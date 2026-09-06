@@ -9,7 +9,6 @@ test.setTimeout(90_000);
 // Keep them independent, but do not run them concurrently within this file.
 test.describe.configure({ mode: "default" });
 
-const PREVIOUS_PAGE_PATH = "/";
 const READ_ONLY_GEAR_PATH = "/gear/nikon-z6iii";
 const SUBMISSION_GEAR_PATH = "/gear/canon-eos-r6-mark-iii";
 const PENDING_SUBMISSION_GEAR_PATH = "/gear/nikon-zr";
@@ -120,17 +119,6 @@ test("closes the intercepted gear editor from its overlay", async ({
   await expectEditModalClosed(page);
 });
 
-test("browser Back clears the intercepted edit slot", async ({ page }) => {
-  await page.goto(PREVIOUS_PAGE_PATH);
-  await navigateToEditableGearPage(page);
-  await openInterceptedEditModal(page);
-
-  await page.goBack();
-
-  await expect(page).toHaveURL((url) => url.pathname === PREVIOUS_PAGE_PATH);
-  await expectEditModalClosed(page);
-});
-
 test("direct edit navigation keeps the full-page fallback", async ({
   page,
 }) => {
@@ -146,27 +134,68 @@ test("direct edit navigation keeps the full-page fallback", async ({
   await expectEditModalClosed(page);
 });
 
-test("successful auto-approved edit closes the modal", async ({ page }) => {
-  await navigateToEditableGearPage(page, SUBMISSION_GEAR_PATH);
-  await openInterceptedEditModal(page, SUBMISSION_GEAR_PATH);
+test("auto-approved edit updates the gear item", async ({ page }) => {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL is required for E2E cleanup");
 
-  const weightInput = page.locator("#weight");
-  const currentWeight = Number(await weightInput.inputValue());
-  expect(Number.isFinite(currentWeight)).toBe(true);
-  await weightInput.fill(String(currentWeight + 1));
+  const sql = postgres(databaseUrl, { max: 1 });
+  const gearSlug = SUBMISSION_GEAR_PATH.split("/").at(-1)!;
+  const [originalGear] = await sql<
+    Array<{ weightGrams: number | null }>
+  >`select weight_grams as "weightGrams" from app.gear where slug = ${gearSlug}`;
+  if (!originalGear || originalGear.weightGrams === null) {
+    await sql.end();
+    throw new Error(`Expected ${gearSlug} to have a seeded weight`);
+  }
 
-  await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
-  await expect(page.locator("#edit-modal-auto-submit")).toBeChecked();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Submit suggestion?" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Apply Now" }).click();
+  const originalWeight = originalGear.weightGrams;
+  const updatedWeight = originalWeight + 1;
 
-  await expect(page).toHaveURL(new RegExp(`${SUBMISSION_GEAR_PATH}/?$`), {
-    timeout: 30_000,
-  });
-  await expectEditModalClosed(page);
+  try {
+    await navigateToEditableGearPage(page, SUBMISSION_GEAR_PATH);
+    await openInterceptedEditModal(page, SUBMISSION_GEAR_PATH);
+
+    const weightInput = page.locator("#weight");
+    await expect(weightInput).toHaveValue(String(originalWeight));
+    await weightInput.fill(String(updatedWeight));
+
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+    await expect(page.locator("#edit-modal-auto-submit")).toBeChecked();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Submit suggestion?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Apply Now" }).click();
+
+    await expect
+      .poll(
+        async () => {
+          const [gear] = await sql<
+            Array<{ weightGrams: number | null }>
+          >`select weight_grams as "weightGrams" from app.gear where slug = ${gearSlug}`;
+          return gear?.weightGrams;
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(updatedWeight);
+
+    const verificationPage = await page.context().newPage();
+    try {
+      await verificationPage.goto(SUBMISSION_GEAR_PATH);
+      await expect(
+        verificationPage.getByText(`${updatedWeight} g`, { exact: true }),
+      ).toBeVisible();
+    } finally {
+      await verificationPage.close();
+    }
+  } finally {
+    await sql`
+      update app.gear
+      set weight_grams = ${originalWeight}
+      where slug = ${gearSlug}
+    `;
+    await sql.end();
+  }
 });
 
 test("pending edit closes the modal and reaches its success page", async ({

@@ -8,12 +8,18 @@ Decision record: `docs/decisions/2026-08-31-hermetic-e2e-ci.md`.
 ## Local setup (one command)
 
 ```bash
-npm run e2e:setup-local   # disposable Postgres on :5433 + full pipeline
+npm run test:e2e:ci-local # disposable Postgres on :5433 + setup + production build + Playwright
 ```
 
-The script prints the two commands for a CI-identical run (production
-build + `npm run test:e2e`). For the usual dev-server flow,
-`npm run test:e2e` alone still works exactly as before.
+This is the one-command local CI-equivalent run. It creates or reuses the
+`sharply-e2e-postgres` container, prepares its isolated database, builds the
+production app, and runs Playwright with CI workers, retries, and reporters.
+The GitHub Actions workflow remains independent of this convenience command.
+
+To prepare the disposable database without immediately building and testing,
+run `npm run e2e:setup-local`; it prints the build and test commands for a
+manual run. For the usual dev-server flow, `npm run test:e2e` alone still works
+exactly as before.
 
 ## Creating a PR (e2e-gated)
 
