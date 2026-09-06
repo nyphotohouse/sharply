@@ -5,6 +5,11 @@
 # Docs: docs/e2e-testing.md   Decision: docs/decisions/2026-08-31-hermetic-e2e-ci.md
 set -euo pipefail
 
+if [ "${1:-}" != "" ] && [ "${1:-}" != "--run" ]; then
+  echo "Usage: $0 [--run]" >&2
+  exit 2
+fi
+
 CONTAINER_NAME="sharply-e2e-postgres"
 DB_PORT="${E2E_DB_PORT:-5433}"
 
@@ -65,6 +70,23 @@ npx drizzle-kit push --force --config=config/drizzle.config.ts
 npm run e2e:bootstrap
 npm run db:seed -- --confirm-seed
 npm run e2e:seed-fixtures
+
+if [ "${1:-}" = "--run" ]; then
+  echo "[e2e] building production app..."
+  npx next build --webpack
+
+  echo "[e2e] running Playwright with CI settings..."
+  CI=true PLAYWRIGHT_SERVER_COMMAND="npm run start:e2e" npm run test:e2e
+
+  cat <<EOF
+
+[e2e] run complete
+
+Tear down when done:
+  docker rm -f ${CONTAINER_NAME}
+EOF
+  exit 0
+fi
 
 cat <<EOF
 

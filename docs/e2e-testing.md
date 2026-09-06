@@ -8,12 +8,18 @@ Decision record: `docs/decisions/2026-08-31-hermetic-e2e-ci.md`.
 ## Local setup (one command)
 
 ```bash
-npm run e2e:setup-local   # disposable Postgres on :5433 + full pipeline
+npm run test:e2e:ci-local # disposable Postgres on :5433 + setup + production build + Playwright
 ```
 
-The script prints the two commands for a CI-identical run (production
-build + `npm run test:e2e`). For the usual dev-server flow,
-`npm run test:e2e` alone still works exactly as before.
+This is the one-command local CI-equivalent run. It creates or reuses the
+`sharply-e2e-postgres` container, prepares its isolated database, builds the
+production app, and runs Playwright with CI workers, retries, and reporters.
+The GitHub Actions workflow remains independent of this convenience command.
+
+To prepare the disposable database without immediately building and testing,
+run `npm run e2e:setup-local`; it prints the build and test commands for a
+manual run. For the usual dev-server flow, `npm run test:e2e` alone still works
+exactly as before.
 
 ## Creating a PR (e2e-gated)
 
@@ -69,10 +75,9 @@ Gotchas encoded in the pipeline — don't reorder it:
   aggregates ("exactly 12 gear items") or assume another spec hasn't
   run. Assert on what you created or what the seed deterministically
   contains.
-- History-sensitive modal specs must establish a known predecessor route before
-  loading the target page; a fresh Playwright page starts at `about:blank`.
-  Assert that known route after history-based dismissal instead of assuming the
-  target page received its own browser-history entry. Wait for the specific
+- Intercepted-route modal specs should assert explicit dismissal to the modal's
+  canonical owning route. Browser Back specs must establish and assert a known
+  predecessor because a fresh Playwright page starts at `about:blank`. Wait for the specific
   auth-dependent control to become visible and enabled instead of using
   `networkidle`: recurring background requests make global network idle an
   unreliable readiness signal in both development and production builds.

@@ -22,6 +22,7 @@ The spec editing system provides a clean, intuitive interface for users to sugge
 - **Parallel Routing**: Uses `@edit` folder structure for seamless modal experience
 - **URL Routing**: Modal maintains proper URL state (`/gear/[slug]/edit`)
 - **Context Preservation**: Users stay in context of the gear page
+- **Deterministic Dismissal**: Escape and overlay dismissal return to the modal's owning `/gear/[slug]` route without consuming unrelated browser history; browser Back clears the intercepted route and follows the user's existing history
 
 ### Mobile Experience (Full Page Navigation)
 
@@ -239,7 +240,7 @@ On approval, the UI builds a merged, filtered payload composed of only the selec
 
 - Namespaces supported: `core`, `camera`, `analogCamera`, `lens`, `fixedLens`, `cameraCardSlots`, and `videoModes`.
 - Measurement changes such as digital and analog `viewfinderEyePointMm` use a friendly field label and unit-formatted values in both contributor previews and moderator review.
-- Digital camera native and expanded ISO proposal values use friendly translated contributor labels and consistent `ISO …` formatting in contributor previews and moderator review. Expanded bounds are submitted independently as `isoMinExpanded` and `isoMaxExpanded`. Base ISO is submitted as the whole nullable `baseIso` array; the server validates positive integers, removes duplicates, sorts ascending, and contributor/moderator previews render localized values separated by ` / `. The editor is capped at three rows through a shared UI constant, while storage and server normalization remain unrestricted.
+- Digital camera native and expanded ISO proposal values use friendly translated contributor labels and consistent `ISO …` formatting in contributor previews and moderator review. Expanded bounds are submitted independently as `isoMinExpanded` and `isoMaxExpanded`. Base ISO is submitted as the whole nullable `baseIso` array; the server validates positive integers, removes duplicates, sorts ascending, and contributor/moderator previews render localized values separated by `/`. The editor is capped at three rows through a shared UI constant, while storage and server normalization remain unrestricted.
 - For conflicts, the chosen option (or Skip) determines inclusion.
 - For non-conflicts, inclusion depends on the checkbox state (default included).
 - `cameraCardSlots` is treated as a replace-set operation; if included, the provided array replaces existing slots for the gear.

@@ -24,6 +24,7 @@
     "e2e:bootstrap": "NODE_ENV=development tsx scripts/e2e/bootstrap-payload.ts",
     "e2e:seed-fixtures": "tsx scripts/e2e/seed-fixtures.ts",
     "e2e:setup-local": "bash scripts/e2e/setup-local.sh",
+    "test:e2e:ci-local": "bash scripts/e2e/setup-local.sh --run",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache --config=prettier.config.js",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache --config=prettier.config.js",
     "lint": "eslint .",
