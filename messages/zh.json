@@ -2331,6 +2331,13 @@
     "saveFailed": "Could not save tag",
     "deleteFailed": "Could not delete tag"
   },
+  "instagramPostBuilder": {
+    "fitImages": "适应图像",
+    "fitImagesDescription": "在边框内完整显示每张图像",
+    "square": "方形",
+    "portrait": "纵向",
+    "landscape": "横向"
+  },
   "metadata": {
     "siteDescription": "真实的规格，真实的评论，真实的速度。 Sharply 是最新、最全面的摄影器材数据库和评论平台，在现代、简约的界面中提供专家评论、真实规格和并排比较。",
     "signInTitle": "登录",

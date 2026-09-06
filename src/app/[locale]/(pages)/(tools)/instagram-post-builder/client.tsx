@@ -1,8 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import {
   DndContext,
   KeyboardSensor,
@@ -34,7 +36,9 @@ import {
 } from "lucide-react";
 import NextImage from "next/image";
 import Link from "next/link";
-import { useEffect,useMemo,useRef,useState } from "react";
+import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getImageRenderRect } from "./image-sizing";
 
 type FrameImage = {
   id: number;
@@ -56,6 +60,7 @@ type Settings = {
   bgColor: string;
   peekAmount: number;
   showGuides: boolean;
+  fitImages: boolean;
 };
 
 type DragState = {
@@ -95,16 +100,33 @@ const DEFAULT_SETTINGS: Settings = {
   aspectRatio: 4 / 5,
   padding: 16,
   bgColor: "#FFFFFF",
-  peekAmount: 110,
+  peekAmount: 0,
   showGuides: true,
+  fitImages: false,
 };
 
-const ASPECT_RATIOS = [
-  { label: "4:5", value: 4 / 5 },
-  { label: "1:1", value: 1 },
-  { label: "9:16", value: 9 / 16 },
-  { label: "16:9", value: 16 / 9 },
-];
+const ASPECT_RATIO_GROUPS = [
+  {
+    labelKey: "square",
+    ratios: [{ label: "1:1", value: 1 }],
+  },
+  {
+    labelKey: "portrait",
+    ratios: [
+      { label: "4:5", value: 4 / 5 },
+      { label: "3:4", value: 3 / 4 },
+      { label: "9:16", value: 9 / 16 },
+    ],
+  },
+  {
+    labelKey: "landscape",
+    ratios: [
+      { label: "5:4", value: 5 / 4 },
+      { label: "4:3", value: 4 / 3 },
+      { label: "16:9", value: 16 / 9 },
+    ],
+  },
+] as const;
 
 const COLORS = ["#FFFFFF", "#000000"];
 const PANORAMA_SPAN_OPTIONS = [2, 3, 4];
@@ -175,11 +197,17 @@ function SortableFrame({
   onSetSpan,
   children,
 }: SortableFrameProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id: frame.id,
-      disabled: totalSpan <= 1,
-    });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: frame.id,
+    disabled: totalSpan <= 1,
+  });
 
   const leftPct = (rect.x / totalWidth) * 100;
   const topPct = (rect.y / totalHeight) * 100;
@@ -298,6 +326,7 @@ function SortableFrame({
 
 const InstagramPostBuilderPage = () => {
   const isMobile = useIsMobile();
+  const t = useTranslations("instagramPostBuilder");
   const [frames, setFrames] = useState<Frame[]>([
     { id: 1, span: 1, images: [] },
   ]);
@@ -324,10 +353,7 @@ const InstagramPostBuilderPage = () => {
 
   const totalSlides = totalSpan;
 
-  const totalWidth = useMemo(
-    () => totalSpan * FRAME_WIDTH,
-    [totalSpan],
-  );
+  const totalWidth = useMemo(() => totalSpan * FRAME_WIDTH, [totalSpan]);
   const totalHeight = useMemo(
     () => FRAME_WIDTH / settings.aspectRatio,
     [settings.aspectRatio],
@@ -601,33 +627,28 @@ const InstagramPostBuilderPage = () => {
         const clipW = rect.w;
         const clipH = segmentHeight;
 
-        const imageRatio = image.width / image.height;
-        const boxRatio = clipW / clipH;
-
-        let renderWidth: number;
-        let renderHeight: number;
-        let renderX: number;
-        let renderY: number;
-
-        if (imageRatio > boxRatio) {
-          renderHeight = clipH;
-          renderWidth = renderHeight * imageRatio;
-          renderY = clipY;
-          renderX =
-            rect.x + (clipW - renderWidth) * (imageData.position.x / 100);
-        } else {
-          renderWidth = clipW;
-          renderHeight = renderWidth / imageRatio;
-          renderX = rect.x;
-          renderY =
-            clipY + (clipH - renderHeight) * (imageData.position.y / 100);
-        }
+        const renderRect = getImageRenderRect({
+          imageWidth: image.width,
+          imageHeight: image.height,
+          boxX: rect.x,
+          boxY: clipY,
+          boxWidth: clipW,
+          boxHeight: clipH,
+          mode: settings.fitImages ? "fit" : "fill",
+          position: imageData.position,
+        });
 
         ctx.save();
         ctx.beginPath();
         ctx.rect(rect.x, clipY, clipW, clipH);
         ctx.clip();
-        ctx.drawImage(image, renderX, renderY, renderWidth, renderHeight);
+        ctx.drawImage(
+          image,
+          renderRect.x,
+          renderRect.y,
+          renderRect.width,
+          renderRect.height,
+        );
         ctx.restore();
       }
     }
@@ -709,13 +730,19 @@ const InstagramPostBuilderPage = () => {
     return frame.images.map((image, index) => (
       <div
         key={image.id}
-        className="group absolute w-full cursor-move overflow-hidden"
+        className={cn(
+          "group absolute w-full overflow-hidden",
+          settings.fitImages ? "cursor-default" : "cursor-move",
+        )}
         style={{
           top: `${index * tileHeight}%`,
           height: `${tileHeight}%`,
         }}
-        onMouseDown={(event) =>
-          handleMouseDown(event, frame.id, image.id, image.position)
+        onMouseDown={
+          settings.fitImages
+            ? undefined
+            : (event) =>
+                handleMouseDown(event, frame.id, image.id, image.position)
         }
       >
         <NextImage
@@ -724,9 +751,14 @@ const InstagramPostBuilderPage = () => {
           fill
           unoptimized
           sizes="33vw"
-          className="pointer-events-none object-cover"
+          className={cn(
+            "pointer-events-none",
+            settings.fitImages ? "object-contain" : "object-cover",
+          )}
           style={{
-            objectPosition: `${image.position.x}% ${image.position.y}%`,
+            objectPosition: settings.fitImages
+              ? "50% 50%"
+              : `${image.position.x}% ${image.position.y}%`,
           }}
         />
         <Button
@@ -872,12 +904,12 @@ const InstagramPostBuilderPage = () => {
                       }).map((_, index) => (
                         <div
                           key={`guide-${index}`}
-                          className="border-primary/60 pointer-events-none absolute inset-y-0 border-l border-dashed"
+                          className="pointer-events-none absolute inset-y-0 border-l border-dashed border-neutral-500"
                           style={{
                             left: `${((index + 1) / totalSlides) * 100}%`,
                           }}
                         >
-                          <div className="bg-primary text-primary-foreground absolute bottom-2 left-1 rounded px-1 py-0.5 font-mono text-[10px]">
+                          <div className="absolute bottom-2 left-1 rounded bg-neutral-500 px-1 py-0.5 font-mono text-[10px] text-white">
                             CUT {index + 1}
                           </div>
                         </div>
@@ -924,26 +956,35 @@ const InstagramPostBuilderPage = () => {
                 <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                   Aspect Ratio
                 </h3>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {ASPECT_RATIOS.map((ratio) => (
-                    <Button
-                      key={ratio.label}
-                      type="button"
-                      size="sm"
-                      variant={
-                        settings.aspectRatio === ratio.value
-                          ? "default"
-                          : "secondary"
-                      }
-                      onClick={() =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          aspectRatio: ratio.value,
-                        }))
-                      }
-                    >
-                      {ratio.label}
-                    </Button>
+                <div className="mt-3 flex flex-col gap-3">
+                  {ASPECT_RATIO_GROUPS.map((group) => (
+                    <div key={group.labelKey} className="flex flex-col gap-1.5">
+                      <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                        {t(group.labelKey)}
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {group.ratios.map((ratio) => (
+                          <Button
+                            key={ratio.label}
+                            type="button"
+                            size="sm"
+                            variant={
+                              settings.aspectRatio === ratio.value
+                                ? "default"
+                                : "secondary"
+                            }
+                            onClick={() =>
+                              setSettings((prev) => ({
+                                ...prev,
+                                aspectRatio: ratio.value,
+                              }))
+                            }
+                          >
+                            {ratio.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </section>
@@ -955,7 +996,8 @@ const InstagramPostBuilderPage = () => {
                 </div>
                 <Slider
                   min={0}
-                  max={150}
+                  max={152}
+                  step={8}
                   value={[settings.padding]}
                   onValueChange={(value) =>
                     setSettings((prev) => ({
@@ -965,6 +1007,36 @@ const InstagramPostBuilderPage = () => {
                   }
                   className="mt-2"
                 />
+              </section>
+
+              <section className="flex items-start gap-3">
+                <Checkbox
+                  id="fit-images"
+                  checked={settings.fitImages}
+                  onCheckedChange={(checked) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      fitImages: checked === true,
+                      peekAmount: checked === true ? 0 : prev.peekAmount,
+                    }))
+                  }
+                  aria-describedby="fit-images-description"
+                  className="mt-0.5"
+                />
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="fit-images"
+                    className="text-muted-foreground cursor-pointer text-xs font-semibold tracking-wide uppercase"
+                  >
+                    {t("fitImages")}
+                  </label>
+                  <p
+                    id="fit-images-description"
+                    className="text-muted-foreground text-[10px]"
+                  >
+                    {t("fitImagesDescription")}
+                  </p>
+                </div>
               </section>
 
               <section>
@@ -977,7 +1049,9 @@ const InstagramPostBuilderPage = () => {
                 </div>
                 <Slider
                   min={0}
-                  max={200}
+                  max={192}
+                  step={16}
+                  disabled={settings.fitImages}
                   value={[settings.peekAmount]}
                   onValueChange={(value) =>
                     setSettings((prev) => ({

@@ -2331,6 +2331,13 @@
     "saveFailed": "Could not save tag",
     "deleteFailed": "Could not delete tag"
   },
+  "instagramPostBuilder": {
+    "fitImages": "Ajuster les images",
+    "fitImagesDescription": "Afficher chaque image en entier dans son cadre",
+    "square": "Carré",
+    "portrait": "Portrait",
+    "landscape": "Paysage"
+  },
   "metadata": {
     "siteDescription": "De vraies specs, de vrais tests, très rapidement. Sharply est la plateforme de base de données et de tests de matériel photo la plus récente et la plus complète, avec des tests d’experts, de vraies spécifications et des comparaisons côte à côte dans une interface moderne et minimaliste.",
     "signInTitle": "Connexion",

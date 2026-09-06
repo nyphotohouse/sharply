@@ -2331,6 +2331,13 @@
     "saveFailed": "Could not save tag",
     "deleteFailed": "Could not delete tag"
   },
+  "instagramPostBuilder": {
+    "fitImages": "Fit images",
+    "fitImagesDescription": "Show each image completely inside its frame",
+    "square": "Square",
+    "portrait": "Portrait",
+    "landscape": "Landscape"
+  },
   "metadata": {
     "siteDescription": "Real specs, real reviews, real fast. Sharply is the newest and most comprehensive photography gear database and review platform featuring expert reviews, real specs, and side-by-side comparisons in a modern, minimalist interface.",
     "signInTitle": "Log In",
