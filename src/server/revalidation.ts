@@ -1,7 +1,7 @@
 import "server-only";
 
 import { revalidatePath } from "next/cache";
-import { locales } from "~/i18n/config";
+import { defaultLocale, locales } from "~/i18n/config";
 import { localizePathname } from "~/i18n/routing";
 
 export type RevalidationPathType = "page" | "layout";
@@ -23,10 +23,22 @@ export function revalidateLocalizedPaths(
   for (const locale of locales) {
     for (const pathname of uniquePathnames) {
       const localizedPathname = localizePathname(pathname, locale);
-      if (type) {
-        revalidatePath(localizedPathname, type);
-      } else {
-        revalidatePath(localizedPathname);
+      const paths =
+        locale === defaultLocale
+          ? [
+              localizedPathname,
+              localizedPathname === "/"
+                ? `/${defaultLocale}`
+                : `/${defaultLocale}${localizedPathname}`,
+            ]
+          : [localizedPathname];
+
+      for (const path of paths) {
+        if (type) {
+          revalidatePath(path, type);
+        } else {
+          revalidatePath(path);
+        }
       }
     }
   }

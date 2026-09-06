@@ -1,9 +1,9 @@
 "use server";
 import "server-only";
 
-import { revalidatePath } from "next/cache";
 import { requireRole } from "~/lib/auth/auth-helpers";
 import { getSessionOrThrow } from "~/server/auth";
+import { revalidateGearPages } from "~/server/revalidation";
 
 export async function actionRevalidateGearPage(params: { gearSlug: string }) {
   const session = await getSessionOrThrow();
@@ -17,7 +17,7 @@ export async function actionRevalidateGearPage(params: { gearSlug: string }) {
   }
 
   const path = `/gear/${gearSlug}`;
-  revalidatePath(path);
+  revalidateGearPages([gearSlug]);
 
   return { ok: true as const, path };
 }
