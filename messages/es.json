@@ -2331,6 +2331,13 @@
     "saveFailed": "No se pudo guardar la etiqueta",
     "deleteFailed": "No se pudo eliminar la etiqueta"
   },
+  "instagramPostBuilder": {
+    "fitImages": "Ajustar imágenes",
+    "fitImagesDescription": "Mostrar cada imagen completa dentro de su marco",
+    "square": "Cuadrado",
+    "portrait": "Vertical",
+    "landscape": "Horizontal"
+  },
   "metadata": {
     "siteDescription": "Especificaciones reales, reseñas reales, muy rápido. Sharply es la plataforma más nueva y completa de base de datos y reseñas de equipo fotográfico, con reseñas de expertos, especificaciones reales y comparaciones lado a lado en una interfaz moderna y minimalista.",
     "signInTitle": "Iniciar sesión",

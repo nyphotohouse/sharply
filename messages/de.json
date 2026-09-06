@@ -2331,6 +2331,13 @@
     "saveFailed": "Tag konnte nicht gespeichert werden",
     "deleteFailed": "Tag konnte nicht gelöscht werden"
   },
+  "instagramPostBuilder": {
+    "fitImages": "Bilder einpassen",
+    "fitImagesDescription": "Jedes Bild vollständig innerhalb seines Rahmens anzeigen",
+    "square": "Quadratisch",
+    "portrait": "Hochformat",
+    "landscape": "Querformat"
+  },
   "metadata": {
     "siteDescription": "Echte Specs, echte Reviews, richtig schnell. Sharply ist die neueste und umfassendste Plattform für Fotografie-Ausrüstungsdatenbanken und Reviews mit Expertenbewertungen, echten Spezifikationen und direkten Vergleichen in einer modernen, minimalistischen Oberfläche.",
     "signInTitle": "Anmelden",
