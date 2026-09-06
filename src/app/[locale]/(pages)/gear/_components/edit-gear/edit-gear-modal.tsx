@@ -55,7 +55,6 @@ export function EditGearModal({
     cancelLeave,
     confirmLeave,
     isConfirmOpen,
-    leaveByHistoryBack,
     navigateAfterHistoryTrap,
     requestLeave,
   } = useUnsavedChangesGuard({
@@ -65,16 +64,18 @@ export function EditGearModal({
     navigate: (href) => router.push(href),
   });
 
-  const closeToPreviousRoute = useCallback(() => {
+  const closeToGear = useCallback(() => {
     setIsOpen(false);
-    leaveByHistoryBack();
-  }, [leaveByHistoryBack]);
+    navigateAfterHistoryTrap(() =>
+      router.replace(localizePathname(`/gear/${gearSlug}`, locale as Locale)),
+    );
+  }, [gearSlug, locale, navigateAfterHistoryTrap, router]);
 
   const requestClose = useCallback(
     (opts?: { force?: boolean }) => {
-      requestLeave(closeToPreviousRoute, opts);
+      requestLeave(closeToGear, opts);
     },
-    [closeToPreviousRoute, requestLeave],
+    [closeToGear, requestLeave],
   );
 
   const handleSubmitSuccess = useCallback(

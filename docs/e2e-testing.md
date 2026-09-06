@@ -69,10 +69,9 @@ Gotchas encoded in the pipeline — don't reorder it:
   aggregates ("exactly 12 gear items") or assume another spec hasn't
   run. Assert on what you created or what the seed deterministically
   contains.
-- History-sensitive modal specs must establish a known predecessor route before
-  loading the target page; a fresh Playwright page starts at `about:blank`.
-  Assert that known route after history-based dismissal instead of assuming the
-  target page received its own browser-history entry. Wait for the specific
+- Intercepted-route modal specs should assert explicit dismissal to the modal's
+  canonical owning route. Browser Back specs must establish and assert a known
+  predecessor because a fresh Playwright page starts at `about:blank`. Wait for the specific
   auth-dependent control to become visible and enabled instead of using
   `networkidle`: recurring background requests make global network idle an
   unreliable readiness signal in both development and production builds.

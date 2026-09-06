@@ -9,10 +9,10 @@ test.setTimeout(90_000);
 // Keep them independent, but do not run them concurrently within this file.
 test.describe.configure({ mode: "default" });
 
+const PREVIOUS_PAGE_PATH = "/";
 const READ_ONLY_GEAR_PATH = "/gear/nikon-z6iii";
 const SUBMISSION_GEAR_PATH = "/gear/canon-eos-r6-mark-iii";
 const PENDING_SUBMISSION_GEAR_PATH = "/gear/nikon-zr";
-const PREVIOUS_PAGE_PATH = "/";
 
 async function deletePendingFixtureProposal(
   proposalId?: string,
@@ -49,7 +49,6 @@ async function navigateToEditableGearPage(
   gearPath = READ_ONLY_GEAR_PATH,
 ): Promise<void> {
   const editPath = `${gearPath}/edit`;
-  await page.goto(PREVIOUS_PAGE_PATH);
   await page.goto(gearPath);
   await expect(page).toHaveURL(new RegExp(`${gearPath}/?$`));
 
@@ -90,8 +89,11 @@ async function expectEditModalClosed(page: Page): Promise<void> {
   ).not.toBeVisible();
 }
 
-async function expectPreviousPage(page: Page): Promise<void> {
-  await expect(page).toHaveURL((url) => url.pathname === PREVIOUS_PAGE_PATH);
+async function expectGearPage(
+  page: Page,
+  gearPath = READ_ONLY_GEAR_PATH,
+): Promise<void> {
+  await expect(page).toHaveURL((url) => url.pathname === gearPath);
 }
 
 test("closes the intercepted gear editor with Escape", async ({ page }) => {
@@ -100,7 +102,7 @@ test("closes the intercepted gear editor with Escape", async ({ page }) => {
 
   await page.keyboard.press("Escape");
 
-  await expectPreviousPage(page);
+  await expectGearPage(page);
   await expectEditModalClosed(page);
 });
 
@@ -114,17 +116,18 @@ test("closes the intercepted gear editor from its overlay", async ({
     position: { x: 5, y: 5 },
   });
 
-  await expectPreviousPage(page);
+  await expectGearPage(page);
   await expectEditModalClosed(page);
 });
 
 test("browser Back clears the intercepted edit slot", async ({ page }) => {
+  await page.goto(PREVIOUS_PAGE_PATH);
   await navigateToEditableGearPage(page);
   await openInterceptedEditModal(page);
 
   await page.goBack();
 
-  await expectPreviousPage(page);
+  await expect(page).toHaveURL((url) => url.pathname === PREVIOUS_PAGE_PATH);
   await expectEditModalClosed(page);
 });
 
