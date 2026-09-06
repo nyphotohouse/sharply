@@ -54,6 +54,9 @@ Notes:
 - `export const revalidate = 86400` (24 hours) for the safety fallback. Gear
   mutations invalidate affected localized routes immediately, so the fallback
   is not the primary freshness mechanism.
+- Default-locale invalidation targets both the public `/gear/...` URL and its
+  internally rewritten `/en/gear/...` cache key. Other locales use their
+  public prefixed paths.
 - Browse invalidation targets the localized `/browse` layout, which covers the
   root, brand, category, and mount-depth catch-all routes.
 - `dynamicParams = true` so non-prebuilt combinations still render on-demand.
