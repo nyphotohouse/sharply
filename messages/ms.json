@@ -2331,6 +2331,13 @@
     "saveFailed": "Tidak dapat menyimpan tag",
     "deleteFailed": "Tidak dapat memadam tag"
   },
+  "instagramPostBuilder": {
+    "fitImages": "Muatkan imej",
+    "fitImagesDescription": "Paparkan setiap imej sepenuhnya di dalam bingkainya",
+    "square": "Segi empat sama",
+    "portrait": "Potret",
+    "landscape": "Landskap"
+  },
   "metadata": {
     "siteDescription": "Spesifikasi sebenar, ulasan sebenar, sangat pantas. Sharply ialah pangkalan data gear fotografi dan platform semakan terbaharu dan paling komprehensif yang menampilkan ulasan pakar, spesifikasi sebenar dan perbandingan sebelah menyebelah dalam antara muka moden dan minimalis.",
     "signInTitle": "Log Masuk",

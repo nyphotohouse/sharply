@@ -2331,6 +2331,13 @@
     "saveFailed": "タグを保存できませんでした",
     "deleteFailed": "タグを削除できませんでした"
   },
+  "instagramPostBuilder": {
+    "fitImages": "画像を全体表示",
+    "fitImagesDescription": "各画像をフレーム内に収めて全体を表示します",
+    "square": "正方形",
+    "portrait": "縦向き",
+    "landscape": "横向き"
+  },
   "metadata": {
     "siteDescription": "本物のスペック、本物のレビュー、すばやく。Sharplyは、専門家のレビュー、実際のスペック、並べて比較できる機能を備えた、最新かつ最も包括的な写真機材データベース兼レビュープラットフォームです。モダンでミニマルなインターフェースで提供します。",
     "signInTitle": "ログイン",
