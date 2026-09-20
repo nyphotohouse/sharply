@@ -203,6 +203,53 @@ Provider consoles still need exact callback URLs registered for every supported 
 - `https://www.sharplyphoto.com/api/auth/callback/google`
 - `https://myapp.vercel.app/api/auth/callback/google`
 
+## Sharply as Trellis's identity provider
+
+Sharply exposes a first-party OpenID Connect provider for Trellis. The public
+discovery endpoints are:
+
+- Local: `http://localhost:3000/api/auth/.well-known/openid-configuration`
+- Production: `https://www.sharplyphoto.com/api/auth/.well-known/openid-configuration`
+- Authorization-server metadata is also available at
+  `/.well-known/oauth-authorization-server/api/auth`.
+
+The provider supports only the `openid`, `profile`, and `email` scopes for this
+integration. Dynamic client registration is disabled. Trellis clients use the
+authorization-code flow with PKCE and are confidential clients whose secrets
+are stored hashed in Sharply's database.
+
+After applying the OAuth schema migration, provision a client against the
+database for the desired environment:
+
+```bash
+OAUTH_PROVISION_ADMIN_COOKIE='better-auth.session_token=…' \
+  npm run oauth:provision:trellis -- local
+
+OAUTH_PROVISION_ADMIN_COOKIE='better-auth.session_token=…' \
+  npm run oauth:provision:trellis -- production
+```
+
+Copy the returned `client_id` and `client_secret` immediately into the matching
+Trellis environment. The local callback is
+`http://localhost:3001/api/auth/callback/sharply`; production uses
+`https://trellis.photo/api/auth/callback/sharply`. Provisioning refuses to
+create another client with the same environment name. Both clients are marked
+as trusted first-party clients and therefore skip the consent screen.
+
+The provisioning cookie must belong to an `ADMIN` or `SUPERADMIN`, must be
+provided only for the command invocation, and must never be stored in a
+deployment environment. OAuth-client read/update/delete/rotation operations
+are likewise restricted to those roles. Rotate a compromised secret through
+Better Auth's authenticated `/api/auth/oauth2/client/rotate-secret` endpoint,
+update Trellis, verify sign-in, and then revoke or delete obsolete clients.
+
+Trellis requires these deployment variables:
+
+- `SHARPLY_OIDC_DISCOVERY_URL`
+- `SHARPLY_CLIENT_ID`
+- `SHARPLY_CLIENT_SECRET`
+- `BETTER_AUTH_URL` matching the Trellis origin so its callback is exact
+
 ## Development auth bypass
 
 Sharply includes an opt-in dev login route for local work and automation:

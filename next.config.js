@@ -17,6 +17,18 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import("next").NextConfig} */
 const config = {
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/oauth-authorization-server/api/auth",
+        destination: "/api/auth/metadata/oauth-authorization-server",
+      },
+      {
+        source: "/api/auth/.well-known/openid-configuration",
+        destination: "/api/auth/metadata/openid-configuration",
+      },
+    ];
+  },
   async redirects() {
     return [
       {

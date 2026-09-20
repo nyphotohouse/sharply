@@ -2795,17 +2795,115 @@ export const authVerifications = appSchema.table(
   (table) => [index("auth_verifications_identifier_idx").on(table.identifier)],
 );
 
+export const authJwks = appSchema.table("auth_jwks", {
+  id: text("id").primaryKey(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const oauthClients = appSchema.table("oauth_clients", {
+  id: text("id").primaryKey(),
+  clientId: text("client_id").notNull().unique(),
+  clientSecret: text("client_secret"),
+  disabled: boolean("disabled").default(false),
+  skipConsent: boolean("skip_consent"),
+  enableEndSession: boolean("enable_end_session"),
+  scopes: text("scopes").array(),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at"),
+  updatedAt: timestamp("updated_at"),
+  name: text("name"),
+  uri: text("uri"),
+  icon: text("icon"),
+  contacts: text("contacts").array(),
+  tos: text("tos"),
+  policy: text("policy"),
+  softwareId: text("software_id"),
+  softwareVersion: text("software_version"),
+  softwareStatement: text("software_statement"),
+  redirectUris: text("redirect_uris").array().notNull(),
+  postLogoutRedirectUris: text("post_logout_redirect_uris").array(),
+  tokenEndpointAuthMethod: text("token_endpoint_auth_method"),
+  grantTypes: text("grant_types").array(),
+  responseTypes: text("response_types").array(),
+  public: boolean("public"),
+  type: text("type"),
+  referenceId: text("reference_id"),
+  metadata: jsonb("metadata"),
+});
+
+export const oauthRefreshTokens = appSchema.table("oauth_refresh_tokens", {
+  id: text("id").primaryKey(),
+  token: text("token").notNull(),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => oauthClients.clientId, { onDelete: "cascade" }),
+  sessionId: text("session_id").references(() => authSessions.id, {
+    onDelete: "set null",
+  }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  referenceId: text("reference_id"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at"),
+  revoked: timestamp("revoked"),
+  scopes: text("scopes").array().notNull(),
+});
+
+export const oauthAccessTokens = appSchema.table("oauth_access_tokens", {
+  id: text("id").primaryKey(),
+  token: text("token").unique(),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => oauthClients.clientId, { onDelete: "cascade" }),
+  sessionId: text("session_id").references(() => authSessions.id, {
+    onDelete: "set null",
+  }),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  referenceId: text("reference_id"),
+  refreshId: text("refresh_id").references(() => oauthRefreshTokens.id, {
+    onDelete: "cascade",
+  }),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at"),
+  scopes: text("scopes").array().notNull(),
+});
+
+export const oauthConsents = appSchema.table("oauth_consents", {
+  id: text("id").primaryKey(),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => oauthClients.clientId, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  referenceId: text("reference_id"),
+  scopes: text("scopes").array().notNull(),
+  createdAt: timestamp("created_at"),
+  updatedAt: timestamp("updated_at"),
+});
+
 export const authUsersRelations = relations(users, ({ many }) => ({
   sessions: many(authSessions),
   accounts: many(authAccounts),
+  oauthClients: many(oauthClients),
+  oauthRefreshTokens: many(oauthRefreshTokens),
+  oauthAccessTokens: many(oauthAccessTokens),
+  oauthConsents: many(oauthConsents),
 }));
 
-export const authSessionsRelations = relations(authSessions, ({ one }) => ({
-  users: one(users, {
-    fields: [authSessions.userId],
-    references: [users.id],
+export const authSessionsRelations = relations(
+  authSessions,
+  ({ one, many }) => ({
+    users: one(users, {
+      fields: [authSessions.userId],
+      references: [users.id],
+    }),
+    oauthRefreshTokens: many(oauthRefreshTokens),
+    oauthAccessTokens: many(oauthAccessTokens),
   }),
-}));
+);
 
 export const authAccountsRelations = relations(authAccounts, ({ one }) => ({
   users: one(users, {
@@ -2816,4 +2914,69 @@ export const authAccountsRelations = relations(authAccounts, ({ one }) => ({
 
 export const passkeysRelations = relations(passkeys, ({ one }) => ({
   user: one(users, { fields: [passkeys.userId], references: [users.id] }),
+}));
+
+export const oauthClientsRelations = relations(
+  oauthClients,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [oauthClients.userId],
+      references: [users.id],
+    }),
+    refreshTokens: many(oauthRefreshTokens),
+    accessTokens: many(oauthAccessTokens),
+    consents: many(oauthConsents),
+  }),
+);
+
+export const oauthRefreshTokensRelations = relations(
+  oauthRefreshTokens,
+  ({ one, many }) => ({
+    client: one(oauthClients, {
+      fields: [oauthRefreshTokens.clientId],
+      references: [oauthClients.clientId],
+    }),
+    session: one(authSessions, {
+      fields: [oauthRefreshTokens.sessionId],
+      references: [authSessions.id],
+    }),
+    user: one(users, {
+      fields: [oauthRefreshTokens.userId],
+      references: [users.id],
+    }),
+    accessTokens: many(oauthAccessTokens),
+  }),
+);
+
+export const oauthAccessTokensRelations = relations(
+  oauthAccessTokens,
+  ({ one }) => ({
+    client: one(oauthClients, {
+      fields: [oauthAccessTokens.clientId],
+      references: [oauthClients.clientId],
+    }),
+    session: one(authSessions, {
+      fields: [oauthAccessTokens.sessionId],
+      references: [authSessions.id],
+    }),
+    user: one(users, {
+      fields: [oauthAccessTokens.userId],
+      references: [users.id],
+    }),
+    refreshToken: one(oauthRefreshTokens, {
+      fields: [oauthAccessTokens.refreshId],
+      references: [oauthRefreshTokens.id],
+    }),
+  }),
+);
+
+export const oauthConsentsRelations = relations(oauthConsents, ({ one }) => ({
+  client: one(oauthClients, {
+    fields: [oauthConsents.clientId],
+    references: [oauthClients.clientId],
+  }),
+  user: one(users, {
+    fields: [oauthConsents.userId],
+    references: [users.id],
+  }),
 }));

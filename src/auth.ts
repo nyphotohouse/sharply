@@ -1,4 +1,5 @@
 import { passkey } from "@better-auth/passkey";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import {
   betterAuth,
   type Auth as BetterAuthInstance,
@@ -6,10 +7,16 @@ import {
 } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { emailOTP } from "better-auth/plugins";
+import { emailOTP, jwt } from "better-auth/plugins";
 import { authAdditionalFields } from "~/lib/auth/additional-fields";
 import { getResend } from "~/lib/email";
 import { resolveAuthOriginConfig } from "~/server/auth/auth-origin-config";
+import {
+  canManageOAuthClients,
+  SHARPLY_OAUTH_CONSENT_PAGE,
+  SHARPLY_OAUTH_LOGIN_PAGE,
+  SHARPLY_OIDC_SCOPES,
+} from "~/server/auth/oauth-provider-config";
 import {
   getInitialDiscordAvatarData,
   mapDiscordProfileToUser,
@@ -36,6 +43,7 @@ function createAuthOptions() {
       : {}),
     trustedOrigins: authOriginConfig.trustedOrigins,
     secret: process.env.AUTH_SECRET!,
+    disabledPaths: ["/token"],
 
     // database adapter
     database: drizzleAdapter(db, {
@@ -47,6 +55,11 @@ function createAuthOptions() {
         account: schema.authAccounts,
         verification: schema.authVerifications,
         passkey: schema.passkeys,
+        jwks: schema.authJwks,
+        oauthClient: schema.oauthClients,
+        oauthRefreshToken: schema.oauthRefreshTokens,
+        oauthAccessToken: schema.oauthAccessTokens,
+        oauthConsent: schema.oauthConsents,
       },
     }),
 
@@ -75,6 +88,7 @@ function createAuthOptions() {
     },
 
     session: {
+      storeSessionInDatabase: true,
       cookieCache: {
         enabled: true,
         maxAge: 5 * 60,
@@ -112,6 +126,19 @@ function createAuthOptions() {
     plugins: [
       nextCookies(),
       passkey(),
+      jwt(),
+      oauthProvider({
+        loginPage: SHARPLY_OAUTH_LOGIN_PAGE,
+        consentPage: SHARPLY_OAUTH_CONSENT_PAGE,
+        scopes: [...SHARPLY_OIDC_SCOPES],
+        allowDynamicClientRegistration: false,
+        allowUnauthenticatedClientRegistration: false,
+        silenceWarnings: {
+          oauthAuthServerConfig: true,
+          openidConfig: true,
+        },
+        clientPrivileges: ({ user }) => canManageOAuthClients(user),
+      }),
       ...(emailOtpEnabled
         ? [
             emailOTP({
