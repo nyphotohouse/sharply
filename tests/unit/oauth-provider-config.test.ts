@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canManageOAuthClients,
   canManageOAuthClientsFromContext,
+  SHARPLY_JWT_OPTIONS,
   SHARPLY_OIDC_SCOPES,
 } from "~/server/auth/oauth-provider-config";
 import {
@@ -31,6 +32,10 @@ describe("Sharply OAuth provider", () => {
 
   it("exposes only the identity scopes Trellis needs", () => {
     expect(SHARPLY_OIDC_SCOPES).toEqual(["openid", "profile", "email"]);
+  });
+
+  it("does not sign Better Auth session payloads as OAuth JWTs", () => {
+    expect(SHARPLY_JWT_OPTIONS.disableSettingJwtHeader).toBe(true);
   });
 
   it("uses exact local and production redirect URIs", () => {

@@ -13,6 +13,7 @@ import { getResend } from "~/lib/email";
 import { resolveAuthOriginConfig } from "~/server/auth/auth-origin-config";
 import {
   canManageOAuthClientsFromContext,
+  SHARPLY_JWT_OPTIONS,
   SHARPLY_OAUTH_CONSENT_PAGE,
   SHARPLY_OAUTH_LOGIN_PAGE,
   SHARPLY_OIDC_SCOPES,
@@ -126,7 +127,7 @@ function createAuthOptions() {
     plugins: [
       nextCookies(),
       passkey(),
-      jwt(),
+      jwt(SHARPLY_JWT_OPTIONS),
       oauthProvider({
         loginPage: SHARPLY_OAUTH_LOGIN_PAGE,
         consentPage: SHARPLY_OAUTH_CONSENT_PAGE,
