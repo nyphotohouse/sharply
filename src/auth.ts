@@ -12,7 +12,7 @@ import { authAdditionalFields } from "~/lib/auth/additional-fields";
 import { getResend } from "~/lib/email";
 import { resolveAuthOriginConfig } from "~/server/auth/auth-origin-config";
 import {
-  canManageOAuthClients,
+  canManageOAuthClientsFromContext,
   SHARPLY_OAUTH_CONSENT_PAGE,
   SHARPLY_OAUTH_LOGIN_PAGE,
   SHARPLY_OIDC_SCOPES,
@@ -137,7 +137,7 @@ function createAuthOptions() {
           oauthAuthServerConfig: true,
           openidConfig: true,
         },
-        clientPrivileges: ({ user }) => canManageOAuthClients(user),
+        clientPrivileges: canManageOAuthClientsFromContext,
       }),
       ...(emailOtpEnabled
         ? [

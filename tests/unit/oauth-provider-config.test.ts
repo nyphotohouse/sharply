@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canManageOAuthClients,
+  canManageOAuthClientsFromContext,
   SHARPLY_OIDC_SCOPES,
 } from "~/server/auth/oauth-provider-config";
 import {
@@ -16,7 +17,16 @@ describe("Sharply OAuth provider", () => {
     expect(canManageOAuthClients({ role: "EDITOR" })).toBe(false);
     expect(canManageOAuthClients({ role: "ADMIN" })).toBe(true);
     expect(canManageOAuthClients({ role: "SUPERADMIN" })).toBe(true);
+    expect(canManageOAuthClients(null)).toBe(false);
     expect(canManageOAuthClients()).toBe(false);
+  });
+
+  it("denies client management when Better Auth has no session context", () => {
+    expect(canManageOAuthClientsFromContext(null)).toBe(false);
+    expect(canManageOAuthClientsFromContext()).toBe(false);
+    expect(canManageOAuthClientsFromContext({ user: { role: "ADMIN" } })).toBe(
+      true,
+    );
   });
 
   it("exposes only the identity scopes Trellis needs", () => {
