@@ -41,7 +41,9 @@ export function parseTrustedOrigins(value?: string) {
 }
 
 export function resolveAuthOriginConfig(env: AuthOriginEnv) {
-  const baseTrustedOrigin = normalizeTrustedOrigin(env.NEXT_PUBLIC_BASE_URL ?? "");
+  const baseTrustedOrigin = normalizeTrustedOrigin(
+    env.NEXT_PUBLIC_BASE_URL ?? "",
+  );
   const additionalTrustedOrigins = parseTrustedOrigins(
     env.AUTH_ADDITIONAL_TRUSTED_ORIGINS,
   );
@@ -67,6 +69,8 @@ export function resolveAuthOriginConfig(env: AuthOriginEnv) {
 
   return {
     trustedOrigins,
+    resolvedAuthBaseURL:
+      staticAuthBaseEntry?.value ?? baseTrustedOrigin ?? undefined,
     staticAuthBaseURL: staticAuthBaseEntry?.value ?? null,
     staticAuthBaseURLSource: staticAuthBaseEntry?.key ?? null,
     warning,

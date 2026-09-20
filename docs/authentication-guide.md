@@ -185,16 +185,16 @@ await signOut({ callbackURL: "/" });
 
 Sharply separates the canonical site URL from the Better Auth callback host:
 
-- `NEXT_PUBLIC_BASE_URL` is the canonical site URL used for metadata, absolute app links, and SEO-sensitive server output.
+- `NEXT_PUBLIC_BASE_URL` is the canonical site URL used for metadata, absolute app links, SEO-sensitive server output, and as Better Auth's fallback base URL. The OAuth/OIDC provider requires this stable fallback during production initialization.
 - `AUTH_ADDITIONAL_TRUSTED_ORIGINS` adds extra allowed post-login callback origins, such as a fixed `https://myapp.vercel.app`.
-- `AUTH_BASE_URL`, `BETTER_AUTH_BASE_URL`, `BETTER_AUTH_URL`, and `NEXT_PUBLIC_BETTER_AUTH_URL` are single-host auth overrides. If any of them are set, Better Auth pins OAuth provider callbacks to that host.
+- `AUTH_BASE_URL`, `BETTER_AUTH_BASE_URL`, `BETTER_AUTH_URL`, and `NEXT_PUBLIC_BETTER_AUTH_URL` are single-host auth overrides. If any of them are set, they take precedence over `NEXT_PUBLIC_BASE_URL` for Better Auth callbacks.
 - Sharply’s browser auth client resolves its Better Auth base URL from `window.location.origin`, which keeps sign-in and account-link requests on the host where the user started the flow instead of relying on Better Auth’s client-side env inference.
 
 For multi-origin OAuth on a main domain plus a fixed `vercel.app` host:
 
 - keep `NEXT_PUBLIC_BASE_URL` pointed at the canonical main domain
 - set `AUTH_ADDITIONAL_TRUSTED_ORIGINS` to the fixed alternate host
-- leave the single-host auth override env vars unset
+- set an auth-base override to the exact host whose server handles the OAuth callback; otherwise Better Auth uses `NEXT_PUBLIC_BASE_URL`
 
 Provider consoles still need exact callback URLs registered for every supported host, for example:
 

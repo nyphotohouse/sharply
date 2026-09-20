@@ -1,19 +1,34 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   parseTrustedOrigins,
   resolveAuthOriginConfig,
 } from "~/server/auth/auth-origin-config";
 
 describe("auth origin config", () => {
-  it("uses the canonical site in trusted origins without pinning auth callbacks", () => {
+  it("uses the canonical site as the Better Auth fallback", () => {
     const result = resolveAuthOriginConfig({
       NODE_ENV: "production",
       NEXT_PUBLIC_BASE_URL: "https://www.sharplyphoto.com",
     });
 
     expect(result.trustedOrigins).toEqual(["https://www.sharplyphoto.com"]);
+    expect(result.resolvedAuthBaseURL).toBe("https://www.sharplyphoto.com");
     expect(result.staticAuthBaseURL).toBeNull();
     expect(result.warning).toBeNull();
+  });
+
+  it("ignores blank auth overrides and keeps the canonical fallback", () => {
+    const result = resolveAuthOriginConfig({
+      NODE_ENV: "production",
+      NEXT_PUBLIC_BASE_URL: "https://www.sharplyphoto.com",
+      AUTH_BASE_URL: "",
+      BETTER_AUTH_BASE_URL: "  ",
+      BETTER_AUTH_URL: "",
+      NEXT_PUBLIC_BETTER_AUTH_URL: "",
+    });
+
+    expect(result.resolvedAuthBaseURL).toBe("https://www.sharplyphoto.com");
+    expect(result.staticAuthBaseURL).toBeNull();
   });
 
   it("adds localhost and extra trusted origins without pinning auth to them", () => {
@@ -40,6 +55,7 @@ describe("auth origin config", () => {
     });
 
     expect(result.staticAuthBaseURL).toBe("https://auth.sharplyphoto.com");
+    expect(result.resolvedAuthBaseURL).toBe("https://auth.sharplyphoto.com");
     expect(result.staticAuthBaseURLSource).toBe("BETTER_AUTH_URL");
   });
 
@@ -62,9 +78,6 @@ describe("parseTrustedOrigins", () => {
       parseTrustedOrigins(
         " https://myapp.vercel.app/path, https://myapp.vercel.app , https://*.preview.example.com ",
       ),
-    ).toEqual([
-      "https://myapp.vercel.app",
-      "https://*.preview.example.com",
-    ]);
+    ).toEqual(["https://myapp.vercel.app", "https://*.preview.example.com"]);
   });
 });

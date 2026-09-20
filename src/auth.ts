@@ -39,9 +39,7 @@ function createAuthOptions() {
   const options = {
     // config
     appName: "Sharply",
-    ...(authOriginConfig.staticAuthBaseURL
-      ? { baseURL: authOriginConfig.staticAuthBaseURL }
-      : {}),
+    baseURL: authOriginConfig.resolvedAuthBaseURL,
     trustedOrigins: authOriginConfig.trustedOrigins,
     secret: process.env.AUTH_SECRET!,
     disabledPaths: ["/token"],
