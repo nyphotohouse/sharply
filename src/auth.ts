@@ -43,6 +43,12 @@ function createAuthOptions() {
     trustedOrigins: authOriginConfig.trustedOrigins,
     secret: process.env.AUTH_SECRET!,
     disabledPaths: ["/token"],
+    rateLimit: {
+      customRules: {
+        "/.well-known/oauth-authorization-server": false,
+        "/.well-known/openid-configuration": false,
+      },
+    },
 
     // database adapter
     database: drizzleAdapter(db, {
