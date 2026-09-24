@@ -5,6 +5,8 @@ This guide shows how to work with authentication in Sharply using Better Auth (c
 ## Overview
 
 - Better Auth is initialized in `src/auth.ts` with the Drizzle adapter.
+- Sharply pins Better Auth and its compatible packages to `1.4.22`; keep the
+  Trellis integration on the same Better Auth version.
 - Client helpers (including `useSession`) are exported from `src/lib/auth/auth-client.ts`.
 - Shared role helper (`requireRole`) lives in `src/lib/auth/auth-helpers.ts` and is safe to use in both server and client code (pure runtime check, no server APIs).
 - Server session helper `getSessionOrThrow` is exported from `~/server/auth` (wraps `auth.api.getSession` with `headers` and throws 401 when missing).
@@ -236,6 +238,12 @@ Trellis environment. The local callback is
 create another client with the same environment name. Both clients are marked
 as trusted first-party clients and therefore skip the consent screen.
 
+The production client is intentionally registered with the apex callback above.
+Vercel currently redirects the public apex to `www.trellis.photo`, so callback
+logs may show the `www` host after that redirect. Keep Trellis's
+`BETTER_AUTH_URL`, the Sharply client registration, and the provider config
+aligned; changing the callback host requires re-provisioning the client.
+
 The provisioning cookie must belong to an `ADMIN` or `SUPERADMIN`, must be
 provided only for the command invocation, and must never be stored in a
 deployment environment. OAuth-client read/update/delete/rotation operations
@@ -249,6 +257,35 @@ Trellis requires these deployment variables:
 - `SHARPLY_CLIENT_ID`
 - `SHARPLY_CLIENT_SECRET`
 - `BETTER_AUTH_URL` matching the Trellis origin so its callback is exact
+
+### Production OIDC edge protection
+
+The OIDC endpoints are machine-to-machine APIs. In the Sharply Vercel project,
+configure Firewall/Bot Protection rules to **bypass browser challenges** for
+these exact routes (before any challenge rule):
+
+- `GET /api/auth/.well-known/openid-configuration`
+- `GET /.well-known/oauth-authorization-server/api/auth`
+- `POST /api/auth/oauth2/token`
+- `GET /api/auth/oauth2/userinfo`
+
+`GET /api/auth/jwks` must also remain reachable; it currently returns normally
+without a bypass rule. The `rateLimit.customRules` entries in `src/auth.ts`
+only exempt the two discovery paths from Better Auth's application limiter; they
+do not disable Vercel's edge challenge.
+
+To verify the deployment, request discovery directly:
+
+```bash
+curl -i https://www.sharplyphoto.com/api/auth/.well-known/openid-configuration
+```
+
+Discovery must return `200` JSON and must not include
+`x-vercel-mitigated: challenge`. A token request made without a valid body may
+return an application-level `400`, but it must not return a Vercel challenge or
+`429`. If Trellis redirects to `/signin?error=invalid_code` after the Sharply
+authorization page, inspect the token endpoint first. After changing firewall
+rules, start a new sign-in attempt because authorization codes are single-use.
 
 ## Development auth bypass
 
