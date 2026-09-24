@@ -42,6 +42,8 @@ Notes:
 - Category-specific: lenses (`minFocal`, `maxFocal`, `minAperture`, `maxAperture`), cameras (`minMp`, `maxMp`, `minIso`, `maxIso`)
 - Use cases: `useCase` (CSV)
 
+Browse `newest` ordering compares release dates at their declared precision: year-only dates by year, month-only dates by year/month, and day-precision dates by the full date. When release-date buckets tie, the latest declared-precision announcement date wins, followed by `gear.created_at DESC` and deterministic name/ID ordering. Items without a release date continue to use their announcement date as the primary date.
+
 ## SSG/ISR
 
 - Static params are generated in the page (`[[...segments]]/page.tsx`) with an explicit build-budget filter:

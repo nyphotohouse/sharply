@@ -1,4 +1,13 @@
-import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  sql,
+  type SQL,
+  type SQLWrapper,
+} from "drizzle-orm";
 import "server-only";
 import { orderBrandsWithPriority } from "~/lib/brands";
 import { GEAR_PUBLICATION_STATES } from "~/lib/gear/publication-state";
@@ -49,6 +58,40 @@ const gearCategoryToTypes: Record<GearCategorySlug, GearType[]> = {
 
 function buildPublishedGearClause() {
   return eq(gear.publicationState, GEAR_PUBLICATION_STATES.PUBLISHED);
+}
+
+function buildPrecisionAwareDateExpression(
+  dateColumn: SQLWrapper,
+  precisionColumn: SQLWrapper,
+) {
+  return sql`
+    CASE
+      WHEN ${dateColumn} IS NULL THEN NULL
+      WHEN ${precisionColumn} = 'YEAR' THEN date_trunc('year', ${dateColumn})
+      WHEN ${precisionColumn} = 'MONTH' THEN date_trunc('month', ${dateColumn})
+      ELSE ${dateColumn}
+    END
+  `;
+}
+
+function buildNewestGearOrderBy() {
+  const releaseDate = buildPrecisionAwareDateExpression(
+    gear.releaseDate,
+    gear.releaseDatePrecision,
+  );
+  const announcementDate = buildPrecisionAwareDateExpression(
+    gear.announcedDate,
+    gear.announceDatePrecision,
+  );
+  const effectiveReleaseDate = sql`coalesce(${releaseDate}, ${announcementDate})`;
+
+  return [
+    sql`${effectiveReleaseDate} DESC NULLS LAST`,
+    sql`${announcementDate} DESC NULLS LAST`,
+    desc(gear.createdAt),
+    asc(gear.name),
+    asc(gear.id),
+  ];
 }
 
 // Prefer using BRANDS directly from constants at call sites; kept for legacy imports
@@ -216,7 +259,7 @@ export async function searchGear(
     const sortKey: SortKey = allowed.includes(f.sort) ? f.sort : "newest";
     switch (sortKey) {
       case "newest":
-        return [sql`${effectiveReleaseDate} DESC NULLS LAST`, asc(gear.name)];
+        return buildNewestGearOrderBy();
       case "oldest":
         return [sql`${effectiveReleaseDate} ASC NULLS LAST`, asc(gear.name)];
       case "recently_added":
@@ -232,7 +275,7 @@ export async function searchGear(
       case LENS_FOCAL_LENGTH_SORT:
         return [lensFocalLengthSortExpression(), asc(gear.name)];
       default:
-        return [sql`${effectiveReleaseDate} DESC NULLS LAST`, asc(gear.name)];
+        return buildNewestGearOrderBy();
     }
   })();
 
@@ -273,7 +316,6 @@ export async function getReleaseOrderedGearPage(params: {
   // No upper bound on offset - large offsets are expected for deep pagination
   const offset = Math.max(0, Math.floor(params.offset ?? 0));
   const where: SQL[] = [buildPublishedGearClause()];
-  const effectiveReleaseDate = sql`coalesce(${gear.releaseDate}, ${gear.announcedDate})`;
   if (params.brandId) where.push(eq(gear.brandId, params.brandId));
   else if (params.brandSlug) where.push(eq(brands.slug, params.brandSlug));
 
@@ -295,7 +337,7 @@ export async function getReleaseOrderedGearPage(params: {
     .from(gear)
     .leftJoin(brands, eq(gear.brandId, brands.id))
     .where(where.length ? and(...where) : undefined)
-    .orderBy(sql`${effectiveReleaseDate} DESC NULLS LAST`, desc(gear.id))
+    .orderBy(...buildNewestGearOrderBy())
     .limit(limit + 1)
     .offset(offset);
 
