@@ -281,11 +281,13 @@ curl -i https://www.sharplyphoto.com/api/auth/.well-known/openid-configuration
 ```
 
 Discovery must return `200` JSON and must not include
-`x-vercel-mitigated: challenge`. A token request made without a valid body may
-return an application-level `400`, but it must not return a Vercel challenge or
-`429`. If Trellis redirects to `/signin?error=invalid_code` after the Sharply
-authorization page, inspect the token endpoint first. After changing firewall
-rules, start a new sign-in attempt because authorization codes are single-use.
+`x-vercel-mitigated: challenge`. An under-limit token request made without a
+valid body should return an application-level `400`. A `429` is expected only
+after the endpoint exceeds Better Auth's configured request limit; an under-
+limit probe must not return a Vercel challenge or `429`. If Trellis redirects
+to `/signin?error=invalid_code` after the Sharply authorization page, inspect
+the token endpoint first. After changing firewall rules, start a new sign-in
+attempt because authorization codes are single-use.
 
 ## Development auth bypass
 
