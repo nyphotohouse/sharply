@@ -213,6 +213,25 @@
     "latestReviewsTitle": "Ulasan Terkini"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "Tiada hasil lagi",
+      "fetching": "Sedang mengambil…",
+      "editLink": "Edit pautan sumber",
+      "editLinkTitle": "Edit pautan sumber",
+      "editLinkDescription": "Kemas kini URL produk yang digunakan untuk mengambil sumber ini.",
+      "productLink": "Pautan produk",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "Pautan produk diperlukan untuk sumber automatik.",
+      "saveLink": "Simpan pautan",
+      "linkSaved": "Pautan sumber harga disimpan",
+      "observations": "Pemerhatian",
+      "refetch": "Ambil semula",
+      "currentProjection": "Unjuran semasa",
+      "currentProjectionDescription": "Nilai yang sedang dipaparkan pada halaman gear.",
+      "noProjection": "Tiada unjuran semasa.",
+      "asOf": "Setakat {date}",
+      "recalculate": "Kira semula"
+    },
     "renameDialog": {
       "title": "Namakan semula peralatan",
       "description": "Kemas kini nama peralatan ini. Slug dan indeks carian akan dikemas kini secara automatik.",

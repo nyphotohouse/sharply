@@ -213,6 +213,25 @@
     "latestReviewsTitle": "Latest Reviews"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "No result yet",
+      "fetching": "Fetching…",
+      "editLink": "Edit source link",
+      "editLinkTitle": "Edit source link",
+      "editLinkDescription": "Update the product URL used for fetching this source.",
+      "productLink": "Product link",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "A product link is required for automatic sources.",
+      "saveLink": "Save link",
+      "linkSaved": "Price source link saved",
+      "observations": "Observations",
+      "refetch": "Refetch",
+      "currentProjection": "Current projection",
+      "currentProjectionDescription": "Values currently shown on the gear page.",
+      "noProjection": "No current projection.",
+      "asOf": "As of {date}",
+      "recalculate": "Recalculate"
+    },
     "renameDialog": {
       "title": "Rename Gear Item",
       "description": "Update this gear item's name. The slug and search index will be updated automatically.",

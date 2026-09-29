@@ -213,6 +213,25 @@
     "latestReviewsTitle": "最新评论"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "暂无结果",
+      "fetching": "获取中…",
+      "editLink": "编辑来源链接",
+      "editLinkTitle": "编辑来源链接",
+      "editLinkDescription": "更新用于获取此来源的产品网址。",
+      "productLink": "产品链接",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "自动来源需要产品链接。",
+      "saveLink": "保存链接",
+      "linkSaved": "价格来源链接已保存",
+      "observations": "观测记录",
+      "refetch": "重新获取",
+      "currentProjection": "当前估算",
+      "currentProjectionDescription": "齿轮页面当前显示的数值。",
+      "noProjection": "暂无当前估算。",
+      "asOf": "截至 {date}",
+      "recalculate": "重新计算"
+    },
     "renameDialog": {
       "title": "重命名器材",
       "description": "更新此器材的名称。URL 标识和搜索索引将自动更新。",

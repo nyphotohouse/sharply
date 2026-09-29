@@ -1,4 +1,5 @@
 import {
+  BadgeDollarSign,
   BookOpen,
   FileBadge,
   FilePlus,
@@ -21,6 +22,7 @@ import type { AuthUser } from "~/auth";
 import { GearImageModal } from "~/components/modals/gear-image-modal";
 import { ManageColorwaysModal } from "~/components/gear/manage-colorways-modal";
 import { ManageGearTagsModal } from "~/components/gear/manage-gear-tags-modal";
+import { ManagePriceModal } from "~/components/gear/manage-price-modal";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -191,6 +193,31 @@ export function buildDockButtons({
             }
           />
           <TooltipContent sideOffset={10}>Gear Images</TooltipContent>
+        </Tooltip>
+      ),
+    },
+    {
+      id: "pricing",
+      allowed: (currentUser) =>
+        Boolean(gearId && requireRole(currentUser, ["EDITOR"])),
+      render: () => (
+        <Tooltip key="pricing">
+          <ManagePriceModal
+            gearId={gearId!}
+            slug={slug}
+            trigger={
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className={baseTriggerClass}
+                  aria-label="Manage Used Prices"
+                >
+                  <BadgeDollarSign className="text-foreground/70 size-4.5" />
+                </button>
+              </TooltipTrigger>
+            }
+          />
+          <TooltipContent sideOffset={10}>Used Prices</TooltipContent>
         </Tooltip>
       ),
     },

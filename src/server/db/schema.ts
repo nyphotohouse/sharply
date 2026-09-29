@@ -52,6 +52,36 @@ export const gearPublicationStateEnum = pgEnum("gear_publication_state", [
   "RUMORED",
   "HIDDEN",
 ]);
+export const gearPriceMappingStatusEnum = pgEnum("gear_price_mapping_status", [
+  "ACTIVE",
+  "DISABLED",
+]);
+export const gearPriceFetchStatusEnum = pgEnum("gear_price_fetch_status", [
+  "NEVER",
+  "SUCCESS",
+  "NO_DATA",
+  "ERROR",
+]);
+export const gearPriceFetchRunStatusEnum = pgEnum(
+  "gear_price_fetch_run_status",
+  ["RUNNING", "SUCCESS", "PARTIAL", "ERROR"],
+);
+export const gearPriceFetchRunTriggerEnum = pgEnum(
+  "gear_price_fetch_run_trigger",
+  ["CRON"],
+);
+export const gearPriceFetchRunItemStatusEnum = pgEnum(
+  "gear_price_fetch_run_item_status",
+  ["SUCCESS", "NO_DATA", "ERROR"],
+);
+export const gearPriceObservationValueKindEnum = pgEnum(
+  "gear_price_observation_value_kind",
+  ["POINT", "RANGE"],
+);
+export const gearPriceObservationStatusEnum = pgEnum(
+  "gear_price_observation_status",
+  ["VALID", "INVALID"],
+);
 export const gearRegionEnum = pgEnum("gear_region", [
   "GLOBAL",
   "US",
@@ -156,6 +186,23 @@ export const popularityTimeframeEnum = pgEnum("popularity_timeframe", [
   "7d",
   "30d",
 ]);
+
+/**
+ * Denormalized used-price values stored on gear for fast public reads.
+ * Amounts are integer minor units; currency is inferred from the market key.
+ */
+export type GearPriceProjectionEntry = {
+  low: number;
+  typical: number;
+  high: number;
+  asOf: string;
+  status: "current" | "stale" | "unavailable";
+  sourceCount: number;
+  observationCount: number;
+  methodVersion: number;
+};
+
+export type GearPriceProjection = Record<string, GearPriceProjectionEntry>;
 
 // Date precision for partial dates shown to users
 export const datePrecisionEnum = pgEnum("date_precision_enum", [
@@ -634,6 +681,11 @@ export const gear = appSchema.table(
     msrpAtLaunchUsdCents: integer("msrp_at_launch_usd_cents"),
     // Max observed price on MPB (USD cents), optional
     mpbMaxPriceUsdCents: integer("mpb_max_price_usd_cents"),
+    // Denormalized current used-price projection. Source history lives in the
+    // pricing tables below; this JSON keeps public gear reads simple and fast.
+    usedPriceProjection: jsonb(
+      "used_price_projection",
+    ).$type<GearPriceProjection>(),
     thumbnailUrl: text("thumbnail_url"),
     ogImageUrl: text("og_image_url"),
     topViewUrl: text("top_view_url"),
@@ -672,6 +724,185 @@ export const gear = appSchema.table(
     index("gear_brand_mount_idx").on(t.brandId, t.mountId),
     index("gear_predecessor_idx").on(t.predecessorGearId),
     index("gear_successor_idx").on(t.successorGearId),
+  ],
+);
+
+/** A source/market pairing that can be refreshed or maintained manually. */
+export const gearPriceMappings = appSchema.table(
+  "gear_price_mappings",
+  () => ({
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    gearId: varchar("gear_id", { length: 36 })
+      .notNull()
+      .references(() => gear.id, { onDelete: "cascade" }),
+    sourceKey: varchar("source_key", { length: 40 }).notNull(),
+    marketKey: varchar("market_key", { length: 40 }).notNull(),
+    priceKind: varchar("price_kind", { length: 40 })
+      .notNull()
+      .default("used_retail"),
+    externalProductId: varchar("external_product_id", { length: 255 }),
+    canonicalUrl: text("canonical_url"),
+    fetchUrl: text("fetch_url"),
+    status: gearPriceMappingStatusEnum("status").notNull().default("ACTIVE"),
+    priority: integer("priority").notNull().default(0),
+    retryCount: integer("retry_count").notNull().default(0),
+    nextFetchAt: timestamp("next_fetch_at", { withTimezone: true }),
+    lastFetchedAt: timestamp("last_fetched_at", { withTimezone: true }),
+    lastFetchStatus: gearPriceFetchStatusEnum("last_fetch_status")
+      .notNull()
+      .default("NEVER"),
+    lastFetchError: text("last_fetch_error"),
+    createdById: varchar("created_by_id", { length: 255 }).references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    createdAt,
+    updatedAt,
+  }),
+  (t) => [
+    index("gear_price_mappings_gear_idx").on(t.gearId),
+    index("gear_price_mappings_due_idx").on(t.status, t.nextFetchAt),
+    index("gear_price_mappings_source_market_idx").on(t.sourceKey, t.marketKey),
+    uniqueIndex("gear_price_mappings_identity_uidx").on(
+      t.gearId,
+      t.sourceKey,
+      t.marketKey,
+      t.priceKind,
+    ),
+  ],
+);
+
+/** A persisted execution of the scheduled price refresh batch. */
+export const gearPriceFetchRuns = appSchema.table(
+  "gear_price_fetch_runs",
+  () => ({
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    trigger: gearPriceFetchRunTriggerEnum("trigger").notNull().default("CRON"),
+    status: gearPriceFetchRunStatusEnum("status").notNull().default("RUNNING"),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    scannedCount: integer("scanned_count").notNull().default(0),
+    successCount: integer("success_count").notNull().default(0),
+    noDataCount: integer("no_data_count").notNull().default(0),
+    errorCount: integer("error_count").notNull().default(0),
+    error: text("error"),
+  }),
+  (t) => [index("gear_price_fetch_runs_started_idx").on(t.startedAt)],
+);
+
+/** The per-mapping result captured as part of a scheduled refresh run. */
+export const gearPriceFetchRunItems = appSchema.table(
+  "gear_price_fetch_run_items",
+  () => ({
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    runId: varchar("run_id", { length: 36 })
+      .notNull()
+      .references(() => gearPriceFetchRuns.id, { onDelete: "cascade" }),
+    mappingId: varchar("mapping_id", { length: 36 }).references(
+      () => gearPriceMappings.id,
+      { onDelete: "set null" },
+    ),
+    gearId: varchar("gear_id", { length: 36 }).references(() => gear.id, {
+      onDelete: "set null",
+    }),
+    gearName: text("gear_name").notNull(),
+    gearSlug: text("gear_slug").notNull(),
+    sourceKey: varchar("source_key", { length: 40 }).notNull(),
+    marketKey: varchar("market_key", { length: 40 }).notNull(),
+    status: gearPriceFetchRunItemStatusEnum("status").notNull(),
+    insertedObservationCount: integer("inserted_observation_count")
+      .notNull()
+      .default(0),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    nextFetchAt: timestamp("next_fetch_at", { withTimezone: true }),
+    error: text("error"),
+  }),
+  (t) => [
+    index("gear_price_fetch_run_items_run_idx").on(t.runId),
+    index("gear_price_fetch_run_items_mapping_idx").on(t.mappingId),
+  ],
+);
+
+/** Immutable source observations used to calculate an estimate. */
+export const gearPriceObservations = appSchema.table(
+  "gear_price_observations",
+  () => ({
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    mappingId: varchar("mapping_id", { length: 36 })
+      .notNull()
+      .references(() => gearPriceMappings.id, { onDelete: "cascade" }),
+    valueKind: gearPriceObservationValueKindEnum("value_kind")
+      .notNull()
+      .default("POINT"),
+    amountMinor: integer("amount_minor"),
+    lowMinor: integer("low_minor"),
+    highMinor: integer("high_minor"),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    condition: varchar("condition", { length: 40 })
+      .notNull()
+      .default("unknown"),
+    availability: varchar("availability", { length: 40 })
+      .notNull()
+      .default("available"),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }),
+    evidenceUrl: text("evidence_url"),
+    note: text("note"),
+    status: gearPriceObservationStatusEnum("status").notNull().default("VALID"),
+    createdById: varchar("created_by_id", { length: 255 }).references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    createdAt,
+  }),
+  (t) => [
+    index("gear_price_observations_mapping_idx").on(t.mappingId),
+    index("gear_price_observations_observed_idx").on(t.observedAt, t.status),
+  ],
+);
+
+/** Versioned estimates produced from the valid observation history. */
+export const gearPriceEstimates = appSchema.table(
+  "gear_price_estimates",
+  () => ({
+    id: varchar("id", { length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    gearId: varchar("gear_id", { length: 36 })
+      .notNull()
+      .references(() => gear.id, { onDelete: "cascade" }),
+    marketKey: varchar("market_key", { length: 40 }).notNull(),
+    priceKind: varchar("price_kind", { length: 40 })
+      .notNull()
+      .default("used_retail"),
+    lowMinor: integer("low_minor").notNull(),
+    typicalMinor: integer("typical_minor").notNull(),
+    highMinor: integer("high_minor").notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    asOf: timestamp("as_of", { withTimezone: true }).notNull(),
+    methodVersion: integer("method_version").notNull().default(1),
+    sourceCount: integer("source_count").notNull().default(0),
+    observationCount: integer("observation_count").notNull().default(0),
+    inputObservationIds: jsonb("input_observation_ids").$type<string[]>(),
+    createdAt,
+  }),
+  (t) => [
+    index("gear_price_estimates_gear_idx").on(t.gearId),
+    index("gear_price_estimates_market_idx").on(t.marketKey, t.priceKind),
+    index("gear_price_estimates_as_of_idx").on(t.asOf),
   ],
 );
 
@@ -1496,7 +1727,75 @@ export const gearRelations = relations(gear, ({ one, many }) => ({
   rawSamples: many(gearRawSamples),
   aliases: many(gearAliases),
   colorways: many(gearColorways),
+  priceMappings: many(gearPriceMappings),
+  priceEstimates: many(gearPriceEstimates),
+  priceFetchRunItems: many(gearPriceFetchRunItems),
 }));
+
+export const gearPriceMappingsRelations = relations(
+  gearPriceMappings,
+  ({ one, many }) => ({
+    gear: one(gear, {
+      fields: [gearPriceMappings.gearId],
+      references: [gear.id],
+    }),
+    createdBy: one(users, {
+      fields: [gearPriceMappings.createdById],
+      references: [users.id],
+    }),
+    observations: many(gearPriceObservations),
+    fetchRunItems: many(gearPriceFetchRunItems),
+  }),
+);
+
+export const gearPriceFetchRunsRelations = relations(
+  gearPriceFetchRuns,
+  ({ many }) => ({
+    items: many(gearPriceFetchRunItems),
+  }),
+);
+
+export const gearPriceFetchRunItemsRelations = relations(
+  gearPriceFetchRunItems,
+  ({ one }) => ({
+    run: one(gearPriceFetchRuns, {
+      fields: [gearPriceFetchRunItems.runId],
+      references: [gearPriceFetchRuns.id],
+    }),
+    mapping: one(gearPriceMappings, {
+      fields: [gearPriceFetchRunItems.mappingId],
+      references: [gearPriceMappings.id],
+    }),
+    gear: one(gear, {
+      fields: [gearPriceFetchRunItems.gearId],
+      references: [gear.id],
+    }),
+  }),
+);
+
+export const gearPriceObservationsRelations = relations(
+  gearPriceObservations,
+  ({ one }) => ({
+    mapping: one(gearPriceMappings, {
+      fields: [gearPriceObservations.mappingId],
+      references: [gearPriceMappings.id],
+    }),
+    createdBy: one(users, {
+      fields: [gearPriceObservations.createdById],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const gearPriceEstimatesRelations = relations(
+  gearPriceEstimates,
+  ({ one }) => ({
+    gear: one(gear, {
+      fields: [gearPriceEstimates.gearId],
+      references: [gear.id],
+    }),
+  }),
+);
 
 export const gearColorwaysRelations = relations(gearColorways, ({ one }) => ({
   gear: one(gear, {
@@ -2660,6 +2959,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   bingoSubmissions: many(bingoSubmissions),
   bingoScores: many(bingoScores),
   bingoEvents: many(bingoEvents),
+  priceMappings: many(gearPriceMappings),
+  priceObservations: many(gearPriceObservations),
 }));
 
 // Export the user type for use throughout the application

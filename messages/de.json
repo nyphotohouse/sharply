@@ -213,6 +213,25 @@
     "latestReviewsTitle": "Neueste Reviews"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "Noch kein Ergebnis",
+      "fetching": "Wird abgerufen…",
+      "editLink": "Quelllink bearbeiten",
+      "editLinkTitle": "Quelllink bearbeiten",
+      "editLinkDescription": "Aktualisiere die Produkt-URL, die zum Abrufen dieser Quelle verwendet wird.",
+      "productLink": "Produktlink",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "Für automatische Quellen ist ein Produktlink erforderlich.",
+      "saveLink": "Link speichern",
+      "linkSaved": "Link der Preisquelle gespeichert",
+      "observations": "Beobachtungen",
+      "refetch": "Erneut abrufen",
+      "currentProjection": "Aktuelle Projektion",
+      "currentProjectionDescription": "Werte, die derzeit auf der Gear-Seite angezeigt werden.",
+      "noProjection": "Keine aktuelle Projektion.",
+      "asOf": "Stand: {date}",
+      "recalculate": "Neu berechnen"
+    },
     "renameDialog": {
       "title": "Ausrüstung umbenennen",
       "description": "Aktualisiere den Namen dieses Ausrüstungsartikels. Slug und Suchindex werden automatisch aktualisiert.",

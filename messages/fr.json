@@ -213,6 +213,25 @@
     "latestReviewsTitle": "Derniers avis"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "Aucun résultat",
+      "fetching": "Récupération…",
+      "editLink": "Modifier le lien source",
+      "editLinkTitle": "Modifier le lien source",
+      "editLinkDescription": "Mettez à jour l’URL du produit utilisée pour récupérer cette source.",
+      "productLink": "Lien du produit",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "Un lien produit est requis pour les sources automatiques.",
+      "saveLink": "Enregistrer le lien",
+      "linkSaved": "Lien de la source de prix enregistré",
+      "observations": "Observations",
+      "refetch": "Actualiser",
+      "currentProjection": "Projection actuelle",
+      "currentProjectionDescription": "Valeurs actuellement affichées sur la page de l’équipement.",
+      "noProjection": "Aucune projection actuelle.",
+      "asOf": "Au {date}",
+      "recalculate": "Recalculer"
+    },
     "renameDialog": {
       "title": "Renommer le matériel",
       "description": "Modifiez le nom de ce matériel. Le slug et l’index de recherche seront mis à jour automatiquement.",

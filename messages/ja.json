@@ -213,6 +213,25 @@
     "latestReviewsTitle": "最新レビュー"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "結果はまだありません",
+      "fetching": "取得中…",
+      "editLink": "ソースリンクを編集",
+      "editLinkTitle": "ソースリンクを編集",
+      "editLinkDescription": "このソースの取得に使用する商品URLを更新します。",
+      "productLink": "商品リンク",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "自動ソースには商品リンクが必要です。",
+      "saveLink": "リンクを保存",
+      "linkSaved": "価格ソースのリンクを保存しました",
+      "observations": "観測値",
+      "refetch": "再取得",
+      "currentProjection": "現在の推定値",
+      "currentProjectionDescription": "ギアページに現在表示されている値です。",
+      "noProjection": "現在の推定値はありません。",
+      "asOf": "{date} 時点",
+      "recalculate": "再計算"
+    },
     "renameDialog": {
       "title": "機材名を変更",
       "description": "この機材の名前を更新します。スラッグと検索インデックスは自動的に更新されます。",

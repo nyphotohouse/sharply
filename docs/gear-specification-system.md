@@ -34,7 +34,7 @@ The central table that stores common gear information:
   - `HIDDEN`: emergency off switch; hidden from all public surfaces and direct public gear URLs return 404
   - Indexed in the `gear` table to support public browse/search/trending/popularity filters
 - **User Notes**: `notes` — `text[]` for unstructured notes
-- **Commerce**: `mpbMaxPriceUsdCents` — optional MPB max price (USD cents)
+- **Commerce**: `mpbMaxPriceUsdCents` remains as a deprecated compatibility field; used-price data and scheduled-fetch observability are documented in [`used-price-system.md`](./used-price-system.md)
 - **Core Specs**: Physical dimensions (width, height, depth in mm), weight, and optional product lineage
   - `predecessorGearId` and `successorGearId` are nullable same-type self-references for the prior and next model respectively.
   - Editor relationship management keeps the two directions reciprocal. Deleting a referenced gear item sets the corresponding lineage field to `null`.
