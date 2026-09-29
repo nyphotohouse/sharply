@@ -19,6 +19,7 @@ import { formatFocalLengthRangeDisplay } from "~/lib/mapping/focal-length-map";
 import { getItemDisplayPrice } from "~/lib/mapping/price-map";
 import {
   compareNullable,
+  compareEffectivePriceRows,
   formatMountNames,
   getEffectiveDateValue,
   getEffectivePrice,
@@ -271,12 +272,7 @@ export function createGearTableColumns(
     labels.price,
     (row) =>
       getItemDisplayPrice(row, { style: "short", padWholeAmounts: true }),
-    (a, b) =>
-      compareNullable(
-        getEffectivePrice(a.original),
-        getEffectivePrice(b.original),
-        (left, right) => left - right,
-      ),
+    (a, b) => compareEffectivePriceRows(a.original, b.original),
     getEffectivePrice,
   );
 

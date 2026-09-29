@@ -87,7 +87,9 @@ export function SearchResults(props: SearchResultsProps) {
               }
               priceText={getItemDisplayPrice(
                 {
+                  usedPriceProjection: item.usedPriceProjection ?? null,
                   msrpNowUsdCents: item.msrpNowUsdCents ?? null,
+                  msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents ?? null,
                   mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents ?? null,
                 },
                 { style: "short" },

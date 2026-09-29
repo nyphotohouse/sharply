@@ -49,7 +49,9 @@ export function GearAlternativesSection({
             }
             priceText={getItemDisplayPrice(
               {
+                usedPriceProjection: alt.usedPriceProjection,
                 msrpNowUsdCents: alt.msrpNowUsdCents,
+                msrpAtLaunchUsdCents: alt.msrpAtLaunchUsdCents,
                 mpbMaxPriceUsdCents: alt.mpbMaxPriceUsdCents,
               },
               { style: "short", padWholeAmounts: true },

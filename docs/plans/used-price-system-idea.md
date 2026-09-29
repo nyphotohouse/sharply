@@ -4,7 +4,8 @@ Status: implementation slice approved; modal-first editorial workflow is now the
 
 ## Goal
 
-Replace the source-specific `mpbMaxPriceUsdCents` field with a source-independent used-price system that can:
+Add a source-independent used-price system alongside the existing
+`mpbMaxPriceUsdCents` field so the application can:
 
 - support Kamerastore first, followed by manual observations and future MPB data;
 - preserve real source markets without creating rows for every display currency;
@@ -272,7 +273,7 @@ Adapters should normalize source responses into the pricing domain. Scheduling, 
 
 ## Migration boundary
 
-Keep `mpbMaxPriceUsdCents` temporarily as a deprecated compatibility field. Migrate price readers, cards, tables, APIs, SEO, popularity, user lists, alternatives, Discord output, and sorting/filtering to the new read model/projection before removing the legacy field. Add the new nullable schema fields in a backwards-compatible way and update the pricing and gear documentation when implementation begins.
+Keep `mpbMaxPriceUsdCents` available for MPB-specific pricing. Migrate price readers, cards, tables, APIs, SEO, popularity, user lists, alternatives, Discord output, and sorting/filtering to the new read model/projection. Add the new nullable schema fields in a backwards-compatible way and update the pricing and gear documentation when implementation begins.
 
 Recommended vertical slice:
 
@@ -282,4 +283,5 @@ Recommended vertical slice:
 4. Migrate the gear detail page and source-link presentation through the pricing read model.
 5. Add the admin mapping/observation workflow and refresh cron.
 6. Migrate browse, search, tables, lists, popularity, APIs, and SEO.
-7. Backfill and compare legacy/new values before removing the compatibility field.
+7. Backfill and compare values where needed while keeping the MPB field
+   available for future partner integration.

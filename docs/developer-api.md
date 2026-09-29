@@ -33,6 +33,10 @@ Returns a ranked page of published results:
 }
 ```
 
+Search results include the same price fields as the full gear response. Prefer
+`estimatedUsedPrice` and `mpbMaxPriceUsdCents` are both available; the latter
+contains the MPB-specific USD price.
+
 ### `GET /api/v1/search/suggestions`
 
 Required query parameter: `q` (2–200 characters). Optional `limit` defaults to 8 (maximum 10). Optional `region` defaults to `GLOBAL` and accepts `GLOBAL`, `US`, `EU`, or `JP`. A regional alias is returned when the requested region has one; otherwise the canonical name is used.
@@ -98,6 +102,18 @@ there is no published gear, the endpoint still returns `200` with a null URL.
 Returns the complete currently publishable catalog record, including available related specifications, aliases, media, and colourways. The response keeps its established field names: `brands`, flattened image URL fields including side-view URLs, `regionalAliases`, and `colorways`.
 
 The response is an explicit public allowlist. It includes catalog identity, release and price data, dimensions, public links, approved relation fields, and type-specific specification values. `mounts` contains `{ value, shortName }` records from the gear-to-mount relationship. `predecessor` and `successor` are nullable `{ slug, name }` objects describing the adjacent product lineage. `cameraSpecs.sensorFormat` and `lensSpecs.imageCircle` / `fixedLensSpecs.imageCircle` contain `{ slug, name, cropFactor }` when the referenced sensor format exists, otherwise `null`.
+
+Price fields are exposed as follows:
+
+- `estimatedUsedPrice` is a nullable object keyed by market (`US`, `UK`, or
+  `EU`). Each market entry contains `low`, `typical`, and `high` integer minor
+  units, plus `asOf`, `status`, `sourceCount`, `observationCount`, and
+  `methodVersion`. Currency is inferred from the market: USD, GBP, or EUR.
+  `current` and `stale` entries are both valid display estimates; an absent or
+  unavailable entry should be treated as no estimate.
+- `mpbMaxPriceUsdCents` contains the MPB-specific used price in USD cents and
+  remains available for MPB integrations. `estimatedUsedPrice` contains the
+  source-independent estimate, while the MSRP fields represent new pricing.
 
 Digital and analog camera specification objects expose nullable `viewfinderEyePointMm` values in millimeters alongside their viewfinder type.
 

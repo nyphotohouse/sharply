@@ -222,6 +222,9 @@
       "productLink": "商品リンク",
       "productLinkPlaceholder": "https://example.com/product",
       "requiredLinkHelp": "自動ソースには商品リンクが必要です。",
+      "mappingAlreadyExists": "このソースと市場のマッピングはすでに存在します。",
+      "invalidProductLink": "有効な http または https の商品リンクを入力してください。",
+      "invalidMapping": "価格ソースを追加する前に、強調表示された項目を修正してください。",
       "saveLink": "リンクを保存",
       "linkSaved": "価格ソースのリンクを保存しました",
       "observations": "観測値",
@@ -830,6 +833,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "MPB最高価格"
+            },
+            "estimatedUsedPrice": {
+              "label": "中古価格の推定値"
             },
             "weightGrams": {
               "label": "重量"

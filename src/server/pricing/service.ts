@@ -232,13 +232,19 @@ export async function updatePriceMappingLinkService(input: {
     );
   }
 
+  const existingUrl = mapping.fetchUrl ?? mapping.canonicalUrl;
+  const linkChanged = existingUrl !== url;
   const updated = await updatePriceMappingLinkData({
     mappingId: mapping.id,
     canonicalUrl: url,
     fetchUrl: url,
+    deleteObservations: linkChanged,
   });
   if (!updated) {
     throw Object.assign(new Error("Price mapping not found"), { status: 404 });
+  }
+  if (linkChanged) {
+    await rebuildGearPriceProjection(mapping.gearId);
   }
   return updated;
 }

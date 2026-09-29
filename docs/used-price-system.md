@@ -5,6 +5,12 @@ item. The public gear read path uses the denormalized `gear.used_price_projectio
 JSONB column, while source mappings, observations, and estimate history remain
 separate for editorial review and recalculation.
 
+Detailed domain guides now live under [`docs/prices/`](./prices/):
+[`fetching.md`](./prices/fetching.md) covers collection and scheduled runs,
+while [`display.md`](./prices/display.md) covers fallback resolution, public
+surfaces, sorting, and the developer API contract. This document remains the
+broader architecture reference.
+
 ## Data model
 
 - `gear_price_mappings` identifies a gear/source/market pairing. A mapping can
@@ -29,7 +35,21 @@ separate for editorial review and recalculation.
 
 The first estimator is deliberately deterministic: range observations use their
 midpoint, then the valid values produce the 25th percentile, median, and 75th
-percentile as low, typical, and high.
+percentile as low, typical, and high. Calculated values are rounded to the
+nearest whole unit of the market currency before estimates and projections are
+stored; raw observations retain their precise minor-unit values.
+
+Public price consumers use the shared pure resolver in
+`src/lib/pricing/display-price.ts`. Its fallback order is an exact-market
+current or stale projection, MPB, current MSRP, launch MSRP, then no
+price. `getComparablePrice` uses the projection's typical value for sorting and
+rejects USD fallbacks for non-US market comparisons rather than silently
+mixing currencies. Formatting remains in `src/lib/mapping/price-map.ts`.
+
+The developer API exposes the same `estimatedUsedPrice` JSON on full gear and
+search responses. The `mpbMaxPriceUsdCents` field remains in those responses
+for MPB-specific pricing; see
+[`developer-api.md`](./developer-api.md) for the public response contract.
 
 ## Editorial workflow
 
@@ -43,6 +63,11 @@ US, UK, and EU market choices. `/admin/prices` includes an upcoming-fetch queue 
 log. Run rows open a detail modal with aggregate results and per-mapping
 outcomes; manual refetches remain in the mapping's own status and are not
 mixed into the scheduled batch history.
+
+Changing a mapping's source link clears that mapping's existing observations and
+resets its fetch state, then rebuilds the gear projection so prices from the old
+source link are not attributed to the new one. Saving the same effective link
+does not clear history.
 
 Manual source refreshes are limited to one request per mapping every six hours
 for editors. Administrators can bypass that cooldown. A single daily cron job
@@ -66,5 +91,6 @@ to the US storefront. The EU mapping remains a generic EUR market; the
 Germany hint only pins the site's shared /en-eu/ storefront.
 
 Database schema changes are intentionally backwards-compatible. The existing
-`mpbMaxPriceUsdCents` column remains available during rollout and should not be
-used by new pricing code.
+`mpbMaxPriceUsdCents` column remains available for MPB-specific pricing and is
+read through the shared resolver; callers should not implement their own direct
+MPB precedence.

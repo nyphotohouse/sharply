@@ -45,6 +45,10 @@ function observationValue(observation: EstimatorObservation): number | null {
   return null;
 }
 
+function roundToNearestDollar(amountMinor: number): number {
+  return Math.round(amountMinor / 100) * 100;
+}
+
 /**
  * Small, deterministic estimator for the first pricing slice. Ranges become
  * their midpoint, then quartiles provide low/typical/high. This is easy to
@@ -73,9 +77,9 @@ export function estimatePrice(
   }, new Date(0));
 
   return {
-    lowMinor: percentile(values, 0.25),
-    typicalMinor: percentile(values, 0.5),
-    highMinor: percentile(values, 0.75),
+    lowMinor: roundToNearestDollar(percentile(values, 0.25)),
+    typicalMinor: roundToNearestDollar(percentile(values, 0.5)),
+    highMinor: roundToNearestDollar(percentile(values, 0.75)),
     asOf: latest,
     observationCount: usable.length,
     inputObservationIds: usable

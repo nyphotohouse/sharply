@@ -169,17 +169,31 @@ export async function updatePriceMappingLinkData(input: {
   mappingId: string;
   canonicalUrl: string | null;
   fetchUrl: string | null;
+  deleteObservations: boolean;
 }) {
-  const [mapping] = await db
-    .update(gearPriceMappings)
-    .set({
-      canonicalUrl: input.canonicalUrl,
-      fetchUrl: input.fetchUrl,
-      updatedAt: new Date(),
-    })
-    .where(eq(gearPriceMappings.id, input.mappingId))
-    .returning();
-  return mapping ?? null;
+  return db.transaction(async (tx) => {
+    if (input.deleteObservations) {
+      await tx
+        .delete(gearPriceObservations)
+        .where(eq(gearPriceObservations.mappingId, input.mappingId));
+    }
+
+    const [mapping] = await tx
+      .update(gearPriceMappings)
+      .set({
+        canonicalUrl: input.canonicalUrl,
+        fetchUrl: input.fetchUrl,
+        lastFetchedAt: input.deleteObservations ? null : undefined,
+        nextFetchAt: input.deleteObservations ? null : undefined,
+        lastFetchStatus: input.deleteObservations ? "NEVER" : undefined,
+        lastFetchError: input.deleteObservations ? null : undefined,
+        retryCount: input.deleteObservations ? 0 : undefined,
+        updatedAt: new Date(),
+      })
+      .where(eq(gearPriceMappings.id, input.mappingId))
+      .returning();
+    return mapping ?? null;
+  });
 }
 
 export async function addPriceObservationData(input: {

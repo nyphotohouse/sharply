@@ -179,7 +179,20 @@ const { data, pagination } = await response.json();`}
     "slug": "nikon-z6-iii",
     "name": "Nikon Z6 III",
     "brandName": "Nikon",
-    "gearType": "CAMERA"
+    "gearType": "CAMERA",
+    "estimatedUsedPrice": {
+      "US": {
+        "low": 178300,
+        "typical": 178300,
+        "high": 178300,
+        "asOf": "2026-09-29T19:05:00.000Z",
+        "status": "current",
+        "sourceCount": 1,
+        "observationCount": 1,
+        "methodVersion": 1
+      }
+    },
+    "mpbMaxPriceUsdCents": null
   }],
   "pagination": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 }
 }`}</CodeBlock>
@@ -329,6 +342,19 @@ const { data } = await response.json();`}
     "slug": "nikon-z6iii",
     "name": "Nikon Z6III",
     "gearType": "CAMERA",
+    "estimatedUsedPrice": {
+      "US": {
+        "low": 178300,
+        "typical": 178300,
+        "high": 178300,
+        "asOf": "2026-09-29T19:05:00.000Z",
+        "status": "current",
+        "sourceCount": 1,
+        "observationCount": 1,
+        "methodVersion": 1
+      }
+    },
+    "mpbMaxPriceUsdCents": null,
     "mounts": [{ "value": "z-nikon", "shortName": "z" }],
     "cameraSpecs": {
       "sensorFormat": {

@@ -222,6 +222,9 @@
       "productLink": "产品链接",
       "productLinkPlaceholder": "https://example.com/product",
       "requiredLinkHelp": "自动来源需要产品链接。",
+      "mappingAlreadyExists": "此来源和市场的映射已存在。",
+      "invalidProductLink": "请输入有效的 http 或 https 商品链接。",
+      "invalidMapping": "添加价格来源前，请修正突出显示的字段。",
       "saveLink": "保存链接",
       "linkSaved": "价格来源链接已保存",
       "observations": "观测记录",
@@ -830,6 +833,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "MPB 最高价格"
+            },
+            "estimatedUsedPrice": {
+              "label": "估算二手价格"
             },
             "weightGrams": {
               "label": "重量"

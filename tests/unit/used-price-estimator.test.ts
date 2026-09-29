@@ -47,6 +47,41 @@ describe("used price estimator", () => {
     });
   });
 
+  it("rounds calculated values to the nearest dollar", () => {
+    const result = estimatePrice([
+      {
+        id: "one",
+        valueKind: "POINT",
+        amountMinor: 10049,
+        observedAt: new Date("2026-01-01T00:00:00Z"),
+      },
+      {
+        id: "two",
+        valueKind: "POINT",
+        amountMinor: 20051,
+        observedAt: new Date("2026-01-02T00:00:00Z"),
+      },
+      {
+        id: "three",
+        valueKind: "POINT",
+        amountMinor: 30049,
+        observedAt: new Date("2026-01-03T00:00:00Z"),
+      },
+      {
+        id: "four",
+        valueKind: "POINT",
+        amountMinor: 40051,
+        observedAt: new Date("2026-01-04T00:00:00Z"),
+      },
+    ]);
+
+    expect(result).toMatchObject({
+      lowMinor: 17600,
+      typicalMinor: 25100,
+      highMinor: 32600,
+    });
+  });
+
   it("returns null when observations have no usable price", () => {
     expect(
       estimatePrice([

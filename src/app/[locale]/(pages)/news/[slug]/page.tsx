@@ -228,7 +228,9 @@ export default async function DynamicPage({
                     }
                     priceText={getItemDisplayPrice(
                       {
+                        usedPriceProjection: item.usedPriceProjection,
                         msrpNowUsdCents: item.msrpNowUsdCents,
+                        msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents,
                         mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents,
                       },
                       { style: "short", padWholeAmounts: true },

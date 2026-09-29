@@ -222,6 +222,9 @@
       "productLink": "Pautan produk",
       "productLinkPlaceholder": "https://example.com/product",
       "requiredLinkHelp": "Pautan produk diperlukan untuk sumber automatik.",
+      "mappingAlreadyExists": "Pemetaan untuk sumber dan pasaran ini sudah wujud.",
+      "invalidProductLink": "Masukkan pautan produk http atau https yang sah.",
+      "invalidMapping": "Betulkan medan yang diserlahkan sebelum menambah sumber harga.",
       "saveLink": "Simpan pautan",
       "linkSaved": "Pautan sumber harga disimpan",
       "observations": "Pemerhatian",
@@ -830,6 +833,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "Harga maksimum MPB"
+            },
+            "estimatedUsedPrice": {
+              "label": "Anggaran Harga Terpakai"
             },
             "weightGrams": {
               "label": "Berat"

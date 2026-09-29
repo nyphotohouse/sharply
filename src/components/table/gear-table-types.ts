@@ -1,4 +1,5 @@
 import type { GearAlias } from "~/types/gear";
+import type { PriceProjection } from "~/lib/pricing/display-price";
 
 export type GearTableScope = "camera" | "lens" | "mixed";
 
@@ -16,7 +17,9 @@ export type GearTableRow = {
   announcedDate: string | Date | null;
   announceDatePrecision: "DAY" | "MONTH" | "YEAR" | null;
   msrpNowUsdCents: number | null;
+  msrpAtLaunchUsdCents?: number | null;
   mpbMaxPriceUsdCents: number | null;
+  usedPriceProjection?: PriceProjection | null;
   sensorFormatName: string | null;
   analogCaptureMedium: string | null;
   weightGrams: number | null;
@@ -41,7 +44,9 @@ export type GearTableSource = {
   announcedDate?: string | Date | null;
   announceDatePrecision?: string | null;
   msrpNowUsdCents?: number | null;
+  msrpAtLaunchUsdCents?: number | null;
   mpbMaxPriceUsdCents?: number | null;
+  usedPriceProjection?: PriceProjection | null;
   sensorFormatName?: string | null;
   analogCaptureMedium?: string | null;
   weightGrams?: number | null;

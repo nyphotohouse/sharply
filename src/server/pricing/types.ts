@@ -3,6 +3,14 @@ import type {
   gearPriceMappings,
   gearPriceObservations,
 } from "~/server/db/schema";
+import {
+  MARKET_CURRENCY,
+  PRICE_MARKETS,
+  type PriceMarket,
+} from "~/lib/pricing/display-price";
+
+export { MARKET_CURRENCY, PRICE_MARKETS };
+export type { PriceMarket };
 
 export const PRICE_METHOD_VERSION = 1;
 export const MANUAL_REFRESH_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -18,17 +26,8 @@ export function getPriceFetchRunStatus(
   return "PARTIAL";
 }
 
-export const PRICE_MARKETS = ["US", "UK", "EU"] as const;
-export type PriceMarket = (typeof PRICE_MARKETS)[number];
-
 export const PRICE_SOURCE_KEYS = ["manual", "mpb", "kamerastore"] as const;
 export type PriceSourceKey = (typeof PRICE_SOURCE_KEYS)[number];
-
-export const MARKET_CURRENCY: Record<PriceMarket, string> = {
-  US: "USD",
-  UK: "GBP",
-  EU: "EUR",
-};
 
 export function getManualRefreshRetryAt(
   lastFetchedAt: Date | null,

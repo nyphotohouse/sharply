@@ -222,6 +222,9 @@
       "productLink": "Produktlink",
       "productLinkPlaceholder": "https://example.com/product",
       "requiredLinkHelp": "Für automatische Quellen ist ein Produktlink erforderlich.",
+      "mappingAlreadyExists": "Für diese Quelle und diesen Markt ist bereits ein Mapping vorhanden.",
+      "invalidProductLink": "Gib einen gültigen Produktlink mit http oder https ein.",
+      "invalidMapping": "Korrigiere die hervorgehobenen Felder, bevor du die Preisquelle hinzufügst.",
       "saveLink": "Link speichern",
       "linkSaved": "Link der Preisquelle gespeichert",
       "observations": "Beobachtungen",
@@ -830,6 +833,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "Maximaler MPB-Preis"
+            },
+            "estimatedUsedPrice": {
+              "label": "Geschätzter Gebrauchtpreis"
             },
             "weightGrams": {
               "label": "Gewicht"

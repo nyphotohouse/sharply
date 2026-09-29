@@ -1,6 +1,7 @@
 import type { GearTableRow } from "./gear-table-types";
 import { formatAnalogMedium } from "~/lib/mapping/analog-types-map";
 import { getMountLongName } from "~/lib/mapping/mounts-map";
+import { getComparablePrice } from "~/lib/pricing/display-price";
 
 export function getMountDisplayNames(mountNames: string[]) {
   return mountNames.map(getMountLongName);
@@ -35,5 +36,19 @@ export function getEffectiveDateValue(row: GearTableRow) {
 }
 
 export function getEffectivePrice(row: GearTableRow) {
-  return row.mpbMaxPriceUsdCents ?? row.msrpNowUsdCents;
+  return getComparablePrice(row, { market: "US" }).valueMinor;
+}
+
+export function compareEffectivePriceRows(
+  left: GearTableRow,
+  right: GearTableRow,
+) {
+  const priceComparison = compareNullable(
+    getEffectivePrice(left),
+    getEffectivePrice(right),
+    (a, b) => a - b,
+  );
+  if (priceComparison !== 0) return priceComparison;
+
+  return left.name.localeCompare(right.name) || left.id.localeCompare(right.id);
 }

@@ -12,6 +12,7 @@ import {
   formatCameraType,
   formatCardSlotDetails,
   formatPrecaptureSupport,
+  formatDisplayPrice,
   formatPrice,
   formatShutterType,
 } from "~/lib/mapping";
@@ -32,6 +33,7 @@ import { formatFocalLengthRangeDisplay } from "~/lib/mapping/focal-length-map";
 import { formatFocusDistance } from "~/lib/mapping/focus-distance-map";
 import { formatMaxFpsDisplay } from "~/lib/mapping/max-fps-map";
 import { getMountLongNameById } from "~/lib/mapping/mounts-map";
+import { getDisplayPrice } from "~/lib/pricing/display-price";
 import {
   sensorNameFromId,
   sensorTypeLabel,
@@ -54,6 +56,7 @@ export type SpecTranslator = ((key: string) => string) & {
 type SpecTranslationContext = {
   locale?: string;
   t?: SpecTranslator;
+  surface?: "public" | "editor";
 };
 
 type SpecLabelDescriptor = {
@@ -298,7 +301,7 @@ function resolveFieldLabelDescriptor(
 ): SpecLabelDescriptor & {
   englishLabel: string;
 } {
-  const descriptor = field.labelResolver?.(item) ?? {
+  const descriptor = field.labelResolver?.(item, context) ?? {
     label: field.labelOverride ? field.labelOverride(item) : field.label,
     labelKey: getFieldLabelKey(section, field),
   };
@@ -319,7 +322,10 @@ export type SpecFieldDef = {
   label: string; // Human-readable label for display
   labelKey?: string; // Translation key for display label
   labelOverride?: (item: GearItem) => string; // Optional per-item label
-  labelResolver?: (item: GearItem) => SpecLabelDescriptor; // Dynamic label with matching translation key
+  labelResolver?: (
+    item: GearItem,
+    context?: SpecTranslationContext,
+  ) => SpecLabelDescriptor; // Dynamic label with matching translation key
   searchTerms?: string[]; // Optional aliases used by client-side filtering
   getRawValue: (item: GearItem) => unknown; // Extract raw value from GearItem
   formatDisplay?: (
@@ -513,7 +519,33 @@ export const specDictionary: SpecSectionDef[] = [
         label: "MPB Max Price",
         searchTerms: ["price", "used price", "market price", "cost"],
         getRawValue: (item) => item.mpbMaxPriceUsdCents,
-        formatDisplay: (raw) => (raw ? formatPrice(raw as number) : undefined),
+        labelResolver: (item, context) => {
+          const displayPrice =
+            context?.surface === "public"
+              ? getDisplayPrice(item, { market: "US" })
+              : null;
+          return displayPrice?.source === "USED_ESTIMATE"
+            ? {
+                label: "Estimated Used Price",
+                labelKey:
+                  "specRegistry.sections.core.fields.estimatedUsedPrice.label",
+              }
+            : {
+                label: "MPB Max Price",
+                labelKey:
+                  "specRegistry.sections.core.fields.mpbMaxPriceUsdCents.label",
+              };
+        },
+        formatDisplay: (raw, item, _, __, locale) => {
+          const displayPrice = getDisplayPrice(item, { market: "US" });
+          if (displayPrice.source === "USED_ESTIMATE") {
+            return formatDisplayPrice(displayPrice, {
+              style: "long",
+              locale: locale === "en" ? "en-US" : (locale ?? "en-US"),
+            });
+          }
+          return raw ? formatPrice(raw as number) : undefined;
+        },
         editElementId: "mpbMaxPrice",
       },
       {
@@ -2378,7 +2410,14 @@ type DeveloperApiSectionConfig = {
  * constraining how the specs table is organized or displayed.
  */
 const developerApiSectionConfig: Record<string, DeveloperApiSectionConfig> = {
-  core: { category: "gear.basics", label: "Gear basics" },
+  core: {
+    category: "gear.basics",
+    label: "Gear basics",
+    displayOverrides: {
+      mpbMaxPriceUsdCents: (raw) =>
+        raw ? formatPrice(raw as number) : undefined,
+    },
+  },
   "camera-sensor-shutter": {
     category: "camera.sensor",
     label: "Camera sensor",
@@ -2550,6 +2589,7 @@ export function buildGearSpecsSections(
   const translationContext: SpecTranslationContext = {
     locale,
     t: normalizedOptions.t,
+    surface: "public",
   };
   return specDictionary
     .filter((section) => !section.condition || section.condition(item))
@@ -2620,7 +2660,10 @@ export function buildEditSidebarSections(
   item: GearItem,
   options?: SpecTranslationContext,
 ): SidebarSection[] {
-  const translationContext = options ?? {};
+  const translationContext: SpecTranslationContext = {
+    ...options,
+    surface: "editor",
+  };
   return specDictionary
     .filter((section) => !section.condition || section.condition(item))
     .map((section) => ({

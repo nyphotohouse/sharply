@@ -155,11 +155,16 @@ function CreatePriceMappingModal({
   mappings: SerializedMapping[];
   onCreated: (mappingId: string, sourceKey: string) => Promise<void>;
 }) {
+  const t = useTranslations("gearDetail.usedPriceManagement");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [sourceKey, setSourceKey] = useState("manual");
   const [marketKey, setMarketKey] = useState("US");
   const [mappingUrl, setMappingUrl] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    market?: string;
+    mappingUrl?: string;
+  }>({});
   const isAutomatic = sourceKey !== "manual";
   const hasExistingMapping = (source: string, market: string) =>
     mappings.some(
@@ -167,8 +172,41 @@ function CreatePriceMappingModal({
     );
   const isDuplicate = hasExistingMapping(sourceKey, marketKey);
 
+  function validateMapping() {
+    const nextErrors: typeof fieldErrors = {};
+
+    if (isDuplicate) {
+      nextErrors.market = t("mappingAlreadyExists");
+    }
+
+    const value = mappingUrl.trim();
+    if (isAutomatic && !value) {
+      nextErrors.mappingUrl = t("requiredLinkHelp");
+    } else if (value) {
+      try {
+        const url = new URL(value);
+        if (url.protocol !== "http:" && url.protocol !== "https:") {
+          throw new Error();
+        }
+      } catch {
+        nextErrors.mappingUrl = t("invalidProductLink");
+      }
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      toast.error(
+        nextErrors.mappingUrl ?? nextErrors.market ?? t("invalidMapping"),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
   function createMapping() {
-    if (isDuplicate || (isAutomatic && !mappingUrl.trim())) return;
+    if (!validateMapping()) return;
 
     startTransition(async () => {
       try {
@@ -176,8 +214,8 @@ function CreatePriceMappingModal({
           gearId,
           sourceKey,
           marketKey,
-          canonicalUrl: mappingUrl || null,
-          fetchUrl: mappingUrl || null,
+          canonicalUrl: mappingUrl.trim() || null,
+          fetchUrl: mappingUrl.trim() || null,
         });
         await onCreated(mapping.id, mapping.sourceKey);
         setMappingUrl("");
@@ -204,7 +242,17 @@ function CreatePriceMappingModal({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="price-source">Source</Label>
-            <Select value={sourceKey} onValueChange={setSourceKey}>
+            <Select
+              value={sourceKey}
+              onValueChange={(value) => {
+                setSourceKey(value);
+                setFieldErrors((current) => ({
+                  ...current,
+                  market: undefined,
+                  mappingUrl: undefined,
+                }));
+              }}
+            >
               <SelectTrigger id="price-source" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -225,8 +273,21 @@ function CreatePriceMappingModal({
           </div>
           <div className="space-y-2">
             <Label htmlFor="price-market">Market</Label>
-            <Select value={marketKey} onValueChange={setMarketKey}>
-              <SelectTrigger id="price-market" className="w-full">
+            <Select
+              value={marketKey}
+              onValueChange={(value) => {
+                setMarketKey(value);
+                setFieldErrors((current) => ({
+                  ...current,
+                  market: undefined,
+                }));
+              }}
+            >
+              <SelectTrigger
+                id="price-market"
+                className="w-full"
+                aria-invalid={Boolean(fieldErrors.market)}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -241,6 +302,11 @@ function CreatePriceMappingModal({
                 ))}
               </SelectContent>
             </Select>
+            {fieldErrors.market ? (
+              <p className="text-destructive text-xs" role="alert">
+                {fieldErrors.market}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="price-source-url">
@@ -252,16 +318,27 @@ function CreatePriceMappingModal({
               required={isAutomatic}
               aria-required={isAutomatic}
               value={mappingUrl}
-              onChange={(event) => setMappingUrl(event.target.value)}
+              onChange={(event) => {
+                setMappingUrl(event.target.value);
+                setFieldErrors((current) => ({
+                  ...current,
+                  mappingUrl: undefined,
+                }));
+              }}
+              aria-invalid={Boolean(fieldErrors.mappingUrl)}
               placeholder={
                 isAutomatic
                   ? "Required source product URL"
                   : "Source product URL (optional)"
               }
             />
-            {isAutomatic && !mappingUrl.trim() ? (
+            {fieldErrors.mappingUrl ? (
+              <p className="text-destructive text-xs" role="alert">
+                {fieldErrors.mappingUrl}
+              </p>
+            ) : isAutomatic && !mappingUrl.trim() ? (
               <p className="text-muted-foreground text-xs">
-                A product link is required for automatic sources.
+                {t("requiredLinkHelp")}
               </p>
             ) : null}
           </div>
@@ -274,9 +351,7 @@ function CreatePriceMappingModal({
             <Button
               type="button"
               aria-busy={isPending}
-              disabled={
-                isPending || isDuplicate || (isAutomatic && !mappingUrl.trim())
-              }
+              disabled={isPending}
               onClick={createMapping}
             >
               {isPending ? (
