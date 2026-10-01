@@ -1,7 +1,12 @@
-# Plan: Centralized Used-Price Display and Sorting
+# Plan: Centralized Used-Price Display and Sorting (Completed)
 
 > Source: docs/plans/used-price-system-idea.md and the pricing fallback
 > decisions from the implementation discussion.
+
+> Status: completed. This file preserves the implementation acceptance
+> criteria. The live behavior is documented in [`../prices/display.md`](../prices/display.md)
+> and [`../used-price-system.md`](../used-price-system.md); unchecked boxes
+> below are historical checklist artifacts, not remaining work.
 
 ## Goal
 

@@ -21,7 +21,7 @@ The central table that stores common gear information:
 - **Brand & Mount**: References to brands and mounts
   - `mountId`: Single mount reference (kept for backward compatibility, stores "primary" mount)
   - Mount relationships managed via `gear_mounts` junction table for multi-mount support
-- **Metadata**: Announced, release, and discontinued dates with precision; price; thumbnail URL; optional stored Open Graph URL; optional top-view URL; optional rear-view URL; and optional camera side-view URLs
+- **Metadata**: Announced, release, and discontinued dates with precision; MSRP compatibility fields and legacy MPB compatibility price; thumbnail URL; optional stored Open Graph URL; optional top-view URL; optional rear-view URL; and optional camera side-view URLs
   - `thumbnailUrl` applies to all gear
   - `ogImageUrl` stores a precomputed padded social-preview image derived from the front thumbnail, or from a lens orthographic image when no front image exists
   - `topViewUrl` applies to cameras and lenses; lens UI labels this as "Orthographic"
@@ -34,7 +34,7 @@ The central table that stores common gear information:
   - `HIDDEN`: emergency off switch; hidden from all public surfaces and direct public gear URLs return 404
   - Indexed in the `gear` table to support public browse/search/trending/popularity filters
 - **User Notes**: `notes` — `text[]` for unstructured notes
-- **Commerce**: `mpbMaxPriceUsdCents` remains available for MPB-specific pricing; used-price data and scheduled-fetch observability are documented in [`used-price-system.md`](./used-price-system.md)
+- **Commerce**: `mpbMaxPriceUsdCents` remains available for MPB-specific compatibility/fallback behavior. Source mappings, observations, estimates, projections, public display policy, and scheduled-fetch observability are documented in [`prices/`](./prices/) and summarized in [`used-price-system.md`](./used-price-system.md)
 - **Core Specs**: Physical dimensions (width, height, depth in mm), weight, and optional product lineage
   - `predecessorGearId` and `successorGearId` are nullable same-type self-references for the prior and next model respectively.
   - Editor relationship management keeps the two directions reciprocal. Deleting a referenced gear item sets the corresponding lineage field to `null`.

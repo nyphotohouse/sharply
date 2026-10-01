@@ -34,8 +34,8 @@ Returns a ranked page of published results:
 ```
 
 Search results include the same price fields as the full gear response. Prefer
-`estimatedUsedPrice` and `mpbMaxPriceUsdCents` are both available; the latter
-contains the MPB-specific USD price.
+`estimatedUsedPrice` for source-independent used-price estimates; the retained
+`mpbMaxPriceUsdCents` field contains the MPB-specific USD compatibility value.
 
 ### `GET /api/v1/search/suggestions`
 

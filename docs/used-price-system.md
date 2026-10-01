@@ -5,6 +5,13 @@ item. The public gear read path uses the denormalized `gear.used_price_projectio
 JSONB column, while source mappings, observations, and estimate history remain
 separate for editorial review and recalculation.
 
+This system replaces the former workflow of manually maintaining one opaque
+MPB maximum price on the gear row. The legacy `mpbMaxPriceUsdCents` column is
+intentionally retained for compatibility and fallback behavior, but it is not
+the authority for new used-price evidence. The transition and its tradeoffs
+are recorded in
+[`decisions/2026-10-01-source-independent-used-pricing.md`](decisions/2026-10-01-source-independent-used-pricing.md).
+
 Detailed domain guides now live under [`docs/prices/`](./prices/):
 [`fetching.md`](./prices/fetching.md) covers collection and scheduled runs,
 while [`display.md`](./prices/display.md) covers fallback resolution, public
@@ -46,10 +53,11 @@ stored; raw observations retain their precise minor-unit values.
 
 Public price consumers use the shared pure resolver in
 `src/lib/pricing/display-price.ts`. Its fallback order is an exact-market
-current or stale projection, MPB, current MSRP, launch MSRP, then no
-price. `getComparablePrice` uses the projection's typical value for sorting and
-rejects USD fallbacks for non-US market comparisons rather than silently
-mixing currencies. Formatting remains in `src/lib/mapping/price-map.ts`.
+current or stale projection, another-market projection when conversion is
+available, legacy MPB, current MSRP, launch MSRP, then no price.
+`getComparablePrice` uses the projection's typical value for sorting and does
+not silently mix currencies; explicit exchange rates are required for a
+non-native comparison. Formatting remains in `src/lib/mapping/price-map.ts`.
 
 The developer API exposes the same `estimatedUsedPrice` JSON on full gear and
 search responses. The `mpbMaxPriceUsdCents` field remains in those responses
@@ -59,15 +67,17 @@ for MPB-specific pricing; see
 ## Editorial workflow
 
 Editors and administrators open **Used Prices** from the existing staff dock on
-the gear detail page. The modal renders each active mapping as one full-width
-card with its latest result, freshness, and source/observation counts.
-Automatic mappings expose a refetch control and editable product link; only
-manual mappings expose the observation form. Automatic mappings must retain a
-product link, while manual links may be empty. New mappings use only the coarse
-US, UK, and EU market choices. `/admin/prices` includes an upcoming-fetch queue and a scheduled-run
-log. Run rows open a detail modal with aggregate results and per-mapping
-outcomes; manual refetches remain in the mapping's own status and are not
-mixed into the scheduled batch history.
+the gear detail page. The modal renders active automatic mappings as full-width
+cards with their latest result, freshness, and source/observation counts. The
+same modal provides the manual observation form; manual mappings are kept
+hidden from the automatic mapping cards and are reviewed through the recent
+observations/Needs Review surfaces on `/admin/prices`. Automatic mappings
+expose a refetch control and editable product link; automatic mappings must
+retain a product link, while manual mappings may be empty. New mappings use
+only the coarse US, UK, and EU market choices. `/admin/prices` includes an
+upcoming-fetch queue and a scheduled-run log. Run rows open a detail modal with
+aggregate results and per-mapping outcomes; manual refetches remain in the
+mapping's own status and are not mixed into the scheduled batch history.
 
 Changing a mapping's source link clears that mapping's existing observations and
 resets its fetch state, then rebuilds the gear projection so prices from the old
@@ -104,4 +114,7 @@ Germany hint only pins the site's shared /en-eu/ storefront.
 Database schema changes are intentionally backwards-compatible. The existing
 `mpbMaxPriceUsdCents` column remains available for MPB-specific pricing and is
 read through the shared resolver; callers should not implement their own direct
-MPB precedence.
+MPB precedence. The internal Discord price endpoint is a remaining legacy
+consumer and currently returns the retained MPB/MSRP fields rather than the
+new estimate projection; it is intentionally called out as follow-up work
+rather than being represented as fully migrated.

@@ -1,6 +1,10 @@
-# Used Price System Idea
+# Used Price System Idea (Historical)
 
-Status: implementation slice approved; modal-first editorial workflow is now the chosen UI shape.
+Status: superseded by the implemented system. This file preserves the
+original design context; it is not an implementation checklist. The current
+behavior is documented in [`../prices/`](../prices/), summarized in
+[`../used-price-system.md`](../used-price-system.md), and recorded in
+[`../decisions/2026-10-01-source-independent-used-pricing.md`](../decisions/2026-10-01-source-independent-used-pricing.md).
 
 ## Goal
 

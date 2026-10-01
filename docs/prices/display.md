@@ -19,10 +19,12 @@ and observation metadata together with the value.
 The fallback order is:
 
 1. Exact-market estimated used price, whether `current` or `stale`.
-2. MPB used price.
-3. Current MSRP.
-4. Launch MSRP.
-5. Unavailable.
+2. Another market's estimated used price, converted when an exchange-rate
+   snapshot is available.
+3. The legacy MPB used price.
+4. Current MSRP.
+5. Launch MSRP.
+6. Unavailable.
 
 Stale estimates intentionally remain ahead of MPB. A stale result is still an
 estimate from the new system and its stale status is available to the caller.
@@ -32,7 +34,9 @@ projection from another market or a USD legacy fallback. If callers provide
 the optional exchange-rate snapshot, that value is converted to the requested
 currency and formatted with a `~` prefix. The conversion is display-only: no
 converted value or rate is persisted, and the original source currency is
-returned when rates are unavailable.
+returned when rates are unavailable. A converted fallback retains
+`marketMatch: "fallback"` and `isConverted: true`, so callers can label it as
+approximate rather than presenting it as an exact local-market observation.
 
 The server obtains the shared USD/GBP/EUR rate snapshot with a 12-hour
 revalidated fetch and exposes the same cached result through the internal
@@ -85,12 +89,19 @@ Selection and formatting remain separate:
 
 Sorting remains market-native unless a caller explicitly passes exchange rates
 to `getComparablePrice`; display conversion does not silently change existing
-sort semantics.
+sort semantics. Browse and search server ordering intentionally use the
+US/USD SQL comparison helper and do not convert values during a query. A
+non-US comparison is numeric only when the caller explicitly supplies rates
+and the resolver can produce a value in the requested market currency.
 
 Public cards, gear pages, tables, lists, alternatives, metadata, and search
 sorting should use these shared helpers or a server read model that already
 uses them. They should not read `mpbMaxPriceUsdCents` directly or implement a
 second fallback order.
+
+The MPB purchase-link card is a deliberate exception: it may read the legacy
+MPB field to describe the MPB-specific source link. That is source-link
+presentation, not the primary gear-price resolver.
 
 The public read path is SSR-friendly: projections are loaded with the existing
 gear/search data and resolved synchronously. No client-only price fetch or

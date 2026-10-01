@@ -153,6 +153,20 @@ scheduled batch history.
   preserves history.
 - Restoring an archived mapping rebuilds its gear projection.
 
+## Legacy MPB migration boundary
+
+The old `gear.mpb_max_price_usd_cents` value is not a source observation. It
+has no reliable observed date, market-specific provenance, or evidence URL, so
+the application does not backfill it into `gear_price_observations`. It remains
+available as a compatibility fallback after all usable projections and before
+MSRP values. Editors should use Used Price Management for new evidence, even
+when the evidence came from MPB.
+
+The separate `gear.link_mpb` field is also retained for the affiliate/source
+link flow. A link stored there does not create a pricing mapping, observation,
+or estimate. A pricing mapping must be added explicitly with its market and
+source URL.
+
 These rules prevent observations from one product page being attributed to a
 different page while preserving useful history when an editor intentionally
 archives a populated mapping.
