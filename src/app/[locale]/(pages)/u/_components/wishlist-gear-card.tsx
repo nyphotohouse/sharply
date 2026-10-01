@@ -6,19 +6,27 @@ import { useState } from "react";
 import { getGearDisplayImageUrl } from "~/lib/gear/display-image";
 import { useGearDisplayName } from "~/lib/hooks/useGearDisplayName";
 import { getItemDisplayPrice } from "~/lib/mapping";
+import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
+import { useExchangeRates } from "~/lib/pricing/use-exchange-rates";
+import { useDisplayPriceMarket } from "~/lib/pricing/use-display-price-market";
 import { getBrandNameById } from "~/lib/mapping/brand-map";
 import type { GearItem } from "~/types/gear";
 import { WishlistRemoveButton } from "./wishlist-remove-button";
+import { ApproximatePriceText } from "~/components/gear/approximate-price-text";
 
 interface WishlistGearCardProps {
   item: GearItem;
   showRemoveButton: boolean;
+  market: PriceMarket;
+  initialExchangeRates?: ExchangeRates | null;
 }
 
 // Client-side wishlist card so we can optimistically hide on removal
 export function WishlistGearCard({
   item,
   showRemoveButton,
+  market,
+  initialExchangeRates,
 }: WishlistGearCardProps) {
   const [isRemoved, setIsRemoved] = useState(false);
 
@@ -28,9 +36,19 @@ export function WishlistGearCard({
     regionalAliases: item.regionalAliases,
   });
   const trimmedName = getDisplayName(displayName, brandName);
+  const exchangeRates = useExchangeRates(initialExchangeRates);
+  const activeMarket = useDisplayPriceMarket(market);
   const priceDisplay = getItemDisplayPrice(item, {
     style: "short",
     padWholeAmounts: true,
+    market: activeMarket,
+    locale:
+      activeMarket === "US"
+        ? "en-US"
+        : activeMarket === "UK"
+          ? "en-GB"
+          : "de-DE",
+    exchangeRates,
   });
   const displayImageUrl = getGearDisplayImageUrl(item);
   const brandLabel = brandName || "Unknown brand";
@@ -82,7 +100,7 @@ export function WishlistGearCard({
               {trimmedName}
             </h3>
             <span className="text-muted-foreground mt-auto text-sm font-medium">
-              {priceDisplay}
+              <ApproximatePriceText value={priceDisplay} />
             </span>
           </div>
         </div>

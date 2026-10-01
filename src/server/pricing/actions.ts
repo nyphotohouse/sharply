@@ -3,12 +3,14 @@ import "server-only";
 
 import { revalidateLocalizedPaths } from "~/server/revalidation";
 import {
-  addManualPriceObservationService,
+  addManualPriceObservationForGearService,
+  addPublicPriceObservationService,
   archiveOrDeletePriceMappingService,
   createPriceMappingService,
   recalculateGearPricingService,
   refreshPriceMappingService,
   restorePriceMappingService,
+  reviewPriceObservationService,
   updatePriceMappingLinkService,
 } from "./service";
 
@@ -33,11 +35,27 @@ export async function actionUpdatePriceMappingLink(
   return mapping;
 }
 
-export async function actionAddManualPriceObservation(
-  input: Parameters<typeof addManualPriceObservationService>[0],
+export async function actionAddManualPriceObservationForGear(
+  input: Parameters<typeof addManualPriceObservationForGearService>[0],
 ) {
-  const result = await addManualPriceObservationService(input);
+  const result = await addManualPriceObservationForGearService(input);
   revalidatePricingPaths(result.gear.slug);
+  return result;
+}
+
+export async function actionAddPublicPriceObservation(
+  input: Parameters<typeof addPublicPriceObservationService>[0],
+) {
+  const result = await addPublicPriceObservationService(input);
+  revalidatePricingPaths(result.gearSlug);
+  return result;
+}
+
+export async function actionReviewPriceObservation(
+  input: Parameters<typeof reviewPriceObservationService>[0],
+) {
+  const result = await reviewPriceObservationService(input);
+  revalidatePricingPaths(result.gearSlug);
   return result;
 }
 

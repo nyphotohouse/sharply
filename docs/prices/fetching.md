@@ -21,9 +21,12 @@ The current supported values are:
 | Market     | `US` → USD, `UK` → GBP, `EU` → EUR |
 | Price kind | `used_retail`                      |
 
-Automatic mappings require a product link. Manual mappings may omit a link and
-are maintained by editors through observations. The UI disables source/market
-combinations that already exist for the gear item.
+Automatic mappings require a product link. Manual mappings have no link and are
+created internally the first time an editor submits an observation for a gear
+item and market. Editors do not create or manage manual mappings directly in
+the UI; the mapping is reused for later observations. Manual mappings are also
+omitted from the visible mapping lists, admin mapping overview, upcoming queue,
+and scheduled fetch selection.
 
 Mappings retain source metadata and fetch state, including the canonical link,
 fetch link, active/disabled status, retry count, last fetch result, error, and
@@ -34,7 +37,8 @@ next scheduled fetch time.
 Adapters are selected by `sourceKey` in
 `src/server/pricing/adapters/index.ts`:
 
-- `manual` does not fetch. Editors add point or range observations directly.
+- `manual` does not fetch. Editors add point or range observations through the
+  separate manual-observation modal.
 - `mpb` and `kamerastore` use the shared JSON-LD adapter. It follows the
   mapping link, extracts a matching offer from `application/ld+json`, accepts a
   point price or a low/high range, and records the source page as evidence.
@@ -56,17 +60,24 @@ time and source URL as their evidence metadata.
 
 ## Observation and estimate lifecycle
 
-1. An editor creates a mapping from the Used Price Management modal. Automatic
-   mappings are fetched immediately after creation, while the newly created
-   card shows its loading state.
-2. A manual mapping receives an editor-entered point or range observation.
-   Automatic mappings receive observations from their adapter.
+1. An editor creates an automatic mapping from the Used Price Management modal.
+   Automatic mappings are fetched immediately after creation, while the newly
+   created card shows its loading state.
+2. An editor submits a point or range observation from the separate manual
+   observation modal. The service creates or reactivates the matching manual
+   mapping as part of that mutation, then stores the observation. Automatic
+   mappings receive observations from their adapter.
 3. The observation is stored in integer minor units. Raw observations retain
    their exact values; a range is represented by `lowMinor` and `highMinor`.
 4. The gear projection is rebuilt after a successful observation change. Valid
    observations are grouped by market and price kind.
-5. Range observations contribute their midpoint. The valid values produce the
-   25th percentile, median, and 75th percentile for low, typical, and high.
+5. The current estimate uses the five most recent valid observations, or all
+   available observations when fewer than five exist. Range observations
+   contribute their low and high bounds to the projected low and high values,
+   and their midpoint to typical. The sampled values use the 25th percentile,
+   median, and 75th percentile for low, typical, and high. Older observations
+   remain stored for future history views but no longer hold back the current
+   estimate indefinitely.
 6. Calculated values are rounded to the nearest whole unit of the market
    currency before the estimate and denormalized projection are stored. The
    estimator method version remains `1` during development.
@@ -77,6 +88,23 @@ time and source URL as their evidence metadata.
 Projection entries become `stale` after 30 days. Stale estimates remain valid
 for display and are intentionally preferred over MPB pricing; see
 [`display.md`](./display.md).
+
+## Public first-price contributions
+
+When an item has no valid active price observations, an authenticated public
+contributor can use the gear-page **Price missing, click to add** action. The
+form uses the user's currently selected market and currency; contributors do
+not choose a different market in that flow. Point and range values, optional
+evidence, and an optional note are stored using the same manual mapping and
+observation model as editorial entries.
+
+These observations are deliberately auto-accepted into the live estimate so a
+newly contributed item is useful immediately. The observation remains
+`status = VALID` with `needsReview = true`, which makes it visible in the
+recent-observations section of `/admin/prices`. Editors can approve it by
+clearing the flag or reject it by marking it invalid and rebuilding the item's
+projection. A valid observation already present at submission time prevents a
+second public seed contribution.
 
 ## Manual and scheduled refreshes
 
@@ -102,7 +130,9 @@ The `/admin/prices` page provides:
 
 - an overview of active mappings and their fetch state;
 - an upcoming-fetch queue;
-- a clickable scheduled-run log with aggregate and per-mapping details.
+- a clickable scheduled-run log with aggregate and per-mapping details;
+- a recent-observations queue with review warnings and approve/reject controls
+  for public first-price contributions.
 
 Manual refetches are shown on the mapping itself and are not mixed into the
 scheduled batch history.

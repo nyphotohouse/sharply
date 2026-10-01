@@ -862,6 +862,8 @@ export const gearPriceObservations = appSchema.table(
     evidenceUrl: text("evidence_url"),
     note: text("note"),
     status: gearPriceObservationStatusEnum("status").notNull().default("VALID"),
+    /** Public contributions are live immediately but remain visible to editors for review. */
+    needsReview: boolean("needs_review").notNull().default(false),
     createdById: varchar("created_by_id", { length: 255 }).references(
       () => users.id,
       { onDelete: "set null" },
@@ -871,6 +873,7 @@ export const gearPriceObservations = appSchema.table(
   (t) => [
     index("gear_price_observations_mapping_idx").on(t.mappingId),
     index("gear_price_observations_observed_idx").on(t.observedAt, t.status),
+    index("gear_price_observations_review_idx").on(t.needsReview, t.createdAt),
   ],
 );
 

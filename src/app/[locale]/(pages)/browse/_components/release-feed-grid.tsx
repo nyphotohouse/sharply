@@ -16,6 +16,9 @@ import { Button } from "~/components/ui/button";
 import { useIsMobile } from "~/hooks/use-mobile";
 import { getItemDisplayPrice } from "~/lib/mapping";
 import { getPageLoadingState } from "~/lib/pagination";
+import { useExchangeRates } from "~/lib/pricing/use-exchange-rates";
+import { useDisplayPriceMarket } from "~/lib/pricing/use-display-price-market";
+import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
 import type { BrowseFeedPage } from "~/types/browse";
 
 type ReleaseFeedGridProps = {
@@ -24,6 +27,8 @@ type ReleaseFeedGridProps = {
   brandSlug?: string;
   trendingBrandId?: string;
   trendingSlugs?: string[];
+  market: PriceMarket;
+  initialExchangeRates?: ExchangeRates | null;
 };
 
 const PAGE_SIZE = 12;
@@ -47,6 +52,8 @@ export function ReleaseFeedGrid({
   brandSlug,
   trendingBrandId,
   trendingSlugs,
+  market,
+  initialExchangeRates,
 }: ReleaseFeedGridProps) {
   const t = useTranslations("browsePage");
   const isMobile = useIsMobile();
@@ -58,6 +65,8 @@ export function ReleaseFeedGrid({
   const requestedPageRef = useRef<number | null>(null);
   const autoScrollLoadsRef = useRef(0);
   const [isRequestingMore, setIsRequestingMore] = useState(false);
+  const exchangeRates = useExchangeRates(initialExchangeRates);
+  const activeMarket = useDisplayPriceMarket(market);
 
   const buildKey = useCallback(
     (offset: number) => {
@@ -232,6 +241,14 @@ export function ReleaseFeedGrid({
               priceText={getItemDisplayPrice(g, {
                 style: "short",
                 padWholeAmounts: true,
+                market: activeMarket,
+                locale:
+                  activeMarket === "US"
+                    ? "en-US"
+                    : activeMarket === "UK"
+                      ? "en-GB"
+                      : "de-DE",
+                exchangeRates,
               })}
             />
           ))}

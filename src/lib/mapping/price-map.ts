@@ -8,6 +8,7 @@ import {
   MARKET_CURRENCY,
   type DisplayPrice,
   type DisplayPriceInput,
+  type ExchangeRates,
   type PriceMarket,
 } from "~/lib/pricing/display-price";
 
@@ -28,6 +29,7 @@ type FormatPriceOptions = {
 
 export type DisplayPriceFormatOptions = FormatPriceOptions & {
   locale?: string;
+  exchangeRates?: ExchangeRates | null;
 };
 
 type PriceableGear = Partial<
@@ -117,11 +119,18 @@ export function formatDisplayPrice(
     return PRICE_FALLBACK_TEXT;
   }
 
+  const prefix =
+    price.isConverted ||
+    (price.source === "USED_ESTIMATE" && price.value.kind === "POINT")
+      ? "~"
+      : "";
+
   const currency = price.currency;
+  const shouldPadWholeAmounts = price.isConverted ? false : padWholeAmounts;
   const formatValue = (amountMinor: number) =>
     formatDisplayPriceValue(amountMinor, currency, {
       style: "short",
-      padWholeAmounts,
+      padWholeAmounts: shouldPadWholeAmounts,
       locale,
     });
 
@@ -129,18 +138,18 @@ export function formatDisplayPrice(
     const range = `${formatValue(price.value.lowMinor)} – ${formatValue(
       price.value.highMinor,
     )}`;
-    return style === "short" ? range : `${range} ${currency}`;
+    return `${prefix}${style === "short" ? range : `${range} ${currency}`}`;
   }
 
   const formatted = formatDisplayPriceValue(price.value.amountMinor, currency, {
     style,
-    padWholeAmounts,
+    padWholeAmounts: shouldPadWholeAmounts,
     locale,
   });
   if (style === "long" && currency !== MARKET_CURRENCY.US) {
     return `${formatted} ${currency}`;
   }
-  return formatted;
+  return `${prefix}${formatted}`;
 }
 
 /**
@@ -156,12 +165,17 @@ export function getItemDisplayPrice(
     market = "US",
     range = false,
     locale = "en-US",
+    exchangeRates = null,
   }: DisplayPriceFormatOptions & {
     market?: PriceMarket;
     range?: boolean;
   } = {},
 ): string {
-  const price = getDisplayPrice(item as DisplayPriceInput, { market, range });
+  const price = getDisplayPrice(item as DisplayPriceInput, {
+    market,
+    range,
+    exchangeRates,
+  });
   return formatDisplayPrice(price, {
     style,
     padWholeAmounts,

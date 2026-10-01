@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import {
-  actionAddManualPriceObservation,
+  actionAddManualPriceObservationForGear,
   actionArchiveOrDeletePriceMapping,
   actionCreatePriceMapping,
   actionRecalculateGearPricing,
@@ -22,6 +22,7 @@ import {
   actionUpdatePriceMappingLink,
 } from "~/server/pricing/actions";
 import { fetchJson } from "~/lib/fetch-json";
+import { MARKET_CURRENCY, type PriceMarket } from "~/lib/pricing/display-price";
 import { formatPriceSourceLabel } from "~/lib/pricing/source-label";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -43,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
 type SerializedObservation = {
   id: string;
@@ -107,7 +109,6 @@ type PriceManagementResponse = {
 };
 
 const SOURCE_OPTIONS = [
-  ["manual", "Manual"],
   ["mpb", "MPB"],
   ["kamerastore", "KameraStore"],
 ] as const;
@@ -158,14 +159,13 @@ function CreatePriceMappingModal({
   const t = useTranslations("gearDetail.usedPriceManagement");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [sourceKey, setSourceKey] = useState("manual");
+  const [sourceKey, setSourceKey] = useState<string>(SOURCE_OPTIONS[0][0]);
   const [marketKey, setMarketKey] = useState("US");
   const [mappingUrl, setMappingUrl] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{
     market?: string;
     mappingUrl?: string;
   }>({});
-  const isAutomatic = sourceKey !== "manual";
   const hasExistingMapping = (source: string, market: string) =>
     mappings.some(
       (mapping) => mapping.sourceKey === source && mapping.marketKey === market,
@@ -180,7 +180,7 @@ function CreatePriceMappingModal({
     }
 
     const value = mappingUrl.trim();
-    if (isAutomatic && !value) {
+    if (!value) {
       nextErrors.mappingUrl = t("requiredLinkHelp");
     } else if (value) {
       try {
@@ -214,8 +214,8 @@ function CreatePriceMappingModal({
           gearId,
           sourceKey,
           marketKey,
-          canonicalUrl: mappingUrl.trim() || null,
-          fetchUrl: mappingUrl.trim() || null,
+          canonicalUrl: mappingUrl.trim(),
+          fetchUrl: mappingUrl.trim(),
         });
         await onCreated(mapping.id, mapping.sourceKey);
         setMappingUrl("");
@@ -309,14 +309,12 @@ function CreatePriceMappingModal({
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="price-source-url">
-              Product link{isAutomatic ? " *" : ""}
-            </Label>
+            <Label htmlFor="price-source-url">{t("productLink")} *</Label>
             <Input
               id="price-source-url"
               type="url"
-              required={isAutomatic}
-              aria-required={isAutomatic}
+              required
+              aria-required
               value={mappingUrl}
               onChange={(event) => {
                 setMappingUrl(event.target.value);
@@ -326,17 +324,13 @@ function CreatePriceMappingModal({
                 }));
               }}
               aria-invalid={Boolean(fieldErrors.mappingUrl)}
-              placeholder={
-                isAutomatic
-                  ? "Required source product URL"
-                  : "Source product URL (optional)"
-              }
+              placeholder={t("productLinkPlaceholder")}
             />
             {fieldErrors.mappingUrl ? (
               <p className="text-destructive text-xs" role="alert">
                 {fieldErrors.mappingUrl}
               </p>
-            ) : isAutomatic && !mappingUrl.trim() ? (
+            ) : !mappingUrl.trim() ? (
               <p className="text-muted-foreground text-xs">
                 {t("requiredLinkHelp")}
               </p>
@@ -358,6 +352,269 @@ function CreatePriceMappingModal({
                 <LoaderCircle className="size-4 animate-spin" />
               ) : null}
               Add Price Source
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddManualObservationModal({
+  gearId,
+  onAdded,
+}: {
+  gearId: string;
+  onAdded: () => Promise<void>;
+}) {
+  const t = useTranslations("gearDetail.usedPriceManagement");
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [marketKey, setMarketKey] = useState("US");
+  const [valueKind, setValueKind] = useState<"POINT" | "RANGE">("POINT");
+  const [amount, setAmount] = useState("");
+  const [lowAmount, setLowAmount] = useState("");
+  const [highAmount, setHighAmount] = useState("");
+  const [observedDate, setObservedDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
+  const [evidenceUrl, setEvidenceUrl] = useState("");
+  const [note, setNote] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    price?: string;
+    range?: string;
+  }>({});
+
+  function majorToMinor(value: string) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0
+      ? Math.round(parsed * 100)
+      : null;
+  }
+
+  function validateObservation() {
+    const nextErrors: typeof fieldErrors = {};
+    if (valueKind === "POINT") {
+      if (majorToMinor(amount) === null) {
+        nextErrors.price = t("manualObservationInvalid");
+      }
+    } else {
+      const lowMinor = majorToMinor(lowAmount);
+      const highMinor = majorToMinor(highAmount);
+      if (lowMinor === null || highMinor === null || highMinor < lowMinor) {
+        nextErrors.range = t("manualObservationRangeInvalid");
+      }
+    }
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast.error(nextErrors.price ?? nextErrors.range);
+      return false;
+    }
+    return true;
+  }
+
+  function resetForm() {
+    setValueKind("POINT");
+    setAmount("");
+    setLowAmount("");
+    setHighAmount("");
+    setObservedDate(new Date().toISOString().slice(0, 10));
+    setEvidenceUrl("");
+    setNote("");
+    setFieldErrors({});
+  }
+
+  function addObservation() {
+    if (!validateObservation()) return;
+    const pointMinor = majorToMinor(amount);
+    const lowMinor = majorToMinor(lowAmount);
+    const highMinor = majorToMinor(highAmount);
+
+    startTransition(async () => {
+      try {
+        await actionAddManualPriceObservationForGear({
+          gearId,
+          marketKey,
+          valueKind,
+          amountMinor: valueKind === "POINT" ? pointMinor : null,
+          lowMinor: valueKind === "RANGE" ? lowMinor : null,
+          highMinor: valueKind === "RANGE" ? highMinor : null,
+          observedAt: new Date(`${observedDate}T12:00:00Z`),
+          evidenceUrl: evidenceUrl.trim() || null,
+          note: note.trim() || null,
+        });
+        await onAdded();
+        setOpen(false);
+        resetForm();
+        toast.success(t("manualObservationSaved"));
+      } catch (error) {
+        toast.error(errorMessage(error));
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="secondary">
+          <BadgeDollarSign className="size-4" />
+          {t("addManualObservation")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("manualObservationTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("manualObservationDescription")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="manual-price-market">{t("market")}</Label>
+            <Select value={marketKey} onValueChange={setMarketKey}>
+              <SelectTrigger id="manual-price-market" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MARKET_OPTIONS.map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{t("price")}</Label>
+            <ToggleGroup
+              type="single"
+              value={valueKind}
+              onValueChange={(value) => {
+                if (value) {
+                  setValueKind(value as "POINT" | "RANGE");
+                  setFieldErrors({});
+                }
+              }}
+              variant="outline"
+              className="w-full"
+              aria-label={t("price")}
+            >
+              <ToggleGroupItem value="POINT" className="flex-1">
+                {t("pointPrice")}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="RANGE" className="flex-1">
+                {t("rangePrice")}
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          {valueKind === "POINT" ? (
+            <div className="space-y-2">
+              <Label htmlFor="manual-price-amount">{t("price")}</Label>
+              <Input
+                id="manual-price-amount"
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) => {
+                  setAmount(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    price: undefined,
+                  }));
+                }}
+                placeholder={t("pricePlaceholder")}
+                aria-invalid={Boolean(fieldErrors.price)}
+              />
+              {fieldErrors.price ? (
+                <p className="text-destructive text-xs" role="alert">
+                  {fieldErrors.price}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>{t("rangePrice")}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  inputMode="decimal"
+                  value={lowAmount}
+                  onChange={(event) => {
+                    setLowAmount(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      range: undefined,
+                    }));
+                  }}
+                  placeholder={t("lowPrice")}
+                  aria-label={t("lowPrice")}
+                  aria-invalid={Boolean(fieldErrors.range)}
+                />
+                <Input
+                  inputMode="decimal"
+                  value={highAmount}
+                  onChange={(event) => {
+                    setHighAmount(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      range: undefined,
+                    }));
+                  }}
+                  placeholder={t("highPrice")}
+                  aria-label={t("highPrice")}
+                  aria-invalid={Boolean(fieldErrors.range)}
+                />
+              </div>
+              {fieldErrors.range ? (
+                <p className="text-destructive text-xs" role="alert">
+                  {fieldErrors.range}
+                </p>
+              ) : null}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="manual-price-date">{t("observedDate")}</Label>
+            <Input
+              id="manual-price-date"
+              type="date"
+              value={observedDate}
+              onChange={(event) => setObservedDate(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="manual-price-evidence">
+              {t("evidenceUrlOptional")}
+            </Label>
+            <Input
+              id="manual-price-evidence"
+              type="url"
+              value={evidenceUrl}
+              onChange={(event) => setEvidenceUrl(event.target.value)}
+              placeholder={t("evidenceUrlPlaceholder")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="manual-price-note">{t("noteOptional")}</Label>
+            <Input
+              id="manual-price-note"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" disabled={isPending}>
+                {t("cancel")}
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              disabled={isPending}
+              aria-busy={isPending}
+              onClick={addObservation}
+            >
+              {isPending ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : null}
+              {t("addObservation")}
             </Button>
           </div>
         </div>
@@ -484,15 +741,6 @@ export function ManagePriceModal({
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("gearDetail.usedPriceManagement");
-  const [valueKind, setValueKind] = useState<"POINT" | "RANGE">("POINT");
-  const [amount, setAmount] = useState("");
-  const [lowAmount, setLowAmount] = useState("");
-  const [highAmount, setHighAmount] = useState("");
-  const [observedDate, setObservedDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
-  const [evidenceUrl, setEvidenceUrl] = useState("");
-  const [note, setNote] = useState("");
   const [initialFetchIds, setInitialFetchIds] = useState<string[]>([]);
 
   const { data, error, isLoading, mutate } = useSWR<PriceManagementResponse>(
@@ -502,12 +750,19 @@ export function ManagePriceModal({
   );
 
   const activeMappings = useMemo(
-    () => data?.mappings.filter((mapping) => mapping.status === "ACTIVE") ?? [],
+    () =>
+      data?.mappings.filter(
+        (mapping) =>
+          mapping.status === "ACTIVE" && mapping.sourceKey !== "manual",
+      ) ?? [],
     [data?.mappings],
   );
   const archivedMappings = useMemo(
     () =>
-      data?.mappings.filter((mapping) => mapping.status === "DISABLED") ?? [],
+      data?.mappings.filter(
+        (mapping) =>
+          mapping.status === "DISABLED" && mapping.sourceKey !== "manual",
+      ) ?? [],
     [data?.mappings],
   );
   const estimatesByKey = useMemo(
@@ -520,6 +775,17 @@ export function ManagePriceModal({
       ),
     [data?.estimates],
   );
+  const currentProjections = useMemo(
+    () =>
+      Object.entries(data?.gear.usedPriceProjection ?? {}).map(
+        ([marketKey, projection]) => ({
+          marketKey,
+          currency: MARKET_CURRENCY[marketKey as PriceMarket] ?? "USD",
+          projection,
+        }),
+      ),
+    [data?.gear.usedPriceProjection],
+  );
 
   function runMutation(task: () => Promise<void>) {
     startTransition(async () => {
@@ -529,34 +795,6 @@ export function ManagePriceModal({
       } catch (mutationError) {
         toast.error(errorMessage(mutationError));
       }
-    });
-  }
-
-  function addObservation(mappingId: string) {
-    const majorToMinor = (value: string) => {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) && parsed > 0
-        ? Math.round(parsed * 100)
-        : null;
-    };
-    const payload = {
-      mappingId,
-      valueKind,
-      amountMinor: valueKind === "POINT" ? majorToMinor(amount) : null,
-      lowMinor: valueKind === "RANGE" ? majorToMinor(lowAmount) : null,
-      highMinor: valueKind === "RANGE" ? majorToMinor(highAmount) : null,
-      observedAt: new Date(`${observedDate}T12:00:00Z`),
-      evidenceUrl: evidenceUrl || null,
-      note: note || null,
-    };
-    runMutation(async () => {
-      await actionAddManualPriceObservation(payload);
-      setAmount("");
-      setLowAmount("");
-      setHighAmount("");
-      setEvidenceUrl("");
-      setNote("");
-      toast.success("Observation added and projection recalculated");
     });
   }
 
@@ -661,17 +899,23 @@ export function ManagePriceModal({
                 <p className="text-muted-foreground mt-1 max-w-sm text-sm">
                   Add a price source to start tracking prices for this item.
                 </p>
-                <div className="mt-4">
+                <div className="mt-4 flex flex-col items-stretch gap-2">
                   <CreatePriceMappingModal
                     gearId={gearId}
                     mappings={data.mappings}
                     onCreated={handleMappingCreated}
                   />
+                  <AddManualObservationModal
+                    gearId={gearId}
+                    onAdded={async () => {
+                      await mutate();
+                    }}
+                  />
                 </div>
               </div>
             ) : null}
 
-            {data.mappings.length > 0 ? (
+            {activeMappings.length > 0 || currentProjections.length > 0 ? (
               <section
                 aria-labelledby="current-projection-title"
                 className="rounded-lg border p-4"
@@ -696,50 +940,40 @@ export function ManagePriceModal({
                     {t("recalculate")}
                   </Button>
                 </div>
-                {data.estimates.length > 0 ? (
+                {currentProjections.length > 0 ? (
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    {data.estimates.map((estimate) => (
-                      <div
-                        key={estimate.id}
-                        className="bg-muted/20 rounded-md p-3"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium">
-                            {estimate.marketKey}
-                          </span>
-                          <Badge variant="outline">{estimate.currency}</Badge>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                          <div>
-                            <p className="mt-2 text-lg font-semibold">
-                              {formatMinor(
-                                estimate.typicalMinor,
-                                estimate.currency,
-                              )}
-                            </p>
-                            {estimate.lowMinor !== estimate.highMinor ? (
-                              <p className="text-muted-foreground text-xs">
-                                {formatMinor(
-                                  estimate.lowMinor,
-                                  estimate.currency,
-                                )}{" "}
-                                –{" "}
-                                {formatMinor(
-                                  estimate.highMinor,
-                                  estimate.currency,
-                                )}
-                              </p>
-                            ) : null}
+                    {currentProjections.map(
+                      ({ marketKey, currency, projection }) => (
+                        <div
+                          key={marketKey}
+                          className="bg-muted/20 rounded-md p-3"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">{marketKey}</span>
+                            <Badge variant="outline">{currency}</Badge>
                           </div>
-                          <p className="text-muted-foreground text-xs sm:text-right">
-                            {estimate.observationCount} {t("observations")}
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                              <p className="mt-2 text-lg font-semibold">
+                                {formatMinor(projection.typical, currency)}
+                              </p>
+                              {projection.low !== projection.high ? (
+                                <p className="text-muted-foreground text-xs">
+                                  {formatMinor(projection.low, currency)} –{" "}
+                                  {formatMinor(projection.high, currency)}
+                                </p>
+                              ) : null}
+                            </div>
+                            <p className="text-muted-foreground text-xs sm:text-right">
+                              {projection.observationCount} {t("observations")}
+                            </p>
+                          </div>
+                          <p className="text-muted-foreground mt-2 text-xs">
+                            {t("asOf", { date: formatDate(projection.asOf) })}
                           </p>
                         </div>
-                        <p className="text-muted-foreground mt-2 text-xs">
-                          {t("asOf", { date: formatDate(estimate.asOf) })}
-                        </p>
-                      </div>
-                    ))}
+                      ),
+                    )}
                   </div>
                 ) : (
                   <p className="text-muted-foreground mt-4 text-sm">
@@ -755,7 +989,6 @@ export function ManagePriceModal({
                   const estimate = estimatesByKey.get(mappingPriceKey(mapping));
                   const projection =
                     data.gear.usedPriceProjection?.[mappingPriceKey(mapping)];
-                  const isManual = mapping.sourceKey === "manual";
                   const isInitialFetching = initialFetchIds.includes(
                     mapping.id,
                   );
@@ -791,18 +1024,16 @@ export function ManagePriceModal({
                               await mutate();
                             }}
                           />
-                          {!isManual ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={isPending || isInitialFetching}
-                              onClick={() => refreshMapping(mapping.id)}
-                            >
-                              <RefreshCw className="size-4" />
-                              {t("refetch")}
-                            </Button>
-                          ) : null}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isPending || isInitialFetching}
+                            onClick={() => refreshMapping(mapping.id)}
+                          >
+                            <RefreshCw className="size-4" />
+                            {t("refetch")}
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
@@ -863,103 +1094,22 @@ export function ManagePriceModal({
                               </p>
                             </div>
                           </div>
-
-                          {isManual ? (
-                            <div className="space-y-3 border-t pt-4">
-                              <div className="grid gap-2 sm:grid-cols-2">
-                                <Select
-                                  value={valueKind}
-                                  onValueChange={(value) =>
-                                    setValueKind(value as "POINT" | "RANGE")
-                                  }
-                                >
-                                  <SelectTrigger
-                                    id="price-value-kind"
-                                    className="w-full"
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="POINT">
-                                      Point price
-                                    </SelectItem>
-                                    <SelectItem value="RANGE">
-                                      Price range
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="date"
-                                  value={observedDate}
-                                  onChange={(event) =>
-                                    setObservedDate(event.target.value)
-                                  }
-                                />
-                                {valueKind === "POINT" ? (
-                                  <Input
-                                    inputMode="decimal"
-                                    value={amount}
-                                    onChange={(event) =>
-                                      setAmount(event.target.value)
-                                    }
-                                    placeholder="Price, e.g. 849"
-                                  />
-                                ) : (
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <Input
-                                      inputMode="decimal"
-                                      value={lowAmount}
-                                      onChange={(event) =>
-                                        setLowAmount(event.target.value)
-                                      }
-                                      placeholder="Low"
-                                    />
-                                    <Input
-                                      inputMode="decimal"
-                                      value={highAmount}
-                                      onChange={(event) =>
-                                        setHighAmount(event.target.value)
-                                      }
-                                      placeholder="High"
-                                    />
-                                  </div>
-                                )}
-                                <Input
-                                  value={evidenceUrl}
-                                  onChange={(event) =>
-                                    setEvidenceUrl(event.target.value)
-                                  }
-                                  placeholder="Evidence URL (optional)"
-                                />
-                                <Input
-                                  value={note}
-                                  onChange={(event) =>
-                                    setNote(event.target.value)
-                                  }
-                                  placeholder="Note (optional)"
-                                />
-                              </div>
-                              <Button
-                                type="button"
-                                className="w-full"
-                                disabled={isPending}
-                                onClick={() => addObservation(mapping.id)}
-                              >
-                                <BadgeDollarSign className="size-4" />
-                                Add observation
-                              </Button>
-                            </div>
-                          ) : null}
                         </>
                       )}
                     </div>
                   );
                 })}
-                <div>
+                <div className="flex flex-wrap gap-2">
                   <CreatePriceMappingModal
                     gearId={gearId}
                     mappings={data.mappings}
                     onCreated={handleMappingCreated}
+                  />
+                  <AddManualObservationModal
+                    gearId={gearId}
+                    onAdded={async () => {
+                      await mutate();
+                    }}
                   />
                 </div>
               </div>

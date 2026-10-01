@@ -1,5 +1,6 @@
 import type { SpecsTableSection } from "~/app/[locale]/(pages)/gear/_components/specs-table";
 import { VideoSpecsSummary } from "~/app/[locale]/(pages)/gear/_components/video/video-summary";
+import { ApproximatePriceText } from "~/components/gear/approximate-price-text";
 import { LensApertureProfile } from "~/components/lens-aperture-profile/lens-aperture-profile";
 import { normalizeApertureProfile } from "~/lib/lens-aperture-profile";
 import { Badge } from "~/components/ui/badge";
@@ -539,10 +540,14 @@ export const specDictionary: SpecSectionDef[] = [
         formatDisplay: (raw, item, _, __, locale) => {
           const displayPrice = getDisplayPrice(item, { market: "US" });
           if (displayPrice.source === "USED_ESTIMATE") {
-            return formatDisplayPrice(displayPrice, {
-              style: "long",
-              locale: locale === "en" ? "en-US" : (locale ?? "en-US"),
-            });
+            return (
+              <ApproximatePriceText
+                value={formatDisplayPrice(displayPrice, {
+                  style: "long",
+                  locale: locale === "en" ? "en-US" : (locale ?? "en-US"),
+                })}
+              />
+            );
           }
           return raw ? formatPrice(raw as number) : undefined;
         },

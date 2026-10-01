@@ -14,7 +14,7 @@ describe("used price estimator", () => {
     expect(PRICE_MARKETS).toEqual(["US", "UK", "EU"]);
   });
 
-  it("uses a range midpoint and quartiles for a deterministic estimate", () => {
+  it("uses range bounds and midpoint for a deterministic estimate", () => {
     const result = estimatePrice([
       {
         id: "one",
@@ -38,12 +38,112 @@ describe("used price estimator", () => {
     ]);
 
     expect(result).toEqual({
-      lowMinor: 90000,
+      lowMinor: 85000,
       typicalMinor: 100000,
-      highMinor: 120000,
+      highMinor: 125000,
       asOf: new Date("2026-01-03T00:00:00Z"),
       observationCount: 3,
       inputObservationIds: ["one", "two", "three"],
+    });
+  });
+
+  it("includes multiple same-day range observations", () => {
+    const result = estimatePrice([
+      {
+        id: "one",
+        valueKind: "RANGE",
+        lowMinor: 10000,
+        highMinor: 20000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+      },
+      {
+        id: "two",
+        valueKind: "RANGE",
+        lowMinor: 20000,
+        highMinor: 30000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+      },
+    ]);
+
+    expect(result).toMatchObject({
+      lowMinor: 12500,
+      typicalMinor: 20000,
+      highMinor: 27500,
+      observationCount: 2,
+      inputObservationIds: ["one", "two"],
+    });
+  });
+
+  it("keeps a single range as a range", () => {
+    const result = estimatePrice([
+      {
+        valueKind: "RANGE",
+        lowMinor: 10000,
+        highMinor: 20000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+      },
+    ]);
+
+    expect(result).toMatchObject({
+      lowMinor: 10000,
+      typicalMinor: 15000,
+      highMinor: 20000,
+      observationCount: 1,
+    });
+  });
+
+  it("uses the five most recent observations and excludes older values", () => {
+    const result = estimatePrice([
+      {
+        id: "old",
+        valueKind: "POINT",
+        amountMinor: 100000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+        createdAt: new Date("2026-01-01T12:00:00Z"),
+      },
+      {
+        id: "one",
+        valueKind: "POINT",
+        amountMinor: 10000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+        createdAt: new Date("2026-02-01T12:00:00Z"),
+      },
+      {
+        id: "two",
+        valueKind: "POINT",
+        amountMinor: 11000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+        createdAt: new Date("2026-03-01T12:00:00Z"),
+      },
+      {
+        id: "three",
+        valueKind: "POINT",
+        amountMinor: 12000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+        createdAt: new Date("2026-04-01T12:00:00Z"),
+      },
+      {
+        id: "four",
+        valueKind: "POINT",
+        amountMinor: 13000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+        createdAt: new Date("2026-05-01T12:00:00Z"),
+      },
+      {
+        id: "five",
+        valueKind: "POINT",
+        amountMinor: 14000,
+        observedAt: new Date("2026-10-01T12:00:00Z"),
+        createdAt: new Date("2026-06-01T12:00:00Z"),
+      },
+    ]);
+
+    expect(result).toMatchObject({
+      lowMinor: 11000,
+      typicalMinor: 12000,
+      highMinor: 13000,
+      observationCount: 5,
+      inputObservationIds: ["one", "two", "three", "four", "five"],
     });
   });
 

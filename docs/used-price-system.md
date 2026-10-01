@@ -19,7 +19,9 @@ broader architecture reference.
   history are archived and can be restored.
 - `gear_price_observations` stores immutable point or range observations in
   integer minor units. Currency is derived from the mapping market and also
-  stored on each observation for historical clarity.
+  stored on each observation for historical clarity. Public first-price
+  contributions remain valid immediately and set `needs_review` so editors can
+  review them later without a second proposal table.
 - `gear_price_estimates` stores versioned low/typical/high estimates plus the
   observation IDs used to produce them.
 - `gear_price_fetch_runs` stores each scheduled batch execution, including its
@@ -33,8 +35,11 @@ broader architecture reference.
   from the market key. Each entry includes freshness, source count, observation
   count, and estimator version metadata.
 
-The first estimator is deliberately deterministic: range observations use their
-midpoint, then the valid values produce the 25th percentile, median, and 75th
+The first estimator is deliberately deterministic and uses the five most
+recent valid observations, or all available observations when fewer than five
+exist. Range observations contribute their bounds to low/high and their
+midpoint to typical, while point observations contribute the same value to all
+three. The sampled values produce the 25th percentile, median, and 75th
 percentile as low, typical, and high. Calculated values are rounded to the
 nearest whole unit of the market currency before estimates and projections are
 stored; raw observations retain their precise minor-unit values.
@@ -73,6 +78,12 @@ Manual source refreshes are limited to one request per mapping every six hours
 for editors. Administrators can bypass that cooldown. A single daily cron job
 refreshes due active mappings in a bounded batch; it does not use per-row locks
 or leases because the application owns the scheduler.
+
+Public contributors can seed an item that has no valid active observations from
+the gear-page price header. The contribution uses the user's selected market,
+creates or reuses the hidden manual mapping, updates the estimate immediately,
+and appears with a review warning in `/admin/prices`. Approving only clears the
+warning; rejecting marks the observation invalid and rebuilds the projection.
 
 ## Server boundaries
 

@@ -112,7 +112,7 @@ describe("spec registry i18n", () => {
 
     expect(row).toMatchObject({
       label: "Estimated Used Price",
-      value: "$1,783 USD",
+      value: { props: { value: "~$1,783 USD" } },
     });
 
     const fallbackItem = createGearItem({ mpbMaxPriceUsdCents: 219900 });

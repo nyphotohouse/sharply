@@ -27,10 +27,24 @@ The fallback order is:
 Stale estimates intentionally remain ahead of MPB. A stale result is still an
 estimate from the new system and its stale status is available to the caller.
 
-There is no implicit currency conversion. A projection for `US`, `UK`, or `EU`
-is used only for that requested market. MSRP and MPB fallbacks are USD
-values and are marked as fallbacks; they are not treated as GBP or EUR
-comparables.
+When the requested market has no usable projection, the resolver may use a
+projection from another market or a USD legacy fallback. If callers provide
+the optional exchange-rate snapshot, that value is converted to the requested
+currency and formatted with a `~` prefix. The conversion is display-only: no
+converted value or rate is persisted, and the original source currency is
+returned when rates are unavailable.
+
+The server obtains the shared USD/GBP/EUR rate snapshot with a 12-hour
+revalidated fetch and exposes the same cached result through the internal
+`/api/pricing/exchange-rates` endpoint. Server-rendered pages pass the snapshot
+to this helper, while client-loaded card lists share the endpoint through SWR.
+This keeps the first render stable without making every browser talk to the
+external provider.
+
+The URL language and the user's market selection are separate concerns. The
+server derives the initial market from the route language, then hydrated gear
+pages and client-loaded cards follow Sharply's existing persisted market
+selection (`US`, `UK`, or `Europe`).
 
 ## Projection shape
 
@@ -68,6 +82,10 @@ Selection and formatting remain separate:
 - `formatDisplayPrice` formats the selected value for a locale.
 - `getComparablePrice` returns the typical point value and currency status for
   sorting/filtering.
+
+Sorting remains market-native unless a caller explicitly passes exchange rates
+to `getComparablePrice`; display conversion does not silently change existing
+sort semantics.
 
 Public cards, gear pages, tables, lists, alternatives, metadata, and search
 sorting should use these shared helpers or a server read model that already

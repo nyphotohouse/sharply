@@ -1,6 +1,7 @@
 import {
   listPriceFetchRunsService,
   listPriceOverviewService,
+  listRecentPriceObservationsService,
   listUpcomingPriceMappingsService,
 } from "~/server/pricing/service";
 import {
@@ -15,14 +16,19 @@ import {
   UpcomingPriceFetches,
   type UpcomingPriceFetchRow,
 } from "./upcoming-price-fetches";
+import {
+  RecentPriceObservations,
+  type RecentPriceObservationRow,
+} from "./recent-price-observations";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPricesPage() {
-  const [rows, runs, upcoming] = await Promise.all([
+  const [rows, runs, upcoming, observations] = await Promise.all([
     listPriceOverviewService(),
     listPriceFetchRunsService(),
     listUpcomingPriceMappingsService(),
+    listRecentPriceObservationsService(),
   ]);
   const serializedRows: PriceOverviewTableRow[] = rows.map((row) => ({
     ...row,
@@ -45,6 +51,14 @@ export default async function AdminPricesPage() {
     lastFetchedAt: row.lastFetchedAt?.toISOString() ?? null,
     nextFetchAt: row.nextFetchAt?.toISOString() ?? null,
   }));
+  const serializedObservations: RecentPriceObservationRow[] = observations.map(
+    (row) => ({
+      ...row,
+      observedAt: row.observedAt.toISOString(),
+      fetchedAt: row.fetchedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+    }),
+  );
   const activeCount = rows.filter((row) => row.status === "ACTIVE").length;
   const errorCount = rows.filter(
     (row) => row.lastFetchStatus === "ERROR",
@@ -75,6 +89,7 @@ export default async function AdminPricesPage() {
       </div>
       <UpcomingPriceFetches rows={serializedUpcoming} />
       <PriceFetchRunLog runs={serializedRuns} />
+      <RecentPriceObservations rows={serializedObservations} />
       <PriceOverviewTable rows={serializedRows} />
     </div>
   );

@@ -9,6 +9,7 @@ import {
   inArray,
   isNull,
   lte,
+  ne,
   or,
 } from "drizzle-orm";
 import { db } from "~/server/db";
@@ -19,6 +20,7 @@ import {
   gearPriceFetchRuns,
   gearPriceMappings,
   gearPriceObservations,
+  users,
 } from "~/server/db/schema";
 import type { GearPriceProjection } from "~/server/db/schema";
 import type {
@@ -48,7 +50,12 @@ export async function getPriceManagementData(gearId: string) {
     db
       .select()
       .from(gearPriceMappings)
-      .where(eq(gearPriceMappings.gearId, gearId))
+      .where(
+        and(
+          eq(gearPriceMappings.gearId, gearId),
+          ne(gearPriceMappings.sourceKey, "manual"),
+        ),
+      )
       .orderBy(
         asc(gearPriceMappings.marketKey),
         asc(gearPriceMappings.sourceKey),
@@ -69,7 +76,11 @@ export async function getPriceManagementData(gearId: string) {
       })
       .from(gearPriceEstimates)
       .where(eq(gearPriceEstimates.gearId, gearId))
-      .orderBy(desc(gearPriceEstimates.asOf)),
+      .orderBy(
+        desc(gearPriceEstimates.asOf),
+        desc(gearPriceEstimates.createdAt),
+        desc(gearPriceEstimates.id),
+      ),
   ]);
 
   const mappingIds = mappings.map((mapping) => mapping.id);
@@ -210,6 +221,7 @@ export async function addPriceObservationData(input: {
   evidenceUrl?: string | null;
   note?: string | null;
   fetchedAt?: Date | null;
+  needsReview?: boolean;
 }) {
   const [observation] = await db
     .insert(gearPriceObservations)
@@ -227,11 +239,199 @@ export async function addPriceObservationData(input: {
       fetchedAt: input.fetchedAt ?? null,
       evidenceUrl: input.evidenceUrl ?? null,
       note: input.note ?? null,
+      needsReview: input.needsReview ?? false,
     })
     .returning();
 
   if (!observation) throw new Error("Unable to add price observation");
   return observation;
+}
+
+/**
+ * Creates the first public price observation without introducing a separate
+ * proposal table. The observation is valid immediately, while needsReview
+ * gives editors a lightweight moderation queue.
+ */
+export async function addPublicPriceObservationData(input: {
+  gearId: string;
+  marketKey: string;
+  createdById: string;
+  currency: string;
+  valueKind: "POINT" | "RANGE";
+  amountMinor?: number | null;
+  lowMinor?: number | null;
+  highMinor?: number | null;
+  observedAt: Date;
+  evidenceUrl?: string | null;
+  note?: string | null;
+}) {
+  return db.transaction(async (tx) => {
+    const [gearRow] = await tx
+      .select({ id: gear.id, slug: gear.slug })
+      .from(gear)
+      .where(eq(gear.id, input.gearId))
+      .limit(1);
+
+    if (!gearRow) {
+      throw Object.assign(new Error("Gear item not found"), { status: 404 });
+    }
+
+    const [existing] = await tx
+      .select({ count: count() })
+      .from(gearPriceObservations)
+      .innerJoin(
+        gearPriceMappings,
+        eq(gearPriceMappings.id, gearPriceObservations.mappingId),
+      )
+      .where(
+        and(
+          eq(gearPriceMappings.gearId, input.gearId),
+          eq(gearPriceMappings.status, "ACTIVE"),
+          eq(gearPriceObservations.status, "VALID"),
+        ),
+      );
+
+    if (Number(existing?.count ?? 0) > 0) {
+      return {
+        created: false as const,
+        gearId: gearRow.id,
+        gearSlug: gearRow.slug,
+      };
+    }
+
+    const now = new Date();
+    const [mapping] = await tx
+      .insert(gearPriceMappings)
+      .values({
+        gearId: input.gearId,
+        sourceKey: "manual",
+        marketKey: input.marketKey,
+        priceKind: "used_retail",
+        createdById: input.createdById,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [
+          gearPriceMappings.gearId,
+          gearPriceMappings.sourceKey,
+          gearPriceMappings.marketKey,
+          gearPriceMappings.priceKind,
+        ],
+        set: {
+          status: "ACTIVE",
+          updatedAt: now,
+        },
+      })
+      .returning({ id: gearPriceMappings.id });
+
+    if (!mapping) throw new Error("Unable to create public price mapping");
+
+    const [observation] = await tx
+      .insert(gearPriceObservations)
+      .values({
+        mappingId: mapping.id,
+        createdById: input.createdById,
+        currency: input.currency,
+        valueKind: input.valueKind,
+        amountMinor: input.amountMinor ?? null,
+        lowMinor: input.lowMinor ?? null,
+        highMinor: input.highMinor ?? null,
+        condition: "unknown",
+        availability: "available",
+        observedAt: input.observedAt,
+        evidenceUrl: input.evidenceUrl ?? null,
+        note: input.note ?? null,
+        needsReview: true,
+      })
+      .returning();
+
+    if (!observation) {
+      throw new Error("Unable to add public price observation");
+    }
+
+    return {
+      created: true as const,
+      gearId: gearRow.id,
+      gearSlug: gearRow.slug,
+      observation,
+    };
+  });
+}
+
+export async function listRecentPriceObservationsData(limit = 30) {
+  return db
+    .select({
+      id: gearPriceObservations.id,
+      gearId: gear.id,
+      gearName: gear.name,
+      gearSlug: gear.slug,
+      mappingId: gearPriceMappings.id,
+      sourceKey: gearPriceMappings.sourceKey,
+      marketKey: gearPriceMappings.marketKey,
+      priceKind: gearPriceMappings.priceKind,
+      valueKind: gearPriceObservations.valueKind,
+      amountMinor: gearPriceObservations.amountMinor,
+      lowMinor: gearPriceObservations.lowMinor,
+      highMinor: gearPriceObservations.highMinor,
+      currency: gearPriceObservations.currency,
+      observedAt: gearPriceObservations.observedAt,
+      fetchedAt: gearPriceObservations.fetchedAt,
+      evidenceUrl: gearPriceObservations.evidenceUrl,
+      note: gearPriceObservations.note,
+      status: gearPriceObservations.status,
+      needsReview: gearPriceObservations.needsReview,
+      createdAt: gearPriceObservations.createdAt,
+      createdById: gearPriceObservations.createdById,
+      createdByName: users.name,
+      createdByEmail: users.email,
+    })
+    .from(gearPriceObservations)
+    .innerJoin(
+      gearPriceMappings,
+      eq(gearPriceMappings.id, gearPriceObservations.mappingId),
+    )
+    .innerJoin(gear, eq(gear.id, gearPriceMappings.gearId))
+    .leftJoin(users, eq(users.id, gearPriceObservations.createdById))
+    .orderBy(
+      desc(gearPriceObservations.needsReview),
+      desc(gearPriceObservations.createdAt),
+    )
+    .limit(limit);
+}
+
+export async function reviewPriceObservationData(input: {
+  observationId: string;
+  decision: "APPROVE" | "REJECT";
+}) {
+  return db.transaction(async (tx) => {
+    const [context] = await tx
+      .select({
+        gearId: gear.id,
+        gearSlug: gear.slug,
+      })
+      .from(gearPriceObservations)
+      .innerJoin(
+        gearPriceMappings,
+        eq(gearPriceMappings.id, gearPriceObservations.mappingId),
+      )
+      .innerJoin(gear, eq(gear.id, gearPriceMappings.gearId))
+      .where(eq(gearPriceObservations.id, input.observationId))
+      .limit(1);
+
+    if (!context) return null;
+
+    const [observation] = await tx
+      .update(gearPriceObservations)
+      .set({
+        needsReview: false,
+        status: input.decision === "REJECT" ? "INVALID" : "VALID",
+      })
+      .where(eq(gearPriceObservations.id, input.observationId))
+      .returning();
+
+    if (!observation) return null;
+    return { ...context, observation };
+  });
 }
 
 export async function archiveOrDeletePriceMappingData(mappingId: string) {
@@ -321,6 +521,7 @@ export async function updatePriceMappingFetchData(input: {
           fetchedAt: input.fetchedAt,
           evidenceUrl: observation.evidenceUrl ?? null,
           note: observation.note ?? null,
+          needsReview: false,
         })),
       );
     }
@@ -366,6 +567,7 @@ export async function listValidPriceObservationsForGearData(gearId: string) {
       highMinor: gearPriceObservations.highMinor,
       currency: gearPriceObservations.currency,
       observedAt: gearPriceObservations.observedAt,
+      createdAt: gearPriceObservations.createdAt,
     })
     .from(gearPriceObservations)
     .innerJoin(
@@ -379,7 +581,11 @@ export async function listValidPriceObservationsForGearData(gearId: string) {
         eq(gearPriceObservations.status, "VALID"),
       ),
     )
-    .orderBy(desc(gearPriceObservations.observedAt));
+    .orderBy(
+      desc(gearPriceObservations.observedAt),
+      desc(gearPriceObservations.createdAt),
+      desc(gearPriceObservations.id),
+    );
 }
 
 export async function createPriceEstimateData(input: {
@@ -422,6 +628,7 @@ export async function listDuePriceMappingsData(limit: number) {
     .where(
       and(
         eq(gearPriceMappings.status, "ACTIVE"),
+        ne(gearPriceMappings.sourceKey, "manual"),
         or(
           isNull(gearPriceMappings.nextFetchAt),
           lte(gearPriceMappings.nextFetchAt, new Date()),
@@ -536,7 +743,12 @@ export async function listUpcomingPriceMappingsData(limit = 8) {
     })
     .from(gearPriceMappings)
     .innerJoin(gear, eq(gear.id, gearPriceMappings.gearId))
-    .where(eq(gearPriceMappings.status, "ACTIVE"))
+    .where(
+      and(
+        eq(gearPriceMappings.status, "ACTIVE"),
+        ne(gearPriceMappings.sourceKey, "manual"),
+      ),
+    )
     .orderBy(asc(gearPriceMappings.nextFetchAt))
     .limit(limit);
 }
@@ -559,6 +771,7 @@ export async function listPriceOverviewData(): Promise<PriceOverviewRow[]> {
       })
       .from(gearPriceMappings)
       .innerJoin(gear, eq(gear.id, gearPriceMappings.gearId))
+      .where(ne(gearPriceMappings.sourceKey, "manual"))
       .orderBy(desc(gearPriceMappings.updatedAt)),
     db
       .select({ mappingId: gearPriceObservations.mappingId, count: count() })

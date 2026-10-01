@@ -5,6 +5,7 @@ import { requireRole } from "~/lib/auth/auth-helpers";
 import { getSessionOrThrow } from "~/server/auth";
 import {
   addPriceObservationData,
+  addPublicPriceObservationData,
   archiveOrDeletePriceMappingData,
   completePriceFetchRunData,
   createPriceMappingData,
@@ -13,10 +14,12 @@ import {
   getPriceMappingData,
   listDuePriceMappingsData,
   listRecentPriceFetchRunsData,
+  listRecentPriceObservationsData,
   listPriceOverviewData,
   listUpcomingPriceMappingsData,
   recordPriceFetchRunItemData,
   restorePriceMappingData,
+  reviewPriceObservationData,
   updatePriceMappingLinkData,
   updatePriceMappingFetchData,
 } from "./data";
@@ -91,6 +94,12 @@ export async function listUpcomingPriceMappingsService(limit = 8) {
   return listUpcomingPriceMappingsData(Math.min(Math.max(limit, 1), 50));
 }
 
+export async function listRecentPriceObservationsService(limit = 30) {
+  const session = await getSessionOrThrow();
+  requirePricingRole(session.user);
+  return listRecentPriceObservationsData(Math.min(Math.max(limit, 1), 100));
+}
+
 export async function createPriceMappingService(input: {
   gearId: string;
   sourceKey: string;
@@ -107,6 +116,12 @@ export async function createPriceMappingService(input: {
     PRICE_SOURCE_KEYS,
     "Unknown price source.",
   );
+  if (input.sourceKey === "manual") {
+    throw Object.assign(
+      new Error("Manual mappings are created when adding an observation."),
+      { status: 400 },
+    );
+  }
   assertAllowedValue(input.marketKey, PRICE_MARKETS, "Unknown price market.");
   const priceKind = input.priceKind?.trim() || "used_retail";
   if (priceKind !== "used_retail") {
@@ -139,8 +154,7 @@ export async function createPriceMappingService(input: {
   });
 }
 
-export async function addManualPriceObservationService(input: {
-  mappingId: string;
+type ManualPriceObservationInput = {
   valueKind: "POINT" | "RANGE";
   amountMinor?: number | null;
   lowMinor?: number | null;
@@ -150,15 +164,14 @@ export async function addManualPriceObservationService(input: {
   observedAt?: Date;
   evidenceUrl?: string | null;
   note?: string | null;
-}) {
-  const session = await getSessionOrThrow();
-  requirePricingRole(session.user);
-  const mapping = await getPriceMappingData(input.mappingId);
-  if (!mapping) {
-    throw Object.assign(new Error("Price mapping not found"), { status: 404 });
-  }
+};
 
-  const currency = inferCurrencyFromMarket(mapping.marketKey);
+function validateManualObservation(input: ManualPriceObservationInput) {
+  if (input.valueKind !== "POINT" && input.valueKind !== "RANGE") {
+    throw Object.assign(new Error("Unknown price value kind."), {
+      status: 400,
+    });
+  }
   const observedAt = input.observedAt ?? new Date();
   const amountMinor = input.amountMinor ?? null;
   const lowMinor = input.lowMinor ?? null;
@@ -194,9 +207,21 @@ export async function addManualPriceObservationService(input: {
     });
   }
 
+  return { observedAt, amountMinor, lowMinor, highMinor };
+}
+
+async function addManualObservationToMapping(
+  mapping: NonNullable<Awaited<ReturnType<typeof getPriceMappingData>>>,
+  input: ManualPriceObservationInput,
+  createdById: string,
+) {
+  const currency = inferCurrencyFromMarket(mapping.marketKey);
+  const { observedAt, amountMinor, lowMinor, highMinor } =
+    validateManualObservation(input);
+
   await addPriceObservationData({
-    mappingId: input.mappingId,
-    createdById: session.user.id,
+    mappingId: mapping.id,
+    createdById,
     currency,
     valueKind: input.valueKind,
     amountMinor,
@@ -211,6 +236,89 @@ export async function addManualPriceObservationService(input: {
 
   await rebuildGearPriceProjection(mapping.gearId);
   return getPriceManagementData(mapping.gearId);
+}
+
+export async function addManualPriceObservationForGearService(
+  input: {
+    gearId: string;
+    marketKey: string;
+  } & ManualPriceObservationInput,
+) {
+  const session = await getSessionOrThrow();
+  requirePricingRole(session.user);
+  assertAllowedValue(input.marketKey, PRICE_MARKETS, "Unknown price market.");
+  validateManualObservation(input);
+
+  const mapping = await createPriceMappingData({
+    gearId: input.gearId,
+    sourceKey: "manual",
+    marketKey: input.marketKey,
+    priceKind: "used_retail",
+    createdById: session.user.id,
+  });
+
+  return addManualObservationToMapping(mapping, input, session.user.id);
+}
+
+/**
+ * Lets an authenticated contributor seed an item with its first price. It is
+ * intentionally separate from the editor-only manual observation path so the
+ * public contribution can be live immediately while remaining reviewable.
+ */
+export async function addPublicPriceObservationService(
+  input: {
+    gearId: string;
+    marketKey: string;
+  } & ManualPriceObservationInput,
+) {
+  const session = await getSessionOrThrow();
+  assertAllowedValue(input.marketKey, PRICE_MARKETS, "Unknown price market.");
+  const { observedAt, amountMinor, lowMinor, highMinor } =
+    validateManualObservation(input);
+
+  const result = await addPublicPriceObservationData({
+    gearId: input.gearId,
+    marketKey: input.marketKey,
+    createdById: session.user.id,
+    currency: inferCurrencyFromMarket(input.marketKey),
+    valueKind: input.valueKind,
+    amountMinor,
+    lowMinor,
+    highMinor,
+    observedAt,
+    evidenceUrl: normalizeOptionalUrl(input.evidenceUrl),
+    note: input.note?.trim() || null,
+  });
+
+  if (!result.created) {
+    throw Object.assign(new Error("PRICE_ALREADY_EXISTS"), {
+      status: 409,
+      code: "PRICE_ALREADY_EXISTS",
+    });
+  }
+
+  const projection = await rebuildGearPriceProjection(result.gearId);
+  return { ...result, projection };
+}
+
+export async function reviewPriceObservationService(input: {
+  observationId: string;
+  decision: "APPROVE" | "REJECT";
+}) {
+  const session = await getSessionOrThrow();
+  requirePricingRole(session.user);
+  const result = await reviewPriceObservationData(input);
+  if (!result) {
+    throw Object.assign(new Error("Price observation not found"), {
+      status: 404,
+    });
+  }
+
+  if (input.decision === "REJECT") {
+    await rebuildGearPriceProjection(result.gearId);
+  }
+
+  return result;
 }
 
 export async function updatePriceMappingLinkService(input: {

@@ -11,6 +11,9 @@ import {
 } from "~/components/table";
 import { Empty, EmptyDescription, EmptyTitle } from "~/components/ui/empty";
 import { getItemDisplayPrice } from "~/lib/mapping/price-map";
+import { useExchangeRates } from "~/lib/pricing/use-exchange-rates";
+import { useDisplayPriceMarket } from "~/lib/pricing/use-display-price-market";
+import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
 import type { SearchResult } from "~/types/search-results";
 import { SearchResultsSkeleton } from "./search-results-skeleton";
 
@@ -27,6 +30,8 @@ type SearchResultsProps = {
   isLoadingMore?: boolean;
   isReachingEnd?: boolean;
   view: GearResultsView;
+  market: PriceMarket;
+  initialExchangeRates?: ExchangeRates | null;
 };
 export function SearchResults(props: SearchResultsProps) {
   const {
@@ -37,7 +42,11 @@ export function SearchResults(props: SearchResultsProps) {
     isLoadingMore = false,
     isReachingEnd = false,
     view,
+    market,
+    initialExchangeRates,
   } = props;
+  const exchangeRates = useExchangeRates(initialExchangeRates);
+  const activeMarket = useDisplayPriceMarket(market);
   const construction = useTranslations("underConstructionPage");
   const trendingSet = new Set(trendingSlugs);
 
@@ -92,7 +101,7 @@ export function SearchResults(props: SearchResultsProps) {
                   msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents ?? null,
                   mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents ?? null,
                 },
-                { style: "short" },
+                { style: "short", market: activeMarket, exchangeRates },
               )}
               releaseDate={item.releaseDate ?? null}
               releaseDatePrecision={(item.releaseDatePrecision as any) ?? null}

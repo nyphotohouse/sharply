@@ -31,6 +31,9 @@ import {
 import type { RouteScope } from "~/lib/browse/routing";
 import { getItemDisplayPrice } from "~/lib/mapping";
 import { getPageLoadingState } from "~/lib/pagination";
+import { useExchangeRates } from "~/lib/pricing/use-exchange-rates";
+import { useDisplayPriceMarket } from "~/lib/pricing/use-display-price-market";
+import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
 import type { BrowseListPage } from "~/types/browse";
 
 type BrowseResultsGridProps = {
@@ -40,6 +43,8 @@ type BrowseResultsGridProps = {
   trendingBrandId?: string;
   trendingMountId?: string;
   trendingSlugs?: string[];
+  market: PriceMarket;
+  initialExchangeRates?: ExchangeRates | null;
 };
 
 const fetcher = async (url: string) => {
@@ -67,6 +72,8 @@ export function BrowseResultsGrid({
   trendingBrandId,
   trendingMountId,
   trendingSlugs,
+  market,
+  initialExchangeRates,
 }: BrowseResultsGridProps) {
   const { view, setView } = useGearResultsView();
   return (
@@ -80,6 +87,8 @@ export function BrowseResultsGrid({
         trendingBrandId={trendingBrandId}
         trendingMountId={trendingMountId}
         trendingSlugs={trendingSlugs}
+        market={market}
+        initialExchangeRates={initialExchangeRates}
         view={view}
         setView={setView}
       />
@@ -94,10 +103,14 @@ function BrowseResultsGridContent({
   trendingBrandId,
   trendingMountId,
   trendingSlugs,
+  initialExchangeRates,
+  market,
   view,
   setView,
 }: BrowseResultsGridProps & ReturnType<typeof useGearResultsView>) {
   const t = useTranslations("browsePage");
+  const exchangeRates = useExchangeRates(initialExchangeRates);
+  const activeMarket = useDisplayPriceMarket(market);
   const isMobile = useIsMobile();
   const rawPathname = usePathname();
   const searchParams = useSearchParams();
@@ -366,6 +379,14 @@ function BrowseResultsGridContent({
               priceText={getItemDisplayPrice(g, {
                 style: "short",
                 padWholeAmounts: true,
+                market: activeMarket,
+                locale:
+                  activeMarket === "US"
+                    ? "en-US"
+                    : activeMarket === "UK"
+                      ? "en-GB"
+                      : "de-DE",
+                exchangeRates,
               })}
             />
           ))}

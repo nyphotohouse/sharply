@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   getComparablePrice,
   getDisplayPrice,
+  getPriceMarketForLocale,
   type DisplayPriceInput,
 } from "~/lib/pricing/display-price";
+import { formatDisplayPrice } from "~/lib/mapping/price-map";
 
 const projection = {
   US: {
@@ -19,6 +21,12 @@ const projection = {
 };
 
 describe("display price resolution", () => {
+  const exchangeRates = {
+    base: "EUR",
+    date: "2026-09-29",
+    rates: { USD: 1.1, GBP: 0.86 },
+  };
+
   it("uses an exact current estimate and supports its real range", () => {
     const input: DisplayPriceInput = { usedPriceProjection: projection };
 
@@ -39,6 +47,17 @@ describe("display price resolution", () => {
         },
       },
     );
+    expect(formatDisplayPrice(getDisplayPrice(input, { market: "US" }))).toBe(
+      "~$1,783 USD",
+    );
+    expect(
+      formatDisplayPrice(
+        getDisplayPrice(input, { market: "US", range: true }),
+        {
+          style: "short",
+        },
+      ),
+    ).toBe("$1,600 – $1,950");
   });
 
   it.each([
@@ -83,6 +102,67 @@ describe("display price resolution", () => {
       status: "stale",
       value: { kind: "POINT", amountMinor: 178300 },
     });
+  });
+
+  it("uses another market as a converted display fallback", () => {
+    const input: DisplayPriceInput = {
+      usedPriceProjection: { EU: projection.US },
+    };
+
+    const price = getDisplayPrice(input, {
+      market: "UK",
+      exchangeRates,
+    });
+
+    expect(price).toMatchObject({
+      market: "EU",
+      marketMatch: "fallback",
+      currency: "GBP",
+      isConverted: true,
+      value: { kind: "POINT", amountMinor: 153300 },
+    });
+    expect(
+      formatDisplayPrice(price, {
+        style: "short",
+        locale: "en-GB",
+        padWholeAmounts: true,
+      }),
+    ).toBe("~£1,533");
+  });
+
+  it("keeps the original source currency when rates are unavailable", () => {
+    const price = getDisplayPrice(
+      { usedPriceProjection: { EU: projection.US } },
+      { market: "UK" },
+    );
+
+    expect(price).toMatchObject({
+      currency: "EUR",
+      isConverted: false,
+      value: { kind: "POINT", amountMinor: 178300 },
+    });
+  });
+
+  it("converts legacy USD fallbacks when rates are provided", () => {
+    expect(
+      getComparablePrice(
+        { mpbMaxPriceUsdCents: 120000 },
+        { market: "EU", exchangeRates },
+      ),
+    ).toMatchObject({
+      currency: "EUR",
+      valueMinor: 109100,
+      comparable: true,
+    });
+  });
+
+  it.each([
+    ["en", "US"],
+    ["en-gb", "UK"],
+    ["de", "EU"],
+    ["fr", "EU"],
+  ] as const)("maps %s to the %s price market", (locale, market) => {
+    expect(getPriceMarketForLocale(locale)).toBe(market);
   });
 
   it("falls back through MPB, current MSRP, and launch MSRP", () => {
