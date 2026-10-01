@@ -9,6 +9,16 @@ import {
   updateBrandSortOrdersData,
 } from "./data";
 
+async function editorSession() {
+  const session = await getSessionOrThrow();
+  if (!requireRole(session.user, ["EDITOR"])) {
+    throw Object.assign(new Error("Editor access required"), {
+      status: 403,
+    });
+  }
+  return session;
+}
+
 async function adminSession() {
   const session = await getSessionOrThrow();
   if (!requireRole(session.user, ["ADMIN"])) {
@@ -35,7 +45,7 @@ function normalizeSortOrder(value: number | null) {
 }
 
 export async function fetchAdminBrands(): Promise<AdminBrand[]> {
-  await adminSession();
+  await editorSession();
   return fetchAdminBrandsData();
 }
 

@@ -36,12 +36,21 @@ describe("admin brands service", () => {
     ]);
   });
 
-  it("rejects non-admin access", async () => {
+  it("allows editors to read brands", async () => {
+    const editor = { id: "editor-1", role: "EDITOR" };
+    authMocks.getSessionOrThrow.mockResolvedValue({ user: editor });
+
+    await expect(fetchAdminBrands()).resolves.toEqual([]);
+    expect(authHelperMocks.requireRole).toHaveBeenCalledWith(editor, [
+      "EDITOR",
+    ]);
+    expect(dataMocks.fetchAdminBrandsData).toHaveBeenCalledOnce();
+  });
+
+  it("rejects users without editor access", async () => {
     authHelperMocks.requireRole.mockReturnValue(false);
 
-    await expect(fetchAdminBrands()).rejects.toThrow(
-      "Administrator access required",
-    );
+    await expect(fetchAdminBrands()).rejects.toThrow("Editor access required");
     expect(dataMocks.fetchAdminBrandsData).not.toHaveBeenCalled();
   });
 
