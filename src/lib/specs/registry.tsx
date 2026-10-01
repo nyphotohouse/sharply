@@ -1768,6 +1768,7 @@ export const specDictionary: SpecSectionDef[] = [
       {
         key: "apertureProfileJson",
         label: "Variable Aperture Profile",
+        condenseOnMobile: true,
         getRawValue: (item) => item.lensSpecs?.apertureProfileJson,
         formatDisplay: (raw) => {
           const points = normalizeApertureProfile(raw);
