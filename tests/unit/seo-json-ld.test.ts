@@ -92,6 +92,30 @@ describe("buildGearProductJsonLd", () => {
     });
   });
 
+  it("does not emit a purchasable Offer for a derived used estimate", () => {
+    expect(
+      buildGearProductJsonLd({
+        item: makeGearItem({
+          usedPriceProjection: {
+            US: {
+              low: 150000,
+              typical: 175000,
+              high: 200000,
+              asOf: "2026-09-29T15:00:00.000Z",
+              status: "stale",
+              sourceCount: 1,
+              observationCount: 3,
+              methodVersion: 1,
+            },
+          },
+          mpbMaxPriceUsdCents: 120000,
+          msrpNowUsdCents: 200000,
+        }),
+        displayName: "Test Camera",
+      }),
+    ).toBeNull();
+  });
+
   it("emits no Product at all without positive price data", () => {
     // Google requires offers, review, or aggregateRating for Product
     // snippets; a Product with none is a Search Console critical issue.

@@ -35,6 +35,7 @@ type CountryContextValue = {
   setCountry: (country: Country | null) => void; // legacy helper
   setCountryCode: (alpha2Code: string | null) => void; // legacy helper
   clearCountry: () => void;
+  isLocaleReady: boolean;
 };
 
 const CountryContext = createContext<CountryContextValue | null>(null);
@@ -72,21 +73,24 @@ function findCountry(alpha2Code: string | null | undefined): Country | null {
 export function CountryProvider({
   children,
   initialCountryAlpha2,
+  initialLocaleId,
 }: {
   children: ReactNode;
   initialCountryAlpha2?: string | null;
+  initialLocaleId?: LocaleId;
 }) {
   const initialLocale = useMemo(() => {
     if (initialCountryAlpha2) {
       return resolveLocaleFromCountryCode(initialCountryAlpha2);
     }
-    return getDefaultLocale();
-  }, [initialCountryAlpha2]);
+    return getLocaleById(initialLocaleId) ?? getDefaultLocale();
+  }, [initialCountryAlpha2, initialLocaleId]);
 
   const {
     value: storedLocaleId,
     setValue: setStoredLocaleId,
     clear: clearStoredLocaleId,
+    hasLoadedFromStorage,
   } = useLocalStorage<string | null>("country.locale.v2", initialLocale.id);
 
   const hasAttemptedNavigatorDetection = useRef(false);
@@ -181,8 +185,16 @@ export function CountryProvider({
         setStoredLocaleId(nextLocale.id);
       },
       clearCountry: () => clearStoredLocaleId(),
+      isLocaleReady: hasLoadedFromStorage,
     }),
-    [region, locale, resolvedCountry, setStoredLocaleId, clearStoredLocaleId],
+    [
+      clearStoredLocaleId,
+      hasLoadedFromStorage,
+      locale,
+      region,
+      resolvedCountry,
+      setStoredLocaleId,
+    ],
   );
 
   return (

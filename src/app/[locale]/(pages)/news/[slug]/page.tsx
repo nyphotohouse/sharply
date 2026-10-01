@@ -16,11 +16,13 @@ import { getGearDisplayImageUrl } from "~/lib/gear/display-image";
 import { formatDate } from "~/lib/format/date";
 import { getItemDisplayPrice } from "~/lib/mapping";
 import { getBrandNameById } from "~/lib/mapping/brand-map";
+import { getPriceViewForLocale } from "~/lib/pricing/display-price";
 import { buildDefaultOgImageUrl } from "~/lib/seo/default-og-image";
 import { buildArticleJsonLd } from "~/lib/seo/json-ld-helpers";
 import { buildLocalizedMetadata } from "~/lib/seo/metadata";
 import { fetchGearBySlug } from "~/server/gear/service";
 import { getNewsPostBySlug, getNewsPosts } from "~/server/payload/service";
+import { getExchangeRates } from "~/server/pricing/exchange-rates";
 
 export const revalidate = 60;
 
@@ -88,6 +90,8 @@ export default async function DynamicPage({
   const t = await getTranslations({ locale, namespace: "newsPage" });
   const page = await getNewsPostBySlug(slug);
   if (!page) return notFound();
+  const exchangeRates = await getExchangeRates();
+  const priceView = getPriceViewForLocale(locale, exchangeRates);
 
   const category = t("category");
   // Add a timestamp to the image src to ensure it's revalidated when page is rebuilt
@@ -228,10 +232,16 @@ export default async function DynamicPage({
                     }
                     priceText={getItemDisplayPrice(
                       {
+                        usedPriceProjection: item.usedPriceProjection,
                         msrpNowUsdCents: item.msrpNowUsdCents,
+                        msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents,
                         mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents,
                       },
-                      { style: "short", padWholeAmounts: true },
+                      {
+                        style: "short",
+                        padWholeAmounts: true,
+                        priceView,
+                      },
                     )}
                     href={`/gear/${item.slug}`}
                   />

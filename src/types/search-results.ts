@@ -1,4 +1,5 @@
 import type { GearAlias } from "~/types/gear";
+import type { PriceProjection } from "~/lib/pricing/display-price";
 
 export type SearchSort =
   | "relevance"
@@ -54,6 +55,7 @@ export type SearchResult = {
   msrpNowUsdCents?: number | null;
   msrpAtLaunchUsdCents?: number | null;
   mpbMaxPriceUsdCents?: number | null;
+  usedPriceProjection?: PriceProjection | null;
   releaseDate?: Date | string | null;
   releaseDatePrecision?: string | null;
   announcedDate?: Date | string | null;

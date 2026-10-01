@@ -11,6 +11,8 @@ import {
 } from "~/components/table";
 import { Empty, EmptyDescription, EmptyTitle } from "~/components/ui/empty";
 import { getItemDisplayPrice } from "~/lib/mapping/price-map";
+import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
+import { usePriceView } from "~/lib/pricing/use-price-view";
 import type { SearchResult } from "~/types/search-results";
 import { SearchResultsSkeleton } from "./search-results-skeleton";
 
@@ -27,6 +29,8 @@ type SearchResultsProps = {
   isLoadingMore?: boolean;
   isReachingEnd?: boolean;
   view: GearResultsView;
+  market: PriceMarket;
+  initialExchangeRates?: ExchangeRates | null;
 };
 export function SearchResults(props: SearchResultsProps) {
   const {
@@ -37,7 +41,10 @@ export function SearchResults(props: SearchResultsProps) {
     isLoadingMore = false,
     isReachingEnd = false,
     view,
+    market,
+    initialExchangeRates,
   } = props;
+  const priceView = usePriceView(market, initialExchangeRates);
   const construction = useTranslations("underConstructionPage");
   const trendingSet = new Set(trendingSlugs);
 
@@ -87,10 +94,15 @@ export function SearchResults(props: SearchResultsProps) {
               }
               priceText={getItemDisplayPrice(
                 {
+                  usedPriceProjection: item.usedPriceProjection ?? null,
                   msrpNowUsdCents: item.msrpNowUsdCents ?? null,
+                  msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents ?? null,
                   mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents ?? null,
                 },
-                { style: "short" },
+                {
+                  style: "short",
+                  priceView,
+                },
               )}
               releaseDate={item.releaseDate ?? null}
               releaseDatePrecision={(item.releaseDatePrecision as any) ?? null}

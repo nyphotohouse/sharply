@@ -1,6 +1,7 @@
 import { defaultLocale, type Locale } from "~/i18n/config";
 import { getLocalizedUrl } from "~/i18n/routing";
 import { BRANDS, SENSOR_FORMATS } from "~/lib/generated";
+import { getDisplayPrice } from "~/lib/pricing/display-price";
 import type { GearItem, GearType } from "~/types/gear";
 
 export type JsonLdNode = Record<string, unknown>;
@@ -166,26 +167,33 @@ export function getGearKeySpecs(item: GearItem): GearJsonLdSpec[] {
 }
 
 /**
- * Mirrors the visible price logic in price-map.ts: the displayed price
- * prefers the MPB (used) price and falls back to current MSRP (new). The
- * emitted Offer must match what the page shows, per Google's guidelines.
+ * Only emit actual offer-like legacy values. The used-price projection is a
+ * derived estimate, not a purchasable listing, so it must not be emitted as a
+ * schema.org Offer even though it is the preferred visible display value.
  */
 function buildGearOfferJsonLd(item: GearItem): JsonLdNode | null {
-  const mpbCents = item.mpbMaxPriceUsdCents;
-  if (typeof mpbCents === "number" && mpbCents > 0) {
+  const displayPrice = getDisplayPrice(item, { market: "US" });
+  if (
+    displayPrice.value?.kind !== "POINT" ||
+    displayPrice.source === "USED_ESTIMATE"
+  ) {
+    return null;
+  }
+
+  if (displayPrice.source === "LEGACY_MPB") {
     return {
       "@type": "Offer",
-      price: centsToPrice(mpbCents),
+      price: centsToPrice(displayPrice.value.amountMinor),
       priceCurrency: "USD",
       itemCondition: "https://schema.org/UsedCondition",
       ...(item.linkMpb ? { url: item.linkMpb } : {}),
     };
   }
-  const msrpCents = item.msrpNowUsdCents;
-  if (typeof msrpCents === "number" && msrpCents > 0) {
+
+  if (displayPrice.source === "MSRP_NOW") {
     return {
       "@type": "Offer",
-      price: centsToPrice(msrpCents),
+      price: centsToPrice(displayPrice.value.amountMinor),
       priceCurrency: "USD",
       itemCondition: "https://schema.org/NewCondition",
     };

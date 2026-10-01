@@ -58,6 +58,7 @@ import { incrementGearPopularityIntraday } from "~/server/popularity/data";
 import { hasEventForUserOnUtcDay } from "~/server/validation/dedupe";
 import { fetchVideoModesByGearId } from "~/server/video-modes/data";
 import { getResolvedUserImageSql } from "~/server/users/data";
+import type { GearPriceProjection } from "~/server/db/schema";
 import type {
   Gear,
   GearAlias,
@@ -1645,7 +1646,9 @@ export type GearAlternativeRow = {
   announcedDate: string | null;
   announceDatePrecision: string | null;
   msrpNowUsdCents: number | null;
+  msrpAtLaunchUsdCents: number | null;
   mpbMaxPriceUsdCents: number | null;
+  usedPriceProjection: GearPriceProjection | null;
 };
 
 export type GearLineageItem = {
@@ -1911,9 +1914,16 @@ export async function fetchAlternativesByGearId(
       gearAMsrpNowUsdCents: sql<number | null>`ga.msrp_now_usd_cents`.as(
         "gear_a_msrp_now_usd_cents",
       ),
+      gearAMsrpAtLaunchUsdCents: sql<
+        number | null
+      >`ga.msrp_at_launch_usd_cents`.as("gear_a_msrp_at_launch_usd_cents"),
       gearAMpbMaxPriceUsdCents: sql<
         number | null
       >`ga.mpb_max_price_usd_cents`.as("gear_a_mpb_max_price_usd_cents"),
+      gearAUsedPriceProjection:
+        sql<GearPriceProjection | null>`ga.used_price_projection`.as(
+          "gear_a_used_price_projection",
+        ),
       // Gear B info
       gearBName: sql<string>`gb.name`.as("gear_b_name"),
       gearBSlug: sql<string>`gb.slug`.as("gear_b_slug"),
@@ -1939,9 +1949,16 @@ export async function fetchAlternativesByGearId(
       gearBMsrpNowUsdCents: sql<number | null>`gb.msrp_now_usd_cents`.as(
         "gear_b_msrp_now_usd_cents",
       ),
+      gearBMsrpAtLaunchUsdCents: sql<
+        number | null
+      >`gb.msrp_at_launch_usd_cents`.as("gear_b_msrp_at_launch_usd_cents"),
       gearBMpbMaxPriceUsdCents: sql<
         number | null
       >`gb.mpb_max_price_usd_cents`.as("gear_b_mpb_max_price_usd_cents"),
+      gearBUsedPriceProjection:
+        sql<GearPriceProjection | null>`gb.used_price_projection`.as(
+          "gear_b_used_price_projection",
+        ),
     })
     .from(gearAlternatives)
     .innerJoin(sql`${gear} AS ga`, sql`ga.id = ${gearAlternatives.gearAId}`)
@@ -1977,9 +1994,15 @@ export async function fetchAlternativesByGearId(
       msrpNowUsdCents: isA
         ? row.gearBMsrpNowUsdCents
         : row.gearAMsrpNowUsdCents,
+      msrpAtLaunchUsdCents: isA
+        ? row.gearBMsrpAtLaunchUsdCents
+        : row.gearAMsrpAtLaunchUsdCents,
       mpbMaxPriceUsdCents: isA
         ? row.gearBMpbMaxPriceUsdCents
         : row.gearAMpbMaxPriceUsdCents,
+      usedPriceProjection: isA
+        ? row.gearBUsedPriceProjection
+        : row.gearAUsedPriceProjection,
     };
   });
 

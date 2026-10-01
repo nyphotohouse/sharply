@@ -213,6 +213,54 @@
     "latestReviewsTitle": "最新レビュー"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "結果はまだありません",
+      "fetching": "取得中…",
+      "editLink": "ソースリンクを編集",
+      "editLinkTitle": "ソースリンクを編集",
+      "editLinkDescription": "このソースの取得に使用する商品URLを更新します。",
+      "productLink": "商品リンク",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "自動ソースには商品リンクが必要です。",
+      "mappingAlreadyExists": "このソースと市場のマッピングはすでに存在します。",
+      "invalidProductLink": "有効な http または https の商品リンクを入力してください。",
+      "invalidMapping": "価格ソースを追加する前に、強調表示された項目を修正してください。",
+      "saveLink": "リンクを保存",
+      "linkSaved": "価格ソースのリンクを保存しました",
+      "observations": "観測値",
+      "refetch": "再取得",
+      "currentProjection": "現在の推定値",
+      "currentProjectionDescription": "ギアページに現在表示されている値です。",
+      "noProjection": "現在の推定値はありません。",
+      "asOf": "{date} 時点",
+      "recalculate": "再計算",
+      "addManualObservation": "手動観測を追加",
+      "manualObservationTitle": "手動観測を追加",
+      "manualObservationDescription": "自動ソースを接続せずに価格を記録します。",
+      "market": "市場",
+      "pointPrice": "単一価格",
+      "rangePrice": "価格範囲",
+      "price": "価格",
+      "pricePlaceholder": "849",
+      "lowPrice": "下限価格",
+      "highPrice": "上限価格",
+      "observedDate": "観測日",
+      "evidenceUrlOptional": "根拠URL（任意）",
+      "evidenceUrlPlaceholder": "https://example.com",
+      "noteOptional": "メモ（任意）",
+      "addObservation": "観測を追加",
+      "cancel": "キャンセル",
+      "manualObservationSaved": "観測を追加し、推定値を再計算しました",
+      "manualObservationInvalid": "有効な正の価格を入力してください。",
+      "manualObservationRangeInvalid": "上限が下限以上になる有効な価格範囲を入力してください。",
+      "priceMissing": "価格がありません",
+      "priceMissingAction": "クリックして追加",
+      "contributorPriceTitle": "中古価格を追加",
+      "contributorPriceDescription": "選択した市場の価格を追加します。すぐに表示され、後で確認する項目としてマークされます。",
+      "contributorPriceSaved": "価格を追加しました",
+      "contributorPriceAlreadyExists": "この項目にはすでに価格があります。",
+      "contributorPriceFailed": "価格を追加できませんでした。もう一度お試しください。"
+    },
     "renameDialog": {
       "title": "機材名を変更",
       "description": "この機材の名前を更新します。スラッグと検索インデックスは自動的に更新されます。",
@@ -811,6 +859,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "MPB最高価格"
+            },
+            "estimatedUsedPrice": {
+              "label": "中古価格の推定値"
             },
             "weightGrams": {
               "label": "重量"

@@ -239,6 +239,13 @@
       "when": 1789932300665,
       "tag": "0033_last_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790873778072,
+      "tag": "0034_normal_screwball",
+      "breakpoints": true
     }
   ]
 }

@@ -1,18 +1,28 @@
 import { useTranslations } from "next-intl";
 import { GearCardHorizontal } from "~/components/gear/gear-card-horizontal";
 import { getItemDisplayPrice } from "~/lib/mapping";
+import {
+  createPriceView,
+  type ExchangeRates,
+  type PriceMarket,
+} from "~/lib/pricing/display-price";
 import type { GearAlternativeRow } from "~/server/gear/service";
 
 interface GearAlternativesSectionProps {
   alternatives: GearAlternativeRow[];
   trendingSlugs?: Set<string>;
+  market: PriceMarket;
+  exchangeRates: ExchangeRates | null;
 }
 
 export function GearAlternativesSection({
   alternatives,
   trendingSlugs = new Set(),
+  market,
+  exchangeRates,
 }: GearAlternativesSectionProps) {
   const t = useTranslations("gearDetail");
+  const priceView = createPriceView(market, exchangeRates);
   if (alternatives.length === 0) {
     return null;
   }
@@ -49,10 +59,16 @@ export function GearAlternativesSection({
             }
             priceText={getItemDisplayPrice(
               {
+                usedPriceProjection: alt.usedPriceProjection,
                 msrpNowUsdCents: alt.msrpNowUsdCents,
+                msrpAtLaunchUsdCents: alt.msrpAtLaunchUsdCents,
                 mpbMaxPriceUsdCents: alt.mpbMaxPriceUsdCents,
               },
-              { style: "short", padWholeAmounts: true },
+              {
+                style: "short",
+                padWholeAmounts: true,
+                priceView,
+              },
             )}
             isTrending={trendingSlugs.has(alt.slug)}
           />

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   BarChart3,
+  BadgeDollarSign,
   Camera,
   CombineIcon,
   HelpCircle,
@@ -80,6 +81,12 @@ const sidebarItems: SidebarItem[] = [
     label: "Gear",
     href: "/admin/gear",
     icon: <Camera className="size-5" />,
+    allowed: ["EDITOR", "ADMIN", "SUPERADMIN"],
+  },
+  {
+    label: "Pricing",
+    href: "/admin/prices",
+    icon: <BadgeDollarSign className="size-5" />,
     allowed: ["EDITOR", "ADMIN", "SUPERADMIN"],
   },
   {

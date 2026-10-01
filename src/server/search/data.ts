@@ -39,6 +39,10 @@ import {
 import type { SearchFilters } from "~/types/search-results";
 import { getGearDisplayImageSql } from "~/server/gear/display-image";
 import {
+  buildUsComparablePriceSql,
+  buildUsHasComparablePriceSql,
+} from "~/server/pricing/sql";
+import {
   buildApertureTokenRegex,
   buildDecimalNumericTokenRegex,
   buildFocalLengthRangeTokenRegex,
@@ -60,13 +64,8 @@ export function buildSearchFilterClause(
   filters: SearchFilters,
 ): SQL | undefined {
   const conditions: SQL[] = [];
-  const hasPrice = sql`
-    ${gear.msrpNowUsdCents} IS NOT NULL
-    OR ${gear.msrpAtLaunchUsdCents} IS NOT NULL
-    OR ${gear.mpbMaxPriceUsdCents} IS NOT NULL
-  `;
-  const effectivePriceCentsForMax = sql`COALESCE(${gear.msrpNowUsdCents}, ${gear.mpbMaxPriceUsdCents}, ${gear.msrpAtLaunchUsdCents})`;
-  const effectivePriceCentsForMin = sql`COALESCE(${gear.msrpNowUsdCents}, ${gear.msrpAtLaunchUsdCents}, ${gear.mpbMaxPriceUsdCents})`;
+  const hasPrice = buildUsHasComparablePriceSql();
+  const effectivePriceCents = buildUsComparablePriceSql();
 
   if (filters.brand)
     conditions.push(sql`${brands.name} ILIKE ${`%${filters.brand}%`}`);
@@ -128,12 +127,12 @@ export function buildSearchFilterClause(
 
   if (filters.priceMin !== undefined) {
     conditions.push(
-      sql`(${hasPrice}) AND (${effectivePriceCentsForMin} >= ${filters.priceMin * 100})`,
+      sql`(${hasPrice}) AND (${effectivePriceCents} >= ${filters.priceMin * 100})`,
     );
   }
   if (filters.priceMax !== undefined) {
     conditions.push(
-      sql`(NOT (${hasPrice}) OR ${effectivePriceCentsForMax} <= ${filters.priceMax * 100})`,
+      sql`(NOT (${hasPrice}) OR ${effectivePriceCents} <= ${filters.priceMax * 100})`,
     );
   }
 
@@ -467,6 +466,7 @@ export async function querySearchRows(options: {
       msrpNowUsdCents: gear.msrpNowUsdCents,
       msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
       mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
+      usedPriceProjection: gear.usedPriceProjection,
       releaseDate: gear.releaseDate,
       releaseDatePrecision: gear.releaseDatePrecision,
       announcedDate: gear.announcedDate,

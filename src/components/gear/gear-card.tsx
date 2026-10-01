@@ -9,6 +9,7 @@ import { BRANDS } from "~/lib/constants";
 import { formatDateWithPrecision, type DatePrecision } from "~/lib/format/date";
 import { useGearDisplayName } from "~/lib/hooks/useGearDisplayName";
 import { PRICE_FALLBACK_TEXT } from "~/lib/mapping";
+import { ApproximatePriceText } from "./approximate-price-text";
 import { cn } from "~/lib/utils";
 import { isInHallOfFame } from "~/lib/utils/is-in-hall-of-fame";
 import { isNewRelease } from "~/lib/utils/is-new";
@@ -294,7 +295,7 @@ export function GearCard(props: GearCardProps) {
                               : "text-foreground",
                           )}
                         >
-                          {priceText}
+                          <ApproximatePriceText value={priceText} />
                         </span>
                       ) : null}
                     </div>

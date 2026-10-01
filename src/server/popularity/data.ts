@@ -136,7 +136,9 @@ export async function getTrendingData(
           announcedDate: gear.announcedDate,
           announceDatePrecision: gear.announceDatePrecision,
           msrpNowUsdCents: gear.msrpNowUsdCents,
+          msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
           mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
+          usedPriceProjection: gear.usedPriceProjection,
           thumbnailUrl: getGearDisplayImageSql(),
           lifetimeViews: gearPopularityLifetime.viewsLifetime,
         })
@@ -169,7 +171,9 @@ export async function getTrendingData(
         announcedDate: r.announcedDate ? r.announcedDate.toISOString() : null,
         announceDatePrecision: r.announceDatePrecision ?? null,
         msrpNowUsdCents: r.msrpNowUsdCents,
+        msrpAtLaunchUsdCents: r.msrpAtLaunchUsdCents,
         mpbMaxPriceUsdCents: r.mpbMaxPriceUsdCents,
+        usedPriceProjection: r.usedPriceProjection,
         lifetimeViews: Number(r.lifetimeViews ?? 0),
         score: Number(r.score),
         stats: {
@@ -247,7 +251,9 @@ export async function getLiveTrendingSnapshot(
           announcedDate: gear.announcedDate,
           announceDatePrecision: gear.announceDatePrecision,
           msrpNowUsdCents: gear.msrpNowUsdCents,
+          msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
           mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
+          usedPriceProjection: gear.usedPriceProjection,
           thumbnailUrl: getGearDisplayImageSql(),
           lifetimeViews: gearPopularityLifetime.viewsLifetime,
         })
@@ -279,7 +285,9 @@ export async function getLiveTrendingSnapshot(
         announcedDate: r.announcedDate ? r.announcedDate.toISOString() : null,
         announceDatePrecision: r.announceDatePrecision ?? null,
         msrpNowUsdCents: r.msrpNowUsdCents,
+        msrpAtLaunchUsdCents: r.msrpAtLaunchUsdCents,
         mpbMaxPriceUsdCents: r.mpbMaxPriceUsdCents,
+        usedPriceProjection: r.usedPriceProjection,
         lifetimeViews: Number(r.lifetimeViews ?? 0),
         stats: {
           views: Number(r.views),

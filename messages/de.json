@@ -213,6 +213,54 @@
     "latestReviewsTitle": "Neueste Reviews"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "Noch kein Ergebnis",
+      "fetching": "Wird abgerufen…",
+      "editLink": "Quelllink bearbeiten",
+      "editLinkTitle": "Quelllink bearbeiten",
+      "editLinkDescription": "Aktualisiere die Produkt-URL, die zum Abrufen dieser Quelle verwendet wird.",
+      "productLink": "Produktlink",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "Für automatische Quellen ist ein Produktlink erforderlich.",
+      "mappingAlreadyExists": "Für diese Quelle und diesen Markt ist bereits ein Mapping vorhanden.",
+      "invalidProductLink": "Gib einen gültigen Produktlink mit http oder https ein.",
+      "invalidMapping": "Korrigiere die hervorgehobenen Felder, bevor du die Preisquelle hinzufügst.",
+      "saveLink": "Link speichern",
+      "linkSaved": "Link der Preisquelle gespeichert",
+      "observations": "Beobachtungen",
+      "refetch": "Erneut abrufen",
+      "currentProjection": "Aktuelle Projektion",
+      "currentProjectionDescription": "Werte, die derzeit auf der Gear-Seite angezeigt werden.",
+      "noProjection": "Keine aktuelle Projektion.",
+      "asOf": "Stand: {date}",
+      "recalculate": "Neu berechnen",
+      "addManualObservation": "Manuelle Beobachtung hinzufügen",
+      "manualObservationTitle": "Manuelle Beobachtung hinzufügen",
+      "manualObservationDescription": "Erfasse einen Preis ohne eine automatische Quelle zu verbinden.",
+      "market": "Markt",
+      "pointPrice": "Punktpreis",
+      "rangePrice": "Preisspanne",
+      "price": "Preis",
+      "pricePlaceholder": "849",
+      "lowPrice": "Niedrigster Preis",
+      "highPrice": "Höchster Preis",
+      "observedDate": "Beobachtungsdatum",
+      "evidenceUrlOptional": "Beleg-URL (optional)",
+      "evidenceUrlPlaceholder": "https://example.com",
+      "noteOptional": "Notiz (optional)",
+      "addObservation": "Beobachtung hinzufügen",
+      "cancel": "Abbrechen",
+      "manualObservationSaved": "Beobachtung hinzugefügt und Projektion neu berechnet",
+      "manualObservationInvalid": "Gib einen gültigen positiven Preis ein.",
+      "manualObservationRangeInvalid": "Gib eine gültige Spanne ein, bei der der höchste Preis mindestens so hoch wie der niedrigste ist.",
+      "priceMissing": "Preis fehlt",
+      "priceMissingAction": "Zum Hinzufügen klicken",
+      "contributorPriceTitle": "Gebrauchtpreis hinzufügen",
+      "contributorPriceDescription": "Füge einen Preis für deinen ausgewählten Markt hinzu. Er wird sofort angezeigt und später zur Prüfung markiert.",
+      "contributorPriceSaved": "Preis hinzugefügt",
+      "contributorPriceAlreadyExists": "Für diesen Artikel ist bereits ein Preis vorhanden.",
+      "contributorPriceFailed": "Der Preis konnte nicht hinzugefügt werden. Bitte versuche es erneut."
+    },
     "renameDialog": {
       "title": "Ausrüstung umbenennen",
       "description": "Aktualisiere den Namen dieses Ausrüstungsartikels. Slug und Suchindex werden automatisch aktualisiert.",
@@ -811,6 +859,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "Maximaler MPB-Preis"
+            },
+            "estimatedUsedPrice": {
+              "label": "Geschätzter Gebrauchtpreis"
             },
             "weightGrams": {
               "label": "Gewicht"
