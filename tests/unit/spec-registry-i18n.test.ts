@@ -376,6 +376,29 @@ describe("spec registry i18n", () => {
     expect(announcedDateField?.label).not.toBe("Announced Date");
   });
 
+  it("omits fields managed outside the gear change form", () => {
+    const sections = buildEditSidebarSections(
+      createGearItem({
+        regionalAliases: [
+          {
+            gearId: "gear-1",
+            region: "US",
+            name: "Regional Gear Name",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      }),
+      { locale: "en" },
+    );
+
+    expect(
+      sections.flatMap((section) => section.fields).some(
+        (field) => field.key === "regionalAliases",
+      ),
+    ).toBe(false);
+  });
+
   it("renders yes-only booleans only when true", () => {
     const trueSections = buildGearSpecsSections(
       createGearItem({

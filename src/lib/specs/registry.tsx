@@ -345,6 +345,8 @@ export type SpecFieldDef = {
   editElementId?: string; // DOM id to focus in the edit UI when navigating from sidebar
   /** Keep this field editable when the editor is filtered to missing values. */
   alwaysShowInEditor?: boolean;
+  /** Exclude fields managed outside the gear change form from the editor. */
+  hiddenInEditor?: boolean;
   condition?: (item: GearItem) => boolean; // Optional: when to show this field
   hideInSpecsTable?: boolean; // Optional: keep field available to edit/navigation but hide from public specs table
   condenseOnMobile?: boolean; // Whether to condense the field on mobile
@@ -665,6 +667,7 @@ export const specDictionary: SpecSectionDef[] = [
       {
         key: "regionalAliases",
         label: "Regional Names",
+        hiddenInEditor: true,
         condenseOnMobile: true,
         getRawValue: (item) => item.regionalAliases,
         formatDisplay: (
@@ -2696,6 +2699,9 @@ export function buildEditSidebarSections(
       anchor: section.sectionAnchor,
       fields: section.fields
         .filter((field) => {
+          if (field.hiddenInEditor) {
+            return false;
+          }
           if (field.condition && !field.condition(item)) {
             return false;
           }
