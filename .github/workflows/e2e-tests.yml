@@ -10,7 +10,7 @@ on:
       - development
       - main
   schedule:
-    - cron: "17 9 * * *" # off-peak, non-top-of-hour; runs the full browser matrix
+    - cron: "17 9 * * 0" # Sundays at 09:17 UTC; runs the full browser matrix
   workflow_dispatch:
     inputs:
       release_sha:

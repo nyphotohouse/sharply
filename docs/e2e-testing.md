@@ -185,9 +185,9 @@ Unskipping these — by fixing specs (pending-nav), writing mobile
 variants (UI), or fixing the app (locale) — is part of the agreed
 coverage phase 2.
 
-## Nightly matrix
+## Weekly full-browser matrix
 
-A scheduled run executes the full browser matrix (firefox, mobile
+A weekly scheduled run executes the full browser matrix (firefox, mobile
 Chrome/Safari) against `development`. Trigger manually:
 Actions → E2E tests → Run workflow.
 
