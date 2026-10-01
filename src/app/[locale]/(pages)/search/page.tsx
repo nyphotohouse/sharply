@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { buildLocalizedMetadata } from "~/lib/seo/metadata";
 import { hasActiveSearchState } from "~/lib/search/has-active-search-state";
-import { getPriceMarketForLocale } from "~/lib/pricing/display-price";
+import { getPriceViewForLocale } from "~/lib/pricing/display-price";
 import { searchGear } from "~/server/search/service";
 import { getExchangeRates } from "~/server/pricing/exchange-rates";
 import { fetchPublicTagOptions } from "~/server/tags/service";
@@ -58,6 +58,7 @@ export default async function SearchPage({
     fetchPublicTagOptions(),
     getExchangeRates(),
   ]);
+  const priceView = getPriceViewForLocale(locale, exchangeRates);
 
   return (
     <main className="min-h-screen space-y-10 pt-24">
@@ -66,8 +67,8 @@ export default async function SearchPage({
         <SearchClient
           initialPage={initialPage}
           tagOptions={tagOptions}
-          market={getPriceMarketForLocale(locale)}
-          initialExchangeRates={exchangeRates}
+          market={priceView.market}
+          initialExchangeRates={priceView.exchangeRates}
         />
       </Suspense>
     </main>

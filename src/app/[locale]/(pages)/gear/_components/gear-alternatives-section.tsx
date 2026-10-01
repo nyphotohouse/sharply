@@ -1,7 +1,11 @@
 import { useTranslations } from "next-intl";
 import { GearCardHorizontal } from "~/components/gear/gear-card-horizontal";
 import { getItemDisplayPrice } from "~/lib/mapping";
-import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
+import {
+  createPriceView,
+  type ExchangeRates,
+  type PriceMarket,
+} from "~/lib/pricing/display-price";
 import type { GearAlternativeRow } from "~/server/gear/service";
 
 interface GearAlternativesSectionProps {
@@ -18,6 +22,7 @@ export function GearAlternativesSection({
   exchangeRates,
 }: GearAlternativesSectionProps) {
   const t = useTranslations("gearDetail");
+  const priceView = createPriceView(market, exchangeRates);
   if (alternatives.length === 0) {
     return null;
   }
@@ -62,14 +67,7 @@ export function GearAlternativesSection({
               {
                 style: "short",
                 padWholeAmounts: true,
-                market,
-                locale:
-                  market === "US"
-                    ? "en-US"
-                    : market === "UK"
-                      ? "en-GB"
-                      : "de-DE",
-                exchangeRates,
+                priceView,
               },
             )}
             isTrending={trendingSlugs.has(alt.slug)}

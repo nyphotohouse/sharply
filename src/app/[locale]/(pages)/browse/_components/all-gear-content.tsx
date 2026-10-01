@@ -9,7 +9,8 @@ import { orderBrandsWithPriority, splitBrandsWithPriority } from "~/lib/brands";
 import { BRANDS } from "~/lib/constants";
 import { getItemDisplayPrice } from "~/lib/mapping";
 import {
-  getPriceMarketForLocale,
+  createPriceView,
+  getPriceViewForLocale,
   type ExchangeRates,
   type PriceMarket,
 } from "~/lib/pricing/display-price";
@@ -38,8 +39,9 @@ export default async function AllGearContent({
 } = {}) {
   const t = await getTranslations("browsePage");
   const locale = await getLocale();
-  const market = getPriceMarketForLocale(locale);
   const exchangeRates = await getExchangeRates();
+  const priceView = getPriceViewForLocale(locale, exchangeRates);
+  const { market } = priceView;
   // return <Loading />;
   const brand = brandSlug ? await fetchBrandBySlug(brandSlug) : null;
   if (brandSlug && !brand) {
@@ -166,6 +168,7 @@ async function TrendingGrid({
     brandId,
     limit: 3,
   });
+  const priceView = createPriceView(market, exchangeRates);
 
   return (
     <div className="grid w-full grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
@@ -188,10 +191,7 @@ async function TrendingGrid({
           priceText={getItemDisplayPrice(g, {
             style: "short",
             padWholeAmounts: true,
-            market,
-            locale:
-              market === "US" ? "en-US" : market === "UK" ? "en-GB" : "de-DE",
-            exchangeRates,
+            priceView,
           })}
         />
       ))}

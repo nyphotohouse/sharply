@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { GearCard } from "~/components/gear/gear-card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { getItemDisplayPrice } from "~/lib/mapping";
-import { getPriceMarketForLocale } from "~/lib/pricing/display-price";
+import { getPriceViewForLocale } from "~/lib/pricing/display-price";
 import { buildLocalizedMetadata } from "~/lib/seo/metadata";
 import { fetchPublicSharedListByParam } from "~/server/user-lists/service";
 import { getExchangeRates } from "~/server/pricing/exchange-rates";
@@ -76,8 +76,8 @@ export default async function SharedListPage({ params }: SharedListPageProps) {
     payload.owner.name || payload.owner.handle || t("sharplyMember");
   const profilePath = `/u/${payload.owner.handle}`;
   const trendingSet = new Set(payload.trendingSlugs);
-  const market = getPriceMarketForLocale(locale);
   const exchangeRates = await getExchangeRates();
+  const priceView = getPriceViewForLocale(locale, exchangeRates);
 
   if (payload.status === "unpublished") {
     return (
@@ -145,10 +145,7 @@ export default async function SharedListPage({ params }: SharedListPageProps) {
             priceText={getItemDisplayPrice(item.gear, {
               style: "short",
               padWholeAmounts: true,
-              market,
-              locale:
-                market === "US" ? "en-US" : market === "UK" ? "en-GB" : "de-DE",
-              exchangeRates,
+              priceView,
             })}
           />
         ))}

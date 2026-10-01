@@ -31,9 +31,8 @@ import {
 import type { RouteScope } from "~/lib/browse/routing";
 import { getItemDisplayPrice } from "~/lib/mapping";
 import { getPageLoadingState } from "~/lib/pagination";
-import { useExchangeRates } from "~/lib/pricing/use-exchange-rates";
-import { useDisplayPriceMarket } from "~/lib/pricing/use-display-price-market";
 import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
+import { usePriceView } from "~/lib/pricing/use-price-view";
 import type { BrowseListPage } from "~/types/browse";
 
 type BrowseResultsGridProps = {
@@ -109,8 +108,7 @@ function BrowseResultsGridContent({
   setView,
 }: BrowseResultsGridProps & ReturnType<typeof useGearResultsView>) {
   const t = useTranslations("browsePage");
-  const exchangeRates = useExchangeRates(initialExchangeRates);
-  const activeMarket = useDisplayPriceMarket(market);
+  const priceView = usePriceView(market, initialExchangeRates);
   const isMobile = useIsMobile();
   const rawPathname = usePathname();
   const searchParams = useSearchParams();
@@ -379,14 +377,7 @@ function BrowseResultsGridContent({
               priceText={getItemDisplayPrice(g, {
                 style: "short",
                 padWholeAmounts: true,
-                market: activeMarket,
-                locale:
-                  activeMarket === "US"
-                    ? "en-US"
-                    : activeMarket === "UK"
-                      ? "en-GB"
-                      : "de-DE",
-                exchangeRates,
+                priceView,
               })}
             />
           ))}

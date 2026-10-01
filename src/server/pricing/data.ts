@@ -31,6 +31,11 @@ import type {
 } from "./types";
 import { getUpcomingFetchCutoff } from "~/lib/pricing/upcoming-fetch-window";
 
+export type PriceEstimateInsert = Omit<
+  typeof gearPriceEstimates.$inferInsert,
+  "gearId"
+>;
+
 export async function getPriceManagementData(gearId: string) {
   const [gearRow] = await db
     .select({
@@ -545,14 +550,30 @@ export async function updatePriceMappingFetchData(input: {
   });
 }
 
-export async function updateGearPriceProjectionData(
-  gearId: string,
-  projection: GearPriceProjection,
-) {
-  await db
-    .update(gear)
-    .set({ usedPriceProjection: projection, updatedAt: new Date() })
-    .where(eq(gear.id, gearId));
+export async function persistGearPriceProjectionData(input: {
+  gearId: string;
+  projection: GearPriceProjection;
+  estimates: PriceEstimateInsert[];
+}) {
+  return db.transaction(async (tx) => {
+    if (input.estimates.length > 0) {
+      await tx.insert(gearPriceEstimates).values(
+        input.estimates.map((estimate) => ({
+          ...estimate,
+          gearId: input.gearId,
+        })),
+      );
+    }
+
+    const [updatedGear] = await tx
+      .update(gear)
+      .set({ usedPriceProjection: input.projection, updatedAt: new Date() })
+      .where(eq(gear.id, input.gearId))
+      .returning({ id: gear.id });
+
+    if (!updatedGear) throw new Error("Gear item not found");
+    return updatedGear;
+  });
 }
 
 export async function listValidPriceObservationsForGearData(gearId: string) {
@@ -587,28 +608,6 @@ export async function listValidPriceObservationsForGearData(gearId: string) {
       desc(gearPriceObservations.createdAt),
       desc(gearPriceObservations.id),
     );
-}
-
-export async function createPriceEstimateData(input: {
-  gearId: string;
-  marketKey: string;
-  priceKind: string;
-  lowMinor: number;
-  typicalMinor: number;
-  highMinor: number;
-  currency: string;
-  asOf: Date;
-  methodVersion: number;
-  sourceCount: number;
-  observationCount: number;
-  inputObservationIds: string[];
-}) {
-  const [estimate] = await db
-    .insert(gearPriceEstimates)
-    .values(input)
-    .returning();
-  if (!estimate) throw new Error("Unable to create price estimate");
-  return estimate;
 }
 
 export async function listDuePriceMappingsData(limit: number) {

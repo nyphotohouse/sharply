@@ -17,6 +17,7 @@ import {
 import { useGearDisplayName } from "~/lib/hooks/useGearDisplayName";
 import { formatFocalLengthRangeDisplay } from "~/lib/mapping/focal-length-map";
 import { getItemDisplayPrice } from "~/lib/mapping/price-map";
+import type { PriceView } from "~/lib/pricing/display-price";
 import {
   compareNullable,
   compareEffectivePriceRows,
@@ -207,6 +208,7 @@ function LensTypePill({
 export function createGearTableColumns(
   scope: GearTableScope,
   labels: GearTableLabels,
+  priceView?: PriceView,
 ): ColumnDef<GearTableRow, unknown>[] {
   const sortable = (
     id: string,
@@ -271,7 +273,11 @@ export function createGearTableColumns(
     "price",
     labels.price,
     (row) =>
-      getItemDisplayPrice(row, { style: "short", padWholeAmounts: true }),
+      getItemDisplayPrice(row, {
+        style: "short",
+        padWholeAmounts: true,
+        priceView,
+      }),
     (a, b) => compareEffectivePriceRows(a.original, b.original),
     getEffectivePrice,
   );

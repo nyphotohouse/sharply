@@ -13,6 +13,12 @@ export type ExchangeRates = {
   rates: Record<string, number>;
 };
 
+export type PriceView = {
+  market: PriceMarket;
+  locale: string;
+  exchangeRates: ExchangeRates | null;
+};
+
 export type PriceProjectionEntry = {
   low: number;
   typical: number;
@@ -304,6 +310,30 @@ export function getPriceMarketForLocaleId(localeId?: string): PriceMarket {
     return "EU";
   }
   return "US";
+}
+
+export function getPriceLocaleForMarket(market: PriceMarket): string {
+  if (market === "UK") return "en-GB";
+  if (market === "EU") return "de-DE";
+  return "en-US";
+}
+
+export function createPriceView(
+  market: PriceMarket,
+  exchangeRates?: ExchangeRates | null,
+): PriceView {
+  return {
+    market,
+    locale: getPriceLocaleForMarket(market),
+    exchangeRates: exchangeRates ?? null,
+  };
+}
+
+export function getPriceViewForLocale(
+  locale?: string,
+  exchangeRates?: ExchangeRates | null,
+): PriceView {
+  return createPriceView(getPriceMarketForLocale(locale), exchangeRates);
 }
 
 export function displayPriceNeedsExchangeRates(

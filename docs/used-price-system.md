@@ -84,6 +84,10 @@ resets its fetch state, then rebuilds the gear projection so prices from the old
 source link are not attributed to the new one. Saving the same effective link
 does not clear history.
 
+Projection rebuilds write all newly calculated estimate rows and the gear JSON
+projection in one database transaction. A failed rebuild therefore leaves both
+the estimate history and the public read model unchanged.
+
 Manual source refreshes are limited to one request per mapping every six hours
 for editors. Administrators can bypass that cooldown. A single daily cron job
 refreshes due active mappings in a bounded batch; it does not use per-row locks

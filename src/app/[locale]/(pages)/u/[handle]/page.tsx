@@ -42,7 +42,8 @@ import { GetGearDisplayName } from "~/lib/gear/naming";
 import { getGearDisplayImageUrl } from "~/lib/gear/display-image";
 import { getBrandNameById } from "~/lib/mapping/brand-map";
 import {
-  getPriceMarketForLocale,
+  createPriceView,
+  getPriceViewForLocale,
   type PriceMarket,
 } from "~/lib/pricing/display-price";
 import { getExchangeRates } from "~/server/pricing/exchange-rates";
@@ -75,12 +76,12 @@ export default async function UserProfilePage({
   params,
 }: UserProfilePageProps) {
   const { locale, handle } = await params;
-  const market = getPriceMarketForLocale(locale);
   const [t, exchangeRates, session] = await Promise.all([
     getTranslations({ locale, namespace: "userProfile" }),
     getExchangeRates(),
     auth.api.getSession({ headers: await headers() }),
   ]);
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
 
   const user = session?.user;
 
@@ -347,12 +348,11 @@ function GearCard({
     regionalAliases: item.regionalAliases ?? [],
   });
   const trimmedName = getDisplayName(displayName, brandName);
+  const priceView = createPriceView(market, exchangeRates);
   const priceDisplay = getItemDisplayPrice(item, {
     style: "short",
     padWholeAmounts: true,
-    market,
-    locale: market === "US" ? "en-US" : market === "UK" ? "en-GB" : "de-DE",
-    exchangeRates,
+    priceView,
   });
   const displayImageUrl = getGearDisplayImageUrl(item);
   const brandLabel = brandName || "Unknown brand";

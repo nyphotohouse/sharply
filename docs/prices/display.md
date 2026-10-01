@@ -50,6 +50,12 @@ server derives the initial market from the route language, then hydrated gear
 pages and client-loaded cards follow Sharply's existing persisted market
 selection (`US`, `UK`, or `Europe`).
 
+Use `getPriceViewForLocale` for server-rendered consumers and `usePriceView` for
+client consumers. Both expose the selected `market`, its formatting `locale`,
+and the shared exchange-rate snapshot together. The specs table uses this same
+view for its used-price row, so its label, currency, and fallback resolution
+follow the user's active market rather than being fixed to USD.
+
 ## Projection shape
 
 The database/read-model field is `usedPriceProjection`. It is a JSON object

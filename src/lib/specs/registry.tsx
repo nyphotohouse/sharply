@@ -34,7 +34,11 @@ import { formatFocalLengthRangeDisplay } from "~/lib/mapping/focal-length-map";
 import { formatFocusDistance } from "~/lib/mapping/focus-distance-map";
 import { formatMaxFpsDisplay } from "~/lib/mapping/max-fps-map";
 import { getMountLongNameById } from "~/lib/mapping/mounts-map";
-import { getDisplayPrice } from "~/lib/pricing/display-price";
+import {
+  getDisplayPrice,
+  getPriceViewForLocale,
+  type PriceView,
+} from "~/lib/pricing/display-price";
 import {
   sensorNameFromId,
   sensorTypeLabel,
@@ -58,6 +62,7 @@ type SpecTranslationContext = {
   locale?: string;
   t?: SpecTranslator;
   surface?: "public" | "editor";
+  priceView?: PriceView;
 };
 
 type SpecLabelDescriptor = {
@@ -335,6 +340,7 @@ export type SpecFieldDef = {
     forceLeftAlign?: boolean,
     viewerRegion?: GearRegion | null,
     locale?: string,
+    priceView?: PriceView,
   ) => React.ReactNode; // Format for display (table, etc.)
   editElementId?: string; // DOM id to focus in the edit UI when navigating from sidebar
   /** Keep this field editable when the editor is filtered to missing values. */
@@ -521,9 +527,14 @@ export const specDictionary: SpecSectionDef[] = [
         searchTerms: ["price", "used price", "market price", "cost"],
         getRawValue: (item) => item.mpbMaxPriceUsdCents,
         labelResolver: (item, context) => {
+          const priceView =
+            context?.priceView ?? getPriceViewForLocale(context?.locale);
           const displayPrice =
             context?.surface === "public"
-              ? getDisplayPrice(item, { market: "US" })
+              ? getDisplayPrice(item, {
+                  market: priceView.market,
+                  exchangeRates: priceView.exchangeRates,
+                })
               : null;
           return displayPrice?.source === "USED_ESTIMATE"
             ? {
@@ -537,14 +548,18 @@ export const specDictionary: SpecSectionDef[] = [
                   "specRegistry.sections.core.fields.mpbMaxPriceUsdCents.label",
               };
         },
-        formatDisplay: (raw, item, _, __, locale) => {
-          const displayPrice = getDisplayPrice(item, { market: "US" });
+        formatDisplay: (raw, item, _, __, locale, priceView) => {
+          const resolvedPriceView = priceView ?? getPriceViewForLocale(locale);
+          const displayPrice = getDisplayPrice(item, {
+            market: resolvedPriceView.market,
+            exchangeRates: resolvedPriceView.exchangeRates,
+          });
           if (displayPrice.source === "USED_ESTIMATE") {
             return (
               <ApproximatePriceText
                 value={formatDisplayPrice(displayPrice, {
                   style: "long",
-                  locale: locale === "en" ? "en-US" : (locale ?? "en-US"),
+                  locale: resolvedPriceView.locale,
                 })}
               />
             );
@@ -2582,6 +2597,7 @@ export function buildGearSpecsSections(
         viewerRegion?: GearRegion | null;
         locale?: string;
         t?: SpecTranslator;
+        priceView?: PriceView;
       },
 ): SpecsTableSection[] {
   const normalizedOptions =
@@ -2595,6 +2611,7 @@ export function buildGearSpecsSections(
     locale,
     t: normalizedOptions.t,
     surface: "public",
+    priceView: normalizedOptions.priceView ?? getPriceViewForLocale(locale),
   };
   return specDictionary
     .filter((section) => !section.condition || section.condition(item))
@@ -2617,6 +2634,7 @@ export function buildGearSpecsSections(
                 forceLeftAlign,
                 viewerRegion,
                 locale,
+                translationContext.priceView,
               )
             : (raw as React.ReactNode);
           const value =

@@ -1,8 +1,8 @@
 import type { GearPriceProjection } from "~/server/db/schema";
 import {
-  createPriceEstimateData,
   listValidPriceObservationsForGearData,
-  updateGearPriceProjectionData,
+  persistGearPriceProjectionData,
+  type PriceEstimateInsert,
 } from "./data";
 import { estimatePrice } from "./estimator";
 import {
@@ -27,6 +27,7 @@ export async function rebuildGearPriceProjection(gearId: string) {
   }
 
   const projection: GearPriceProjection = {};
+  const estimates: PriceEstimateInsert[] = [];
   const now = Date.now();
 
   for (const group of grouped.values()) {
@@ -40,8 +41,7 @@ export async function rebuildGearPriceProjection(gearId: string) {
     ).size;
     const currency = inferCurrencyFromMarket(first.marketKey);
 
-    await createPriceEstimateData({
-      gearId,
+    estimates.push({
       marketKey: first.marketKey,
       priceKind: first.priceKind,
       lowMinor: estimate.lowMinor,
@@ -70,6 +70,6 @@ export async function rebuildGearPriceProjection(gearId: string) {
     };
   }
 
-  await updateGearPriceProjectionData(gearId, projection);
+  await persistGearPriceProjectionData({ gearId, projection, estimates });
   return projection;
 }

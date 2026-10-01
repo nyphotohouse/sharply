@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  createPriceView,
   getComparablePrice,
   getDisplayPrice,
+  getPriceLocaleForMarket,
   getPriceMarketForLocale,
   type DisplayPriceInput,
 } from "~/lib/pricing/display-price";
@@ -163,6 +165,19 @@ describe("display price resolution", () => {
     ["fr", "EU"],
   ] as const)("maps %s to the %s price market", (locale, market) => {
     expect(getPriceMarketForLocale(locale)).toBe(market);
+  });
+
+  it.each([
+    ["US", "en-US"],
+    ["UK", "en-GB"],
+    ["EU", "de-DE"],
+  ] as const)("maps the %s market to its display locale", (market, locale) => {
+    expect(getPriceLocaleForMarket(market)).toBe(locale);
+    expect(createPriceView(market, exchangeRates)).toMatchObject({
+      market,
+      locale,
+      exchangeRates,
+    });
   });
 
   it("falls back through MPB, current MSRP, and launch MSRP", () => {

@@ -3,7 +3,7 @@
 import { TrashIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { startTransition,useMemo,useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
@@ -31,14 +31,19 @@ import {
 } from "~/components/ui/select";
 import { GetGearDisplayName } from "~/lib/gear/naming";
 import { useCountry } from "~/lib/hooks/useCountry";
-import { getItemDisplayPrice,PRICE_FALLBACK_TEXT } from "~/lib/mapping";
+import { getItemDisplayPrice, PRICE_FALLBACK_TEXT } from "~/lib/mapping";
 import { getBrandNameById } from "~/lib/mapping/brand-map";
+import {
+  getPriceMarketForLocaleId,
+  type PriceView,
+} from "~/lib/pricing/display-price";
 import { getSpecFieldDefByKey } from "~/lib/specs/registry";
+import { usePriceView } from "~/lib/pricing/use-price-view";
 import {
   actionToggleOwnership,
   actionUpdateOwnedGearColorway,
 } from "~/server/gear/actions";
-import type { GearItem,GearRegion } from "~/types/gear";
+import type { GearItem, GearRegion } from "~/types/gear";
 import { sortCollectionItems } from "./sort-collection-items";
 
 export const COLLECTION_TABLE_COLUMNS_DEFAULT = [
@@ -67,7 +72,7 @@ type CollectionTableModalProps = {
 
 const DEFAULT_COLLECTION_COLORWAY_VALUE = "__default__";
 
-function buildColumnConfigMap(region: GearRegion) {
+function buildColumnConfigMap(region: GearRegion, priceView: PriceView) {
   return {
     name: {
       key: "name",
@@ -95,6 +100,7 @@ function buildColumnConfigMap(region: GearRegion) {
           getItemDisplayPrice(item, {
             style: "short",
             padWholeAmounts: true,
+            priceView,
           }) ?? PRICE_FALLBACK_TEXT;
         return <span className="font-medium">{displayPrice}</span>;
       },
@@ -234,7 +240,7 @@ function getSelectedCollectionColorwayId(item: GearItem) {
   return eligibleColorways.some(
     (colorway) => colorway.id === item.selectedColorwayId,
   )
-    ? item.selectedColorwayId ?? null
+    ? (item.selectedColorwayId ?? null)
     : null;
 }
 
@@ -250,8 +256,12 @@ export function CollectionTableModal(props: CollectionTableModalProps) {
   } = props;
 
   const [isOpen, setIsOpen] = useState(false);
-  const { region } = useCountry();
-  const columnConfigMap = useMemo(() => buildColumnConfigMap(region), [region]);
+  const { localeId, region } = useCountry();
+  const priceView = usePriceView(getPriceMarketForLocaleId(localeId));
+  const columnConfigMap = useMemo(
+    () => buildColumnConfigMap(region, priceView),
+    [priceView.exchangeRates, priceView.locale, priceView.market, region],
+  );
   const [itemsState, setItemsState] = useState<GearItem[]>(() =>
     sortCollectionItems(items),
   );
@@ -428,13 +438,16 @@ export function CollectionTableModal(props: CollectionTableModalProps) {
                 <TableHead className="w-[220px]">
                   {t("collectionColorway")}
                 </TableHead>
-                <TableHead className="w-[80px]">{t("actionsColumnLabel")}</TableHead>
+                <TableHead className="w-[80px]">
+                  {t("actionsColumnLabel")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {itemsState.map((item) => {
                 const eligibleColorways = getEligibleCollectionColorways(item);
-                const selectedColorwayId = getSelectedCollectionColorwayId(item);
+                const selectedColorwayId =
+                  getSelectedCollectionColorwayId(item);
                 const hasSelectableColorways = eligibleColorways.length > 1;
                 const currentColorway =
                   eligibleColorways.find(

@@ -7,8 +7,7 @@ import { getGearDisplayImageUrl } from "~/lib/gear/display-image";
 import { useGearDisplayName } from "~/lib/hooks/useGearDisplayName";
 import { getItemDisplayPrice } from "~/lib/mapping";
 import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
-import { useExchangeRates } from "~/lib/pricing/use-exchange-rates";
-import { useDisplayPriceMarket } from "~/lib/pricing/use-display-price-market";
+import { usePriceView } from "~/lib/pricing/use-price-view";
 import { getBrandNameById } from "~/lib/mapping/brand-map";
 import type { GearItem } from "~/types/gear";
 import { WishlistRemoveButton } from "./wishlist-remove-button";
@@ -36,19 +35,11 @@ export function WishlistGearCard({
     regionalAliases: item.regionalAliases,
   });
   const trimmedName = getDisplayName(displayName, brandName);
-  const exchangeRates = useExchangeRates(initialExchangeRates);
-  const activeMarket = useDisplayPriceMarket(market);
+  const priceView = usePriceView(market, initialExchangeRates);
   const priceDisplay = getItemDisplayPrice(item, {
     style: "short",
     padWholeAmounts: true,
-    market: activeMarket,
-    locale:
-      activeMarket === "US"
-        ? "en-US"
-        : activeMarket === "UK"
-          ? "en-GB"
-          : "de-DE",
-    exchangeRates,
+    priceView,
   });
   const displayImageUrl = getGearDisplayImageUrl(item);
   const brandLabel = brandName || "Unknown brand";

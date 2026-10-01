@@ -8,7 +8,7 @@ import type { Locale } from "~/i18n/config";
 import { localizePathname } from "~/i18n/routing";
 import { BRANDS, MOUNTS } from "~/lib/constants";
 import { getMountDisplayName } from "~/lib/mapping/mounts-map";
-import { getPriceMarketForLocale } from "~/lib/pricing/display-price";
+import { getPriceViewForLocale } from "~/lib/pricing/display-price";
 import { buildLocalizedMetadata } from "~/lib/seo/metadata";
 import {
   buildBrowseStaticParams,
@@ -123,7 +123,7 @@ export default async function BrowseCatchAll({
     }),
     getExchangeRates(),
   ]);
-  const market = getPriceMarketForLocale(locale);
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
 
   if (depth === 2) {
     const trendingSlugs = await fetchTrendingSlugs({

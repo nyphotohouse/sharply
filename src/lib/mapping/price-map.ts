@@ -4,12 +4,14 @@
 
 import type { GearItem } from "~/types/gear";
 import {
+  createPriceView,
   getDisplayPrice,
   MARKET_CURRENCY,
   type DisplayPrice,
   type DisplayPriceInput,
   type ExchangeRates,
   type PriceMarket,
+  type PriceView,
 } from "~/lib/pricing/display-price";
 
 export const PRICE_FALLBACK_TEXT = "$ ---";
@@ -30,6 +32,7 @@ type FormatPriceOptions = {
 export type DisplayPriceFormatOptions = FormatPriceOptions & {
   locale?: string;
   exchangeRates?: ExchangeRates | null;
+  priceView?: PriceView;
 };
 
 type PriceableGear = Partial<
@@ -164,21 +167,23 @@ export function getItemDisplayPrice(
     padWholeAmounts = false,
     market = "US",
     range = false,
-    locale = "en-US",
+    locale,
     exchangeRates = null,
+    priceView,
   }: DisplayPriceFormatOptions & {
     market?: PriceMarket;
     range?: boolean;
   } = {},
 ): string {
+  const resolvedPriceView = priceView ?? createPriceView(market, exchangeRates);
   const price = getDisplayPrice(item as DisplayPriceInput, {
-    market,
+    market: resolvedPriceView.market,
     range,
-    exchangeRates,
+    exchangeRates: resolvedPriceView.exchangeRates,
   });
   return formatDisplayPrice(price, {
     style,
     padWholeAmounts,
-    locale,
+    locale: locale ?? resolvedPriceView.locale,
   });
 }

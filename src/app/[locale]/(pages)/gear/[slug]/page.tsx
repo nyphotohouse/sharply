@@ -43,12 +43,11 @@ import { formatDate } from "~/lib/format/date";
 import { GetGearDisplayName } from "~/lib/gear/naming";
 import { resolveRegionFromCountryCode } from "~/lib/gear/region";
 import {
-  getPriceMarketForLocale,
+  getPriceViewForLocale,
   type ExchangeRates,
   type PriceMarket,
 } from "~/lib/pricing/display-price";
 import { getBrandById } from "~/lib/mapping/brand-map";
-import { buildGearSpecsSections } from "~/lib/specs/registry";
 import { shouldPrebuildHeavyRouteLocale } from "~/lib/static-generation";
 import { getConstructionState } from "~/lib/utils";
 import { isInHallOfFame } from "~/lib/utils/is-in-hall-of-fame";
@@ -125,8 +124,8 @@ export default async function GearPage({ params }: GearPageProps) {
 
   if (!item) return notFound();
 
-  const market = getPriceMarketForLocale(locale);
   const exchangeRates = await getExchangeRates();
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
   const hasMpbPrice = item.mpbMaxPriceUsdCents != null;
   const regionalDisplayName = GetGearDisplayName(
     {
@@ -191,11 +190,6 @@ export default async function GearPage({ params }: GearPageProps) {
   const isTrending = trendingSlugs.has(item.slug);
   const isHallOfFameItem = isInHallOfFame(item.slug);
 
-  const specSections = buildGearSpecsSections(item, {
-    locale,
-    t,
-    viewerRegion,
-  });
   const brand = getBrandById(item.brandId ?? "");
 
   // console.log("[GearPage] item", item);
@@ -375,9 +369,11 @@ export default async function GearPage({ params }: GearPageProps) {
           {/* Specifications */}
           <SpecsSection
             item={item}
-            sections={specSections}
             slug={item.slug}
             gearType={item.gearType}
+            initialMarket={market}
+            initialExchangeRates={exchangeRates}
+            viewerRegion={viewerRegion}
           />
           <InstructionManualSection
             linkInstructionManual={item.linkInstructionManual ?? null}

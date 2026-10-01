@@ -11,9 +11,8 @@ import {
 } from "~/components/table";
 import { Empty, EmptyDescription, EmptyTitle } from "~/components/ui/empty";
 import { getItemDisplayPrice } from "~/lib/mapping/price-map";
-import { useExchangeRates } from "~/lib/pricing/use-exchange-rates";
-import { useDisplayPriceMarket } from "~/lib/pricing/use-display-price-market";
 import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
+import { usePriceView } from "~/lib/pricing/use-price-view";
 import type { SearchResult } from "~/types/search-results";
 import { SearchResultsSkeleton } from "./search-results-skeleton";
 
@@ -45,8 +44,7 @@ export function SearchResults(props: SearchResultsProps) {
     market,
     initialExchangeRates,
   } = props;
-  const exchangeRates = useExchangeRates(initialExchangeRates);
-  const activeMarket = useDisplayPriceMarket(market);
+  const priceView = usePriceView(market, initialExchangeRates);
   const construction = useTranslations("underConstructionPage");
   const trendingSet = new Set(trendingSlugs);
 
@@ -101,7 +99,10 @@ export function SearchResults(props: SearchResultsProps) {
                   msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents ?? null,
                   mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents ?? null,
                 },
-                { style: "short", market: activeMarket, exchangeRates },
+                {
+                  style: "short",
+                  priceView,
+                },
               )}
               releaseDate={item.releaseDate ?? null}
               releaseDatePrecision={(item.releaseDatePrecision as any) ?? null}
