@@ -213,6 +213,54 @@
     "latestReviewsTitle": "Latest Reviews"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "No result yet",
+      "fetching": "Fetching…",
+      "editLink": "Edit source link",
+      "editLinkTitle": "Edit source link",
+      "editLinkDescription": "Update the product URL used for fetching this source.",
+      "productLink": "Product link",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "A product link is required for automatic sources.",
+      "mappingAlreadyExists": "A mapping already exists for this source and market.",
+      "invalidProductLink": "Enter a valid http or https product link.",
+      "invalidMapping": "Fix the highlighted fields before adding the price source.",
+      "saveLink": "Save link",
+      "linkSaved": "Price source link saved",
+      "observations": "Observations",
+      "refetch": "Refetch",
+      "currentProjection": "Current projection",
+      "currentProjectionDescription": "Values currently shown on the gear page.",
+      "noProjection": "No current projection.",
+      "asOf": "As of {date}",
+      "recalculate": "Recalculate",
+      "addManualObservation": "Add Manual Observation",
+      "manualObservationTitle": "Add Manual Observation",
+      "manualObservationDescription": "Record a price without connecting an automatic source.",
+      "market": "Market",
+      "pointPrice": "Point price",
+      "rangePrice": "Price range",
+      "price": "Price",
+      "pricePlaceholder": "849",
+      "lowPrice": "Low price",
+      "highPrice": "High price",
+      "observedDate": "Observed date",
+      "evidenceUrlOptional": "Evidence URL (optional)",
+      "evidenceUrlPlaceholder": "https://example.com",
+      "noteOptional": "Note (optional)",
+      "addObservation": "Add observation",
+      "cancel": "Cancel",
+      "manualObservationSaved": "Observation added and projection recalculated",
+      "manualObservationInvalid": "Enter a valid positive price.",
+      "manualObservationRangeInvalid": "Enter valid range values with the high price at or above the low price.",
+      "priceMissing": "Price missing",
+      "priceMissingAction": "Click to add",
+      "contributorPriceTitle": "Add a used price",
+      "contributorPriceDescription": "Add a price in your selected market. It will appear immediately and be flagged for later review.",
+      "contributorPriceSaved": "Price added",
+      "contributorPriceAlreadyExists": "This item already has a price.",
+      "contributorPriceFailed": "The price could not be added. Please try again."
+    },
     "renameDialog": {
       "title": "Rename Gear Item",
       "description": "Update this gear item's name. The slug and search index will be updated automatically.",
@@ -811,6 +859,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "MPB Max Price"
+            },
+            "estimatedUsedPrice": {
+              "label": "Estimated Used Price"
             },
             "weightGrams": {
               "label": "Weight"

@@ -6,6 +6,7 @@ import {
   buildEditSidebarSections,
   type SpecTranslator,
 } from "~/lib/specs/registry";
+import { createPriceView } from "~/lib/pricing/display-price";
 import type { GearItem } from "~/types/gear";
 
 function createTranslator(messages: Record<string, string>): SpecTranslator {
@@ -77,6 +78,98 @@ describe("spec registry i18n", () => {
       searchTerms: expect.arrayContaining(["Has IBIS"]),
     });
     expect(hasIbisRow?.label).not.toBe("Has IBIS");
+  });
+
+  it("shows the estimated used price before the legacy MPB fallback", () => {
+    const translator = createTranslator({
+      "specRegistry.sections.core.fields.estimatedUsedPrice.label":
+        "Estimated Used Price",
+      "specRegistry.sections.core.fields.mpbMaxPriceUsdCents.label":
+        "MPB Max Price",
+    });
+    const item = createGearItem({
+      mpbMaxPriceUsdCents: 219900,
+      usedPriceProjection: {
+        US: {
+          low: 170000,
+          typical: 178300,
+          high: 185000,
+          asOf: "2026-09-29T19:00:00.000Z",
+          status: "stale",
+          sourceCount: 1,
+          observationCount: 1,
+          methodVersion: 1,
+        },
+      },
+    });
+
+    const coreSection = buildGearSpecsSections(item, {
+      locale: "en",
+      t: translator,
+    }).find((section) => section.id === "core");
+    const row = coreSection?.data.find(
+      (entry) => entry.key === "mpbMaxPriceUsdCents",
+    );
+
+    expect(row).toMatchObject({
+      label: "Estimated Used Price",
+      value: { props: { value: "~$1,783 USD" } },
+    });
+
+    const fallbackItem = createGearItem({ mpbMaxPriceUsdCents: 219900 });
+    const fallbackCoreSection = buildGearSpecsSections(fallbackItem, {
+      locale: "en",
+      t: translator,
+    }).find((section) => section.id === "core");
+    const fallbackRow = fallbackCoreSection?.data.find(
+      (entry) => entry.key === "mpbMaxPriceUsdCents",
+    );
+
+    expect(fallbackRow).toMatchObject({
+      label: "MPB Max Price",
+      value: "$2,199 USD",
+    });
+
+    const editorCoreSection = buildEditSidebarSections(item, {
+      locale: "en",
+      t: translator,
+    }).find((section) => section.id === "core");
+    expect(
+      editorCoreSection?.fields.find(
+        (field) => field.key === "mpbMaxPriceUsdCents",
+      )?.label,
+    ).toBe("MPB Max Price");
+  });
+
+  it("uses the active price market for the used-price spec row", () => {
+    const item = createGearItem({
+      mpbMaxPriceUsdCents: 219900,
+      usedPriceProjection: {
+        UK: {
+          low: 170000,
+          typical: 178300,
+          high: 185000,
+          asOf: "2026-09-29T19:00:00.000Z",
+          status: "current",
+          sourceCount: 1,
+          observationCount: 1,
+          methodVersion: 1,
+        },
+      },
+    });
+
+    const coreSection = buildGearSpecsSections(item, {
+      locale: "en",
+      priceView: createPriceView("UK"),
+    }).find((section) => section.id === "core");
+    const row = coreSection?.data.find(
+      (entry) => entry.key === "mpbMaxPriceUsdCents",
+    );
+
+    expect(row?.label).toBe("Estimated Used Price");
+    expect(row?.value).toMatchObject({
+      props: { value: expect.stringContaining("£1,783") },
+    });
   });
 
   it("falls back to inline English when translation keys are missing", () => {

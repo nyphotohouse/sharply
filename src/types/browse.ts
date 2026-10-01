@@ -1,4 +1,5 @@
 import type { GearAlias } from "~/types/gear";
+import type { PriceProjection } from "~/lib/pricing/display-price";
 
 export type BrowseFeedItem = {
   id: string;
@@ -13,7 +14,9 @@ export type BrowseFeedItem = {
   announcedDate: string | null;
   announceDatePrecision: "DAY" | "MONTH" | "YEAR" | null;
   msrpNowUsdCents: number | null;
+  msrpAtLaunchUsdCents: number | null;
   mpbMaxPriceUsdCents: number | null;
+  usedPriceProjection: PriceProjection | null;
   mountNames: string[];
   sensorFormatName: string | null;
   analogCaptureMedium: string | null;

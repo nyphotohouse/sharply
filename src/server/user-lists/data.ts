@@ -10,6 +10,7 @@ import {
   userLists,
   users,
 } from "~/server/db/schema";
+import type { GearPriceProjection } from "~/server/db/schema";
 import { fetchGearAliasesByGearIds, getGearIdBySlug } from "~/server/gear/data";
 import type { GearAlias } from "~/types/gear";
 import { getGearDisplayImageSql } from "~/server/gear/display-image";
@@ -51,7 +52,9 @@ export type UserListItemGearRow = {
     announcedDate: Date | null;
     announceDatePrecision: "DAY" | "MONTH" | "YEAR" | null;
     msrpNowUsdCents: number | null;
+    msrpAtLaunchUsdCents: number | null;
     mpbMaxPriceUsdCents: number | null;
+    usedPriceProjection: GearPriceProjection | null;
     regionalAliases: GearAlias[] | null;
     brandName: string | null;
   };
@@ -237,7 +240,9 @@ export async function fetchListItemsByListIdsData(
       announcedDate: gear.announcedDate,
       announceDatePrecision: gear.announceDatePrecision,
       msrpNowUsdCents: gear.msrpNowUsdCents,
+      msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
       mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
+      usedPriceProjection: gear.usedPriceProjection,
       brandName: brands.name,
     })
     .from(userListItems)
@@ -270,7 +275,9 @@ export async function fetchListItemsByListIdsData(
         announcedDate: row.announcedDate,
         announceDatePrecision: row.announceDatePrecision,
         msrpNowUsdCents: row.msrpNowUsdCents,
+        msrpAtLaunchUsdCents: row.msrpAtLaunchUsdCents,
         mpbMaxPriceUsdCents: row.mpbMaxPriceUsdCents,
+        usedPriceProjection: row.usedPriceProjection,
         regionalAliases: aliasesByGearId.get(row.gearId) ?? null,
         brandName: row.brandName ?? null,
       },

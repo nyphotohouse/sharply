@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import slugify from "slugify";
 import { z } from "zod";
 import { auth } from "~/auth";
+import type { GearPriceProjection } from "~/server/db/schema";
 import { getSessionOrThrow } from "~/server/auth";
 import { getTrendingStatusForSlugs } from "~/server/popularity/service";
 import {
@@ -56,7 +57,9 @@ export type UserListItemDto = {
     announcedDate: Date | null;
     announceDatePrecision: "DAY" | "MONTH" | "YEAR" | null;
     msrpNowUsdCents: number | null;
+    msrpAtLaunchUsdCents: number | null;
     mpbMaxPriceUsdCents: number | null;
+    usedPriceProjection: GearPriceProjection | null;
   };
 };
 

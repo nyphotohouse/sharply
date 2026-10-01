@@ -19,6 +19,7 @@ import {
 } from "~/lib/constants";
 import { db } from "~/server/db";
 import { brands, gear, gearMounts, lensSpecs } from "~/server/db/schema";
+import type { GearPriceProjection } from "~/server/db/schema";
 import type { GearListingTableFields } from "~/server/gear/listing-table-data";
 import type { GearAlias, GearType } from "~/types/gear";
 import {
@@ -26,6 +27,10 @@ import {
   lensFocalLengthSortExpression,
 } from "./lens-sort";
 import { getGearDisplayImageSql } from "../display-image";
+import {
+  buildUsComparablePriceSql,
+  buildUsHasComparablePriceSql,
+} from "~/server/pricing/sql";
 
 export type BrowseGearRow = {
   id: string;
@@ -41,7 +46,9 @@ export type BrowseGearRow = {
   announcedDate: Date | null;
   announceDatePrecision: "DAY" | "MONTH" | "YEAR" | null;
   msrpNowUsdCents: number | null;
+  msrpAtLaunchUsdCents: number | null;
   mpbMaxPriceUsdCents: number | null;
+  usedPriceProjection: GearPriceProjection | null;
   lensFocalLengthMinMm?: number | null;
   lensFocalLengthMaxMm?: number | null;
 } & Partial<GearListingTableFields>;
@@ -187,6 +194,7 @@ export async function searchGear(
 
   const f = input.filters;
   const needsLensFocalSort = f.sort === LENS_FOCAL_LENGTH_SORT;
+  const comparablePrice = buildUsComparablePriceSql();
 
   const selectFields: Record<string, any> = {
     id: gear.id,
@@ -201,7 +209,9 @@ export async function searchGear(
     announcedDate: gear.announcedDate,
     announceDatePrecision: gear.announceDatePrecision,
     msrpNowUsdCents: gear.msrpNowUsdCents,
+    msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
     mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
+    usedPriceProjection: gear.usedPriceProjection,
   };
 
   if (needsLensFocalSort) {
@@ -227,9 +237,11 @@ export async function searchGear(
 
   // Traits filters
   if (f.minPrice != null)
-    where.push(sql`${gear.msrpNowUsdCents} >= ${f.minPrice * 100}`);
+    where.push(sql`${comparablePrice} >= ${f.minPrice * 100}`);
   if (f.maxPrice != null)
-    where.push(sql`${gear.msrpNowUsdCents} <= ${f.maxPrice * 100}`);
+    where.push(
+      sql`(NOT (${buildUsHasComparablePriceSql()}) OR ${comparablePrice} <= ${f.maxPrice * 100})`,
+    );
   if (f.minYear != null)
     where.push(
       sql`extract(year from coalesce(${gear.releaseDate}, ${gear.announcedDate})) >= ${f.minYear}`,
@@ -265,9 +277,17 @@ export async function searchGear(
       case "recently_added":
         return [desc(gear.createdAt), asc(gear.name)];
       case "price_asc":
-        return [asc(gear.msrpNowUsdCents), asc(gear.name)];
+        return [
+          sql`${comparablePrice} ASC NULLS LAST`,
+          asc(gear.name),
+          asc(gear.id),
+        ];
       case "price_desc":
-        return [sql`${gear.msrpNowUsdCents} DESC NULLS LAST`, asc(gear.name)];
+        return [
+          sql`${comparablePrice} DESC NULLS LAST`,
+          asc(gear.name),
+          asc(gear.id),
+        ];
       case "popularity":
         return [desc(gear.createdAt), asc(gear.name)];
       case "relevance":
@@ -332,7 +352,9 @@ export async function getReleaseOrderedGearPage(params: {
       announcedDate: gear.announcedDate,
       announceDatePrecision: gear.announceDatePrecision,
       msrpNowUsdCents: gear.msrpNowUsdCents,
+      msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
       mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
+      usedPriceProjection: gear.usedPriceProjection,
     })
     .from(gear)
     .leftJoin(brands, eq(gear.brandId, brands.id))

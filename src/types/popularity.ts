@@ -1,4 +1,5 @@
 import type { GearType } from "~/types/gear";
+import type { PriceProjection } from "~/lib/pricing/display-price";
 
 import type { GearAlias } from "~/types/gear";
 
@@ -21,7 +22,9 @@ export type TrendingEntry = {
   announcedDate: string | null;
   announceDatePrecision: "DAY" | "MONTH" | "YEAR" | null;
   msrpNowUsdCents: number | null;
+  msrpAtLaunchUsdCents?: number | null;
   mpbMaxPriceUsdCents: number | null;
+  usedPriceProjection?: PriceProjection | null;
   lifetimeViews: number;
   score: number;
   liveBoost?: number;
@@ -56,7 +59,9 @@ export type LiveTrendingSnapshotItem = {
   announcedDate: string | null;
   announceDatePrecision: TrendingEntry["announceDatePrecision"];
   msrpNowUsdCents: number | null;
+  msrpAtLaunchUsdCents?: number | null;
   mpbMaxPriceUsdCents: number | null;
+  usedPriceProjection?: PriceProjection | null;
   lifetimeViews: number;
   liveScore: number;
   stats: TrendingEntry["stats"];

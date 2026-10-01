@@ -9,6 +9,7 @@ import { asc, desc, sql, type SQL } from "drizzle-orm";
 import { getConstructionState } from "~/lib/utils";
 import { buildCompareHref, buildSearchHref } from "~/lib/utils/url";
 import { gear } from "~/server/db/schema";
+import { buildUsComparablePriceSql } from "~/server/pricing/sql";
 import { toConstructionGearItem } from "~/server/gear/construction-service";
 import {
   fetchGearAliasesByGearIds,
@@ -108,9 +109,19 @@ export async function searchGear(
   } else if (sort === "newest") {
     orderBy = [sql`${gear.releaseDate} DESC NULLS LAST`, asc(gear.name)];
   } else if (sort === "price_asc") {
-    orderBy = [asc(gear.msrpNowUsdCents), asc(gear.name)];
+    const comparablePrice = buildUsComparablePriceSql();
+    orderBy = [
+      sql`${comparablePrice} ASC NULLS LAST`,
+      asc(gear.name),
+      asc(gear.id),
+    ];
   } else if (sort === "price_desc") {
-    orderBy = [sql`${gear.msrpNowUsdCents} DESC NULLS LAST`, asc(gear.name)];
+    const comparablePrice = buildUsComparablePriceSql();
+    orderBy = [
+      sql`${comparablePrice} DESC NULLS LAST`,
+      asc(gear.name),
+      asc(gear.id),
+    ];
   } else {
     orderBy = [asc(gear.name)];
   }

@@ -1,7 +1,4 @@
-import type {
-  LiveTrendingSnapshot,
-  TrendingEntry,
-} from "~/types/popularity";
+import type { LiveTrendingSnapshot, TrendingEntry } from "~/types/popularity";
 
 export function applyLiveBoostToTrending(params: {
   baseline: TrendingEntry[];
@@ -41,7 +38,9 @@ export function applyLiveBoostToTrending(params: {
       announcedDate: live.announcedDate,
       announceDatePrecision: live.announceDatePrecision,
       msrpNowUsdCents: live.msrpNowUsdCents,
+      msrpAtLaunchUsdCents: live.msrpAtLaunchUsdCents,
       mpbMaxPriceUsdCents: live.mpbMaxPriceUsdCents,
+      usedPriceProjection: live.usedPriceProjection,
       lifetimeViews: live.lifetimeViews,
       score: live.liveScore,
       liveBoost: live.liveScore,

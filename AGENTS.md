@@ -4,7 +4,7 @@ Sharply is a photography gear database and cataloging application built with Nex
 
 ## Task Completion Requirements
 
-- Unit tests must be run against all touched scopes (avoid full test suite when changes are minimal, run full test suite when changes are large)
+- Unit tests must be run against all touched scopes (avoid full test suite when changes are minimal, run full test suite when changes are architectural or touch many features only)
 - All relevant docs in `/docs` must be updated to ensure no drift.
 - Any new hardcoded user-facing strings must be replaced with translation keys for all locales. (Except any admin routes, those should stay hard-coded.)
 - Translation key parity must be maintained: if a key is added, removed, or renamed in `messages/en.json`, the same key change must be applied across all locale files. This is enforced by `tests/unit/translation-parity.test.ts` (covered by `npm run test` / CI Vitest runs).

@@ -213,6 +213,54 @@
     "latestReviewsTitle": "最新评论"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "暂无结果",
+      "fetching": "获取中…",
+      "editLink": "编辑来源链接",
+      "editLinkTitle": "编辑来源链接",
+      "editLinkDescription": "更新用于获取此来源的产品网址。",
+      "productLink": "产品链接",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "自动来源需要产品链接。",
+      "mappingAlreadyExists": "此来源和市场的映射已存在。",
+      "invalidProductLink": "请输入有效的 http 或 https 商品链接。",
+      "invalidMapping": "添加价格来源前，请修正突出显示的字段。",
+      "saveLink": "保存链接",
+      "linkSaved": "价格来源链接已保存",
+      "observations": "观测记录",
+      "refetch": "重新获取",
+      "currentProjection": "当前估算",
+      "currentProjectionDescription": "齿轮页面当前显示的数值。",
+      "noProjection": "暂无当前估算。",
+      "asOf": "截至 {date}",
+      "recalculate": "重新计算",
+      "addManualObservation": "添加手动观测",
+      "manualObservationTitle": "添加手动观测",
+      "manualObservationDescription": "无需连接自动来源即可记录价格。",
+      "market": "市场",
+      "pointPrice": "单点价格",
+      "rangePrice": "价格范围",
+      "price": "价格",
+      "pricePlaceholder": "849",
+      "lowPrice": "最低价",
+      "highPrice": "最高价",
+      "observedDate": "观测日期",
+      "evidenceUrlOptional": "证据网址（可选）",
+      "evidenceUrlPlaceholder": "https://example.com",
+      "noteOptional": "备注（可选）",
+      "addObservation": "添加观测",
+      "cancel": "取消",
+      "manualObservationSaved": "已添加观测并重新计算估算",
+      "manualObservationInvalid": "请输入有效的正价格。",
+      "manualObservationRangeInvalid": "请输入有效范围，最高价必须大于或等于最低价。",
+      "priceMissing": "缺少价格",
+      "priceMissingAction": "点击添加",
+      "contributorPriceTitle": "添加二手价格",
+      "contributorPriceDescription": "在所选市场添加价格。价格会立即显示，并标记为稍后审核。",
+      "contributorPriceSaved": "已添加价格",
+      "contributorPriceAlreadyExists": "此器材已有价格。",
+      "contributorPriceFailed": "无法添加价格，请重试。"
+    },
     "renameDialog": {
       "title": "重命名器材",
       "description": "更新此器材的名称。URL 标识和搜索索引将自动更新。",
@@ -811,6 +859,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "MPB 最高价格"
+            },
+            "estimatedUsedPrice": {
+              "label": "估算二手价格"
             },
             "weightGrams": {
               "label": "重量"

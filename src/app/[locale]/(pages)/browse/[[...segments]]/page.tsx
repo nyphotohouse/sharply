@@ -8,6 +8,7 @@ import type { Locale } from "~/i18n/config";
 import { localizePathname } from "~/i18n/routing";
 import { BRANDS, MOUNTS } from "~/lib/constants";
 import { getMountDisplayName } from "~/lib/mapping/mounts-map";
+import { getPriceViewForLocale } from "~/lib/pricing/display-price";
 import { buildLocalizedMetadata } from "~/lib/seo/metadata";
 import {
   buildBrowseStaticParams,
@@ -22,6 +23,7 @@ import {
   resolveScopeOrThrow,
 } from "~/server/gear/browse/service";
 import { fetchTrendingSlugs } from "~/server/popularity/service";
+import { getExchangeRates } from "~/server/pricing/exchange-rates";
 import AllGearContent from "../_components/all-gear-content";
 import BrandContent from "../_components/brand-content";
 import Breadcrumbs from "../_components/breadcrumbs";
@@ -114,10 +116,14 @@ export default async function BrowseCatchAll({
     );
   }
 
-  const initialPage = await fetchBrowseListPage({
-    segments,
-    searchParams: {},
-  });
+  const [initialPage, exchangeRates] = await Promise.all([
+    fetchBrowseListPage({
+      segments,
+      searchParams: {},
+    }),
+    getExchangeRates(),
+  ]);
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
 
   if (depth === 2) {
     const trendingSlugs = await fetchTrendingSlugs({
@@ -152,6 +158,8 @@ export default async function BrowseCatchAll({
             scope={scope}
             trendingBrandId={brand!.id}
             trendingSlugs={trendingSlugs}
+            market={market}
+            initialExchangeRates={exchangeRates}
           />
         </Suspense>
       </main>
@@ -187,6 +195,8 @@ export default async function BrowseCatchAll({
           trendingBrandId={brand!.id}
           trendingMountId={mount!.id}
           trendingSlugs={trendingSlugs}
+          market={market}
+          initialExchangeRates={exchangeRates}
         />
       </Suspense>
     </main>

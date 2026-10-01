@@ -337,6 +337,7 @@ describe("developer API serializers", () => {
       leftViewUrl: "https://example.test/left.jpg",
       rightViewUrl: "https://example.test/right.jpg",
       widthMm: "134",
+      estimatedUsedPrice: null,
       brands: { name: "Nikon", slug: "nikon" },
       mounts: [
         { value: "Nikon Z", shortName: "Z" },
@@ -451,6 +452,38 @@ describe("developer API serializers", () => {
     });
   });
 
+  it("exposes estimated used price while retaining the legacy MPB field", () => {
+    const response = serializeGear({
+      slug: "nikon-z6",
+      name: "Nikon Z6",
+      gearType: "CAMERA",
+      mpbMaxPriceUsdCents: 219900,
+      usedPriceProjection: {
+        US: {
+          low: 178300,
+          typical: 178300,
+          high: 178300,
+          asOf: "2026-09-29T19:05:00.000Z",
+          status: "current",
+          sourceCount: 1,
+          observationCount: 1,
+          methodVersion: 1,
+        },
+      },
+      mounts: [],
+    } as never);
+
+    expect(response.data).toMatchObject({
+      estimatedUsedPrice: {
+        US: {
+          typical: 178300,
+          methodVersion: 1,
+        },
+      },
+      mpbMaxPriceUsdCents: 219900,
+    });
+  });
+
   it("allowlists regional aliases in search responses", () => {
     const response = serializeSearchResponse({
       results: [
@@ -485,6 +518,47 @@ describe("developer API serializers", () => {
     ]);
     expect(response.data[0]).not.toHaveProperty("regionalAliases.0.gearId");
     expect(response.data[0]).not.toHaveProperty("regionalAliases.0.createdAt");
+  });
+
+  it("includes estimated used price in search results", () => {
+    const response = serializeSearchResponse({
+      results: [
+        {
+          id: "internal-id",
+          slug: "nikon-z6",
+          name: "Nikon Z6",
+          brandName: "Nikon",
+          mountValue: null,
+          gearType: "CAMERA",
+          isUnderConstruction: false,
+          thumbnailUrl: null,
+          mpbMaxPriceUsdCents: 219900,
+          usedPriceProjection: {
+            US: {
+              low: 178300,
+              typical: 178300,
+              high: 178300,
+              asOf: "2026-09-29T19:05:00.000Z",
+              status: "current",
+              sourceCount: 1,
+              observationCount: 1,
+              methodVersion: 1,
+            },
+          },
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+      totalPages: 1,
+    });
+
+    expect(response.data[0]).toMatchObject({
+      estimatedUsedPrice: {
+        US: { typical: 178300 },
+      },
+      mpbMaxPriceUsdCents: 219900,
+    });
   });
 
   it("serializes selected specs with structured raw values", () => {

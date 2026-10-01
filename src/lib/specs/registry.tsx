@@ -1,5 +1,6 @@
 import type { SpecsTableSection } from "~/app/[locale]/(pages)/gear/_components/specs-table";
 import { VideoSpecsSummary } from "~/app/[locale]/(pages)/gear/_components/video/video-summary";
+import { ApproximatePriceText } from "~/components/gear/approximate-price-text";
 import { LensApertureProfile } from "~/components/lens-aperture-profile/lens-aperture-profile";
 import { normalizeApertureProfile } from "~/lib/lens-aperture-profile";
 import { Badge } from "~/components/ui/badge";
@@ -12,6 +13,7 @@ import {
   formatCameraType,
   formatCardSlotDetails,
   formatPrecaptureSupport,
+  formatDisplayPrice,
   formatPrice,
   formatShutterType,
 } from "~/lib/mapping";
@@ -32,6 +34,11 @@ import { formatFocalLengthRangeDisplay } from "~/lib/mapping/focal-length-map";
 import { formatFocusDistance } from "~/lib/mapping/focus-distance-map";
 import { formatMaxFpsDisplay } from "~/lib/mapping/max-fps-map";
 import { getMountLongNameById } from "~/lib/mapping/mounts-map";
+import {
+  getDisplayPrice,
+  getPriceViewForLocale,
+  type PriceView,
+} from "~/lib/pricing/display-price";
 import {
   sensorNameFromId,
   sensorTypeLabel,
@@ -54,6 +61,8 @@ export type SpecTranslator = ((key: string) => string) & {
 type SpecTranslationContext = {
   locale?: string;
   t?: SpecTranslator;
+  surface?: "public" | "editor";
+  priceView?: PriceView;
 };
 
 type SpecLabelDescriptor = {
@@ -298,7 +307,7 @@ function resolveFieldLabelDescriptor(
 ): SpecLabelDescriptor & {
   englishLabel: string;
 } {
-  const descriptor = field.labelResolver?.(item) ?? {
+  const descriptor = field.labelResolver?.(item, context) ?? {
     label: field.labelOverride ? field.labelOverride(item) : field.label,
     labelKey: getFieldLabelKey(section, field),
   };
@@ -319,7 +328,10 @@ export type SpecFieldDef = {
   label: string; // Human-readable label for display
   labelKey?: string; // Translation key for display label
   labelOverride?: (item: GearItem) => string; // Optional per-item label
-  labelResolver?: (item: GearItem) => SpecLabelDescriptor; // Dynamic label with matching translation key
+  labelResolver?: (
+    item: GearItem,
+    context?: SpecTranslationContext,
+  ) => SpecLabelDescriptor; // Dynamic label with matching translation key
   searchTerms?: string[]; // Optional aliases used by client-side filtering
   getRawValue: (item: GearItem) => unknown; // Extract raw value from GearItem
   formatDisplay?: (
@@ -328,6 +340,7 @@ export type SpecFieldDef = {
     forceLeftAlign?: boolean,
     viewerRegion?: GearRegion | null,
     locale?: string,
+    priceView?: PriceView,
   ) => React.ReactNode; // Format for display (table, etc.)
   editElementId?: string; // DOM id to focus in the edit UI when navigating from sidebar
   /** Keep this field editable when the editor is filtered to missing values. */
@@ -513,7 +526,46 @@ export const specDictionary: SpecSectionDef[] = [
         label: "MPB Max Price",
         searchTerms: ["price", "used price", "market price", "cost"],
         getRawValue: (item) => item.mpbMaxPriceUsdCents,
-        formatDisplay: (raw) => (raw ? formatPrice(raw as number) : undefined),
+        labelResolver: (item, context) => {
+          const priceView =
+            context?.priceView ?? getPriceViewForLocale(context?.locale);
+          const displayPrice =
+            context?.surface === "public"
+              ? getDisplayPrice(item, {
+                  market: priceView.market,
+                  exchangeRates: priceView.exchangeRates,
+                })
+              : null;
+          return displayPrice?.source === "USED_ESTIMATE"
+            ? {
+                label: "Estimated Used Price",
+                labelKey:
+                  "specRegistry.sections.core.fields.estimatedUsedPrice.label",
+              }
+            : {
+                label: "MPB Max Price",
+                labelKey:
+                  "specRegistry.sections.core.fields.mpbMaxPriceUsdCents.label",
+              };
+        },
+        formatDisplay: (raw, item, _, __, locale, priceView) => {
+          const resolvedPriceView = priceView ?? getPriceViewForLocale(locale);
+          const displayPrice = getDisplayPrice(item, {
+            market: resolvedPriceView.market,
+            exchangeRates: resolvedPriceView.exchangeRates,
+          });
+          if (displayPrice.source === "USED_ESTIMATE") {
+            return (
+              <ApproximatePriceText
+                value={formatDisplayPrice(displayPrice, {
+                  style: "long",
+                  locale: resolvedPriceView.locale,
+                })}
+              />
+            );
+          }
+          return raw ? formatPrice(raw as number) : undefined;
+        },
         editElementId: "mpbMaxPrice",
       },
       {
@@ -2378,7 +2430,14 @@ type DeveloperApiSectionConfig = {
  * constraining how the specs table is organized or displayed.
  */
 const developerApiSectionConfig: Record<string, DeveloperApiSectionConfig> = {
-  core: { category: "gear.basics", label: "Gear basics" },
+  core: {
+    category: "gear.basics",
+    label: "Gear basics",
+    displayOverrides: {
+      mpbMaxPriceUsdCents: (raw) =>
+        raw ? formatPrice(raw as number) : undefined,
+    },
+  },
   "camera-sensor-shutter": {
     category: "camera.sensor",
     label: "Camera sensor",
@@ -2538,6 +2597,7 @@ export function buildGearSpecsSections(
         viewerRegion?: GearRegion | null;
         locale?: string;
         t?: SpecTranslator;
+        priceView?: PriceView;
       },
 ): SpecsTableSection[] {
   const normalizedOptions =
@@ -2550,6 +2610,8 @@ export function buildGearSpecsSections(
   const translationContext: SpecTranslationContext = {
     locale,
     t: normalizedOptions.t,
+    surface: "public",
+    priceView: normalizedOptions.priceView ?? getPriceViewForLocale(locale),
   };
   return specDictionary
     .filter((section) => !section.condition || section.condition(item))
@@ -2572,6 +2634,7 @@ export function buildGearSpecsSections(
                 forceLeftAlign,
                 viewerRegion,
                 locale,
+                translationContext.priceView,
               )
             : (raw as React.ReactNode);
           const value =
@@ -2620,7 +2683,10 @@ export function buildEditSidebarSections(
   item: GearItem,
   options?: SpecTranslationContext,
 ): SidebarSection[] {
-  const translationContext = options ?? {};
+  const translationContext: SpecTranslationContext = {
+    ...options,
+    surface: "editor",
+  };
   return specDictionary
     .filter((section) => !section.condition || section.condition(item))
     .map((section) => ({
