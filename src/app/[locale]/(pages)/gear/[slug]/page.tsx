@@ -18,6 +18,7 @@ import { HallOfFameBadge } from "~/components/gear-badges/hall-of-fame-badge";
 import { LiveTrendingBadge } from "~/components/gear-badges/live-trending-badge";
 import { NewBadge } from "~/components/gear-badges/new-badge";
 import { GearDisplayName } from "~/components/gear/gear-display-name";
+import { GearPriceDisplay } from "~/components/gear/gear-price-display";
 import { GearItemDock } from "~/components/gear/gear-tools-dock/gear-item-dock";
 import { RenameGearButton } from "~/components/gear/rename-gear-button";
 import { TagCloud } from "~/components/gear/tag-cloud";
@@ -42,12 +43,11 @@ import { formatDate } from "~/lib/format/date";
 import { GetGearDisplayName } from "~/lib/gear/naming";
 import { resolveRegionFromCountryCode } from "~/lib/gear/region";
 import {
-  formatPrice,
-  getItemDisplayPrice,
-  PRICE_FALLBACK_TEXT,
-} from "~/lib/mapping";
+  getPriceViewForLocale,
+  type ExchangeRates,
+  type PriceMarket,
+} from "~/lib/pricing/display-price";
 import { getBrandById } from "~/lib/mapping/brand-map";
-import { buildGearSpecsSections } from "~/lib/specs/registry";
 import { shouldPrebuildHeavyRouteLocale } from "~/lib/static-generation";
 import { getConstructionState } from "~/lib/utils";
 import { isInHallOfFame } from "~/lib/utils/is-in-hall-of-fame";
@@ -70,6 +70,7 @@ import {
   fetchTrendingSlugs,
   getTrendingStatusForSlugs,
 } from "~/server/popularity/service";
+import { getExchangeRates } from "~/server/pricing/exchange-rates";
 import { AiReviewBanner } from "../_components/ai-review-banner";
 import { CreatorVideosSection } from "../_components/creator-videos-section";
 import { EditAlreadyPendingToast } from "../_components/edit-already-pending-toast";
@@ -123,14 +124,9 @@ export default async function GearPage({ params }: GearPageProps) {
 
   if (!item) return notFound();
 
+  const exchangeRates = await getExchangeRates();
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
   const hasMpbPrice = item.mpbMaxPriceUsdCents != null;
-  const priceDisplay = getItemDisplayPrice(item, {
-    style: hasMpbPrice ? "short" : "long",
-  });
-  const msrpNowDisplay =
-    hasMpbPrice && item.msrpNowUsdCents != null
-      ? formatPrice(item.msrpNowUsdCents, { style: "short" })
-      : null;
   const regionalDisplayName = GetGearDisplayName(
     {
       name: item.name,
@@ -194,11 +190,6 @@ export default async function GearPage({ params }: GearPageProps) {
   const isTrending = trendingSlugs.has(item.slug);
   const isHallOfFameItem = isInHallOfFame(item.slug);
 
-  const specSections = buildGearSpecsSections(item, {
-    locale,
-    t,
-    viewerRegion,
-  });
   const brand = getBrandById(item.brandId ?? "");
 
   // console.log("[GearPage] item", item);
@@ -296,20 +287,19 @@ export default async function GearPage({ params }: GearPageProps) {
               regionalAliases={item.regionalAliases ?? undefined}
             />
           </div>
-          <div className="mt-2 text-lg font-semibold sm:text-2xl">
-            {priceDisplay === PRICE_FALLBACK_TEXT ? (
-              <span className="text-muted-foreground">{priceDisplay}</span>
-            ) : (
-              <>
-                {priceDisplay}
-                {msrpNowDisplay ? (
-                  <span className="text-muted-foreground ml-2 text-sm font-normal sm:text-lg">
-                    / {msrpNowDisplay}
-                  </span>
-                ) : null}
-              </>
-            )}
-          </div>
+          <GearPriceDisplay
+            gearId={item.id}
+            slug={item.slug}
+            priceInput={{
+              usedPriceProjection: item.usedPriceProjection,
+              mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents,
+              msrpNowUsdCents: item.msrpNowUsdCents,
+              msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents,
+            }}
+            initialMarket={market}
+            initialExchangeRates={exchangeRates}
+            hasMpbPrice={hasMpbPrice}
+          />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {isHallOfFameItem ? <HallOfFameBadge /> : null}
             <LiveTrendingBadge
@@ -379,9 +369,11 @@ export default async function GearPage({ params }: GearPageProps) {
           {/* Specifications */}
           <SpecsSection
             item={item}
-            sections={specSections}
             slug={item.slug}
             gearType={item.gearType}
+            initialMarket={market}
+            initialExchangeRates={exchangeRates}
+            viewerRegion={viewerRegion}
           />
           <InstructionManualSection
             linkInstructionManual={item.linkInstructionManual ?? null}
@@ -429,7 +421,12 @@ export default async function GearPage({ params }: GearPageProps) {
             )}
           {/* Alternatives */}
           <Suspense fallback={null}>
-            <GearAlternativesAndVideos gearId={item.id} slug={item.slug} />
+            <GearAlternativesAndVideos
+              gearId={item.id}
+              slug={item.slug}
+              market={market}
+              exchangeRates={exchangeRates}
+            />
           </Suspense>
         </div>
         {/* Right column */}
@@ -615,9 +612,13 @@ async function EditorialReviewSection({ slug }: { slug: string }) {
 async function GearAlternativesAndVideos({
   gearId,
   slug,
+  market,
+  exchangeRates,
 }: {
   gearId: string;
   slug: string;
+  market: PriceMarket;
+  exchangeRates: ExchangeRates | null;
 }) {
   const [alternatives, creatorVideos] = await Promise.all([
     fetchGearAlternativesByGearId(gearId),
@@ -633,6 +634,8 @@ async function GearAlternativesAndVideos({
       <GearAlternativesSection
         alternatives={alternatives}
         trendingSlugs={trendingSlugs}
+        market={market}
+        exchangeRates={exchangeRates}
       />
       <CreatorVideosSection videos={creatorVideos} />
     </>

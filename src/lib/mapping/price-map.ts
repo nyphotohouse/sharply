@@ -3,6 +3,16 @@
  */
 
 import type { GearItem } from "~/types/gear";
+import {
+  createPriceView,
+  getDisplayPrice,
+  MARKET_CURRENCY,
+  type DisplayPrice,
+  type DisplayPriceInput,
+  type ExchangeRates,
+  type PriceMarket,
+  type PriceView,
+} from "~/lib/pricing/display-price";
 
 export const PRICE_FALLBACK_TEXT = "$ ---";
 
@@ -19,12 +29,28 @@ type FormatPriceOptions = {
   padWholeAmounts?: boolean;
 };
 
-type PriceableGear = Pick<GearItem, "msrpNowUsdCents" | "mpbMaxPriceUsdCents">;
+export type DisplayPriceFormatOptions = FormatPriceOptions & {
+  locale?: string;
+  exchangeRates?: ExchangeRates | null;
+  priceView?: PriceView;
+};
 
-export function normalizePriceCents(
-  priceCents: unknown,
-): number | null {
-  if (typeof priceCents === "number" && Number.isFinite(priceCents) && Number.isInteger(priceCents)) {
+type PriceableGear = Partial<
+  Pick<
+    GearItem,
+    | "usedPriceProjection"
+    | "mpbMaxPriceUsdCents"
+    | "msrpNowUsdCents"
+    | "msrpAtLaunchUsdCents"
+  >
+>;
+
+export function normalizePriceCents(priceCents: unknown): number | null {
+  if (
+    typeof priceCents === "number" &&
+    Number.isFinite(priceCents) &&
+    Number.isInteger(priceCents)
+  ) {
     return priceCents;
   }
   if (typeof priceCents === "string" && priceCents.trim() !== "") {
@@ -54,19 +80,110 @@ export function formatPrice(
   return style === "short" ? `$${formatted}` : `$${formatted} USD`;
 }
 
+function formatDisplayPriceValue(
+  amountMinor: number,
+  currency: string,
+  options: DisplayPriceFormatOptions,
+): string {
+  if (
+    currency === MARKET_CURRENCY.US &&
+    (options.locale ?? "en-US") === "en-US"
+  ) {
+    return formatPrice(amountMinor, options);
+  }
+
+  return new Intl.NumberFormat(options.locale ?? "en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: options.padWholeAmounts ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(amountMinor / 100);
+}
+
 /**
- * Determine the display-ready price using MPB as the preferred source with
- * MSRP as a fallback. When no values exist we render a helpful empty state.
+ * Format a resolved price without changing the resolver's source or shape.
+ * This is intentionally separate from getDisplayPrice so selection remains a
+ * pure, testable policy and callers can choose their own locale presentation.
+ */
+export function formatDisplayPrice(
+  price: DisplayPrice | null | undefined,
+  {
+    style = "long",
+    padWholeAmounts = false,
+    locale = "en-US",
+  }: DisplayPriceFormatOptions = {},
+): string {
+  if (
+    !price ||
+    price.status === "unavailable" ||
+    !price.value ||
+    !price.currency
+  ) {
+    return PRICE_FALLBACK_TEXT;
+  }
+
+  const prefix =
+    price.isConverted ||
+    (price.source === "USED_ESTIMATE" && price.value.kind === "POINT")
+      ? "~"
+      : "";
+
+  const currency = price.currency;
+  const shouldPadWholeAmounts = price.isConverted ? false : padWholeAmounts;
+  const formatValue = (amountMinor: number) =>
+    formatDisplayPriceValue(amountMinor, currency, {
+      style: "short",
+      padWholeAmounts: shouldPadWholeAmounts,
+      locale,
+    });
+
+  if (price.value.kind === "RANGE") {
+    const range = `${formatValue(price.value.lowMinor)} – ${formatValue(
+      price.value.highMinor,
+    )}`;
+    return `${prefix}${style === "short" ? range : `${range} ${currency}`}`;
+  }
+
+  const formatted = formatDisplayPriceValue(price.value.amountMinor, currency, {
+    style,
+    padWholeAmounts: shouldPadWholeAmounts,
+    locale,
+  });
+  if (style === "long" && currency !== MARKET_CURRENCY.US) {
+    return `${formatted} ${currency}`;
+  }
+  return `${prefix}${formatted}`;
+}
+
+/**
+ * Backwards-compatible string adapter around the shared display-price
+ * resolver. New callers that need source, condition, freshness, or range
+ * metadata should call getDisplayPrice directly.
  */
 export function getItemDisplayPrice(
   item: PriceableGear | null | undefined,
-  { style = "long", padWholeAmounts = false }: FormatPriceOptions = {},
+  {
+    style = "long",
+    padWholeAmounts = false,
+    market = "US",
+    range = false,
+    locale,
+    exchangeRates = null,
+    priceView,
+  }: DisplayPriceFormatOptions & {
+    market?: PriceMarket;
+    range?: boolean;
+  } = {},
 ): string {
-  const cents =
-    typeof item?.mpbMaxPriceUsdCents === "number"
-      ? item.mpbMaxPriceUsdCents
-      : typeof item?.msrpNowUsdCents === "number"
-        ? item.msrpNowUsdCents
-        : null;
-  return formatPrice(cents, { style, padWholeAmounts });
+  const resolvedPriceView = priceView ?? createPriceView(market, exchangeRates);
+  const price = getDisplayPrice(item as DisplayPriceInput, {
+    market: resolvedPriceView.market,
+    range,
+    exchangeRates: resolvedPriceView.exchangeRates,
+  });
+  return formatDisplayPrice(price, {
+    style,
+    padWholeAmounts,
+    locale: locale ?? resolvedPriceView.locale,
+  });
 }

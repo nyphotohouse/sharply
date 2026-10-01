@@ -1,5 +1,5 @@
 import { FlameIcon, TrendingUpIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { JSX } from "react";
 import { Suspense } from "react";
@@ -8,6 +8,13 @@ import { Button } from "~/components/ui/button";
 import { orderBrandsWithPriority, splitBrandsWithPriority } from "~/lib/brands";
 import { BRANDS } from "~/lib/constants";
 import { getItemDisplayPrice } from "~/lib/mapping";
+import {
+  createPriceView,
+  getPriceViewForLocale,
+  type ExchangeRates,
+  type PriceMarket,
+} from "~/lib/pricing/display-price";
+import { getExchangeRates } from "~/server/pricing/exchange-rates";
 import {
   fetchBrandBySlug,
   fetchBrowseTrendingRowItems,
@@ -31,6 +38,10 @@ export default async function AllGearContent({
   showBrandPicker?: boolean;
 } = {}) {
   const t = await getTranslations("browsePage");
+  const locale = await getLocale();
+  const exchangeRates = await getExchangeRates();
+  const priceView = getPriceViewForLocale(locale, exchangeRates);
+  const { market } = priceView;
   // return <Loading />;
   const brand = brandSlug ? await fetchBrandBySlug(brandSlug) : null;
   if (brandSlug && !brand) {
@@ -123,7 +134,11 @@ export default async function AllGearContent({
         </div>
 
         <Suspense fallback={<TrendingSkeleton />}>
-          <TrendingGrid brandId={brandId} />
+          <TrendingGrid
+            brandId={brandId}
+            market={market}
+            exchangeRates={exchangeRates}
+          />
         </Suspense>
       </section>
 
@@ -133,16 +148,27 @@ export default async function AllGearContent({
         initialReleasePage={initialReleasePage}
         trendingSlugs={trendingSlugs}
         latestReleasesLabel={t("latestReleases")}
+        market={market}
+        exchangeRates={exchangeRates}
       />
     </main>
   );
 }
 
-async function TrendingGrid({ brandId }: { brandId?: string }) {
+async function TrendingGrid({
+  brandId,
+  market,
+  exchangeRates,
+}: {
+  brandId?: string;
+  market: PriceMarket;
+  exchangeRates: ExchangeRates | null;
+}) {
   const trendingResult = await fetchBrowseTrendingRowItems({
     brandId,
     limit: 3,
   });
+  const priceView = createPriceView(market, exchangeRates);
 
   return (
     <div className="grid w-full grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
@@ -165,6 +191,7 @@ async function TrendingGrid({ brandId }: { brandId?: string }) {
           priceText={getItemDisplayPrice(g, {
             style: "short",
             padWholeAmounts: true,
+            priceView,
           })}
         />
       ))}
@@ -178,12 +205,16 @@ async function ReleaseSection({
   initialReleasePage,
   trendingSlugs,
   latestReleasesLabel,
+  market,
+  exchangeRates,
 }: {
   brandSlug?: string;
   trendingBrandId?: string;
   initialReleasePage: Awaited<ReturnType<typeof fetchReleaseFeedPage>>;
   trendingSlugs: string[];
   latestReleasesLabel: string;
+  market: PriceMarket;
+  exchangeRates: ExchangeRates | null;
 }): Promise<JSX.Element> {
   return (
     <section className="space-y-4">
@@ -193,6 +224,8 @@ async function ReleaseSection({
         brandSlug={brandSlug}
         trendingBrandId={trendingBrandId}
         trendingSlugs={trendingSlugs}
+        market={market}
+        initialExchangeRates={exchangeRates}
       />
     </section>
   );

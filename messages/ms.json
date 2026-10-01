@@ -213,6 +213,54 @@
     "latestReviewsTitle": "Ulasan Terkini"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "Tiada hasil lagi",
+      "fetching": "Sedang mengambil…",
+      "editLink": "Edit pautan sumber",
+      "editLinkTitle": "Edit pautan sumber",
+      "editLinkDescription": "Kemas kini URL produk yang digunakan untuk mengambil sumber ini.",
+      "productLink": "Pautan produk",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "Pautan produk diperlukan untuk sumber automatik.",
+      "mappingAlreadyExists": "Pemetaan untuk sumber dan pasaran ini sudah wujud.",
+      "invalidProductLink": "Masukkan pautan produk http atau https yang sah.",
+      "invalidMapping": "Betulkan medan yang diserlahkan sebelum menambah sumber harga.",
+      "saveLink": "Simpan pautan",
+      "linkSaved": "Pautan sumber harga disimpan",
+      "observations": "Pemerhatian",
+      "refetch": "Ambil semula",
+      "currentProjection": "Unjuran semasa",
+      "currentProjectionDescription": "Nilai yang sedang dipaparkan pada halaman gear.",
+      "noProjection": "Tiada unjuran semasa.",
+      "asOf": "Setakat {date}",
+      "recalculate": "Kira semula",
+      "addManualObservation": "Tambah pemerhatian manual",
+      "manualObservationTitle": "Tambah pemerhatian manual",
+      "manualObservationDescription": "Rekodkan harga tanpa menyambungkan sumber automatik.",
+      "market": "Pasaran",
+      "pointPrice": "Harga titik",
+      "rangePrice": "Julat harga",
+      "price": "Harga",
+      "pricePlaceholder": "849",
+      "lowPrice": "Harga rendah",
+      "highPrice": "Harga tinggi",
+      "observedDate": "Tarikh pemerhatian",
+      "evidenceUrlOptional": "URL bukti (pilihan)",
+      "evidenceUrlPlaceholder": "https://example.com",
+      "noteOptional": "Nota (pilihan)",
+      "addObservation": "Tambah pemerhatian",
+      "cancel": "Batal",
+      "manualObservationSaved": "Pemerhatian ditambah dan unjuran dikira semula",
+      "manualObservationInvalid": "Masukkan harga positif yang sah.",
+      "manualObservationRangeInvalid": "Masukkan julat yang sah dengan harga tinggi sekurang-kurangnya sama dengan harga rendah.",
+      "priceMissing": "Harga tiada",
+      "priceMissingAction": "Klik untuk menambah",
+      "contributorPriceTitle": "Tambah harga terpakai",
+      "contributorPriceDescription": "Tambah harga dalam pasaran pilihan anda. Ia akan dipaparkan serta-merta dan ditanda untuk semakan kemudian.",
+      "contributorPriceSaved": "Harga ditambah",
+      "contributorPriceAlreadyExists": "Item ini sudah mempunyai harga.",
+      "contributorPriceFailed": "Harga tidak dapat ditambah. Sila cuba lagi."
+    },
     "renameDialog": {
       "title": "Namakan semula peralatan",
       "description": "Kemas kini nama peralatan ini. Slug dan indeks carian akan dikemas kini secara automatik.",
@@ -811,6 +859,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "Harga maksimum MPB"
+            },
+            "estimatedUsedPrice": {
+              "label": "Anggaran Harga Terpakai"
             },
             "weightGrams": {
               "label": "Berat"

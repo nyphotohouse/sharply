@@ -7,6 +7,7 @@ export default tseslint.config(
   {
     ignores: [
       ".next",
+      "playwright-report/**",
       "next-env.d.ts",
       "scripts/**",
       "tests/**",

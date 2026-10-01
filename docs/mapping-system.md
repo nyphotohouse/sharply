@@ -15,6 +15,11 @@ src/lib/mapping/
 └── price-map.ts          # Price formatting utilities
 ```
 
+Price selection is intentionally outside this formatting folder. The pure
+fallback policy and structured result live in
+`src/lib/pricing/display-price.ts`; `price-map.ts` adapts that result to the
+existing string-based card/detail contracts.
+
 ## Core Functions
 
 ### Mount Mappings (`mounts-map.ts`)
@@ -64,6 +69,7 @@ import {
   formatApertureRange,
   formatLensApertureDisplay,
 } from "~/lib/mapping";
+import { getDisplayPrice } from "~/lib/pricing/display-price";
 ```
 
 ### Mount Display Examples
@@ -81,6 +87,10 @@ import {
 ```typescript
 // Simple price formatting
 <div>{formatPrice(item.priceUsdCents)}</div>
+
+// Resolve the shared policy before formatting when a gear item has the new
+// used-price projection.
+const price = getDisplayPrice(item, { market: "US", range: false });
 ```
 
 ### Lens Aperture Formatting (`lens-aperture-map.ts`)

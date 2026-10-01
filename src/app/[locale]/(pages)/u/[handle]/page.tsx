@@ -10,9 +10,8 @@ import {
   EmptyDescription,
   EmptyTitle,
 } from "~/components/ui/empty";
-import {
-  getItemDisplayPrice
-} from "~/lib/mapping";
+import { getItemDisplayPrice } from "~/lib/mapping";
+import { ApproximatePriceText } from "~/components/gear/approximate-price-text";
 import { fetchUserListsForProfile } from "~/server/user-lists/service";
 import type { SocialLink } from "~/server/users/service";
 import {
@@ -22,7 +21,7 @@ import {
   triggerHandleSetupNotification,
 } from "~/server/users/service";
 // Note: page is a Server Component and reads from the service layer only.
-import { LibraryIcon,UserPen } from "lucide-react";
+import { LibraryIcon, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
@@ -42,6 +41,13 @@ import { UserAvatar } from "~/components/ui/user-avatar";
 import { GetGearDisplayName } from "~/lib/gear/naming";
 import { getGearDisplayImageUrl } from "~/lib/gear/display-image";
 import { getBrandNameById } from "~/lib/mapping/brand-map";
+import {
+  createPriceView,
+  getPriceViewForLocale,
+  type PriceMarket,
+} from "~/lib/pricing/display-price";
+import { getExchangeRates } from "~/server/pricing/exchange-rates";
+import type { ExchangeRates } from "~/lib/pricing/display-price";
 import type { GearItem } from "~/types/gear";
 
 interface UserProfilePageProps {
@@ -70,10 +76,12 @@ export default async function UserProfilePage({
   params,
 }: UserProfilePageProps) {
   const { locale, handle } = await params;
-  const t = await getTranslations({ locale, namespace: "userProfile" });
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const [t, exchangeRates, session] = await Promise.all([
+    getTranslations({ locale, namespace: "userProfile" }),
+    getExchangeRates(),
+    auth.api.getSession({ headers: await headers() }),
+  ]);
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
 
   const user = session?.user;
 
@@ -118,7 +126,9 @@ export default async function UserProfilePage({
             <h1 className="text-3xl font-bold">
               {profile.name || t("anonymousUser")}
             </h1>
-            <p className="text-muted-foreground">{t("gearCollectionWishlist")}</p>
+            <p className="text-muted-foreground">
+              {t("gearCollectionWishlist")}
+            </p>
           </div>
         </div>
         {myProfile && (
@@ -186,7 +196,12 @@ export default async function UserProfilePage({
                 {sortedOwnedItems.length > 0 ? (
                   <div className="grid grid-cols-1 gap-1">
                     {sortedOwnedItems.map((item) => (
-                      <GearCard key={item.id} item={item} />
+                      <GearCard
+                        key={item.id}
+                        item={item}
+                        market={market}
+                        exchangeRates={exchangeRates}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -251,6 +266,8 @@ export default async function UserProfilePage({
                   key={item.id}
                   item={item}
                   showRemoveButton={myProfile}
+                  market={market}
+                  initialExchangeRates={exchangeRates}
                 />
               ))}
             </div>
@@ -316,16 +333,26 @@ export default async function UserProfilePage({
 }
 
 // Gear card component for displaying individual items
-function GearCard({ item }: { item: GearItem }) {
+function GearCard({
+  item,
+  market,
+  exchangeRates,
+}: {
+  item: GearItem;
+  market: PriceMarket;
+  exchangeRates: ExchangeRates | null;
+}) {
   const brandName = getBrandNameById(item.brandId);
   const displayName = GetGearDisplayName({
     name: item.name,
     regionalAliases: item.regionalAliases ?? [],
   });
   const trimmedName = getDisplayName(displayName, brandName);
+  const priceView = createPriceView(market, exchangeRates);
   const priceDisplay = getItemDisplayPrice(item, {
     style: "short",
     padWholeAmounts: true,
+    priceView,
   });
   const displayImageUrl = getGearDisplayImageUrl(item);
   const brandLabel = brandName || "Unknown brand";
@@ -363,7 +390,7 @@ function GearCard({ item }: { item: GearItem }) {
               {trimmedName}
             </h3>
             <span className="text-muted-foreground mt-auto text-sm font-medium">
-              {priceDisplay}
+              <ApproximatePriceText value={priceDisplay} />
             </span>
           </div>
         </div>

@@ -213,6 +213,54 @@
     "latestReviewsTitle": "Últimas reseñas"
   },
   "gearDetail": {
+    "usedPriceManagement": {
+      "noResultYet": "Aún no hay resultado",
+      "fetching": "Obteniendo…",
+      "editLink": "Editar enlace de fuente",
+      "editLinkTitle": "Editar enlace de fuente",
+      "editLinkDescription": "Actualiza la URL del producto utilizada para obtener esta fuente.",
+      "productLink": "Enlace del producto",
+      "productLinkPlaceholder": "https://example.com/product",
+      "requiredLinkHelp": "Se requiere un enlace del producto para las fuentes automáticas.",
+      "mappingAlreadyExists": "Ya existe un mapeo para esta fuente y este mercado.",
+      "invalidProductLink": "Introduce un enlace de producto http o https válido.",
+      "invalidMapping": "Corrige los campos destacados antes de añadir la fuente de precios.",
+      "saveLink": "Guardar enlace",
+      "linkSaved": "Enlace de la fuente de precios guardado",
+      "observations": "Observaciones",
+      "refetch": "Volver a obtener",
+      "currentProjection": "Proyección actual",
+      "currentProjectionDescription": "Valores que se muestran actualmente en la página del equipo.",
+      "noProjection": "No hay una proyección actual.",
+      "asOf": "A fecha de {date}",
+      "recalculate": "Recalcular",
+      "addManualObservation": "Añadir observación manual",
+      "manualObservationTitle": "Añadir observación manual",
+      "manualObservationDescription": "Registra un precio sin conectar una fuente automática.",
+      "market": "Mercado",
+      "pointPrice": "Precio puntual",
+      "rangePrice": "Rango de precios",
+      "price": "Precio",
+      "pricePlaceholder": "849",
+      "lowPrice": "Precio mínimo",
+      "highPrice": "Precio máximo",
+      "observedDate": "Fecha de observación",
+      "evidenceUrlOptional": "URL de evidencia (opcional)",
+      "evidenceUrlPlaceholder": "https://example.com",
+      "noteOptional": "Nota (opcional)",
+      "addObservation": "Añadir observación",
+      "cancel": "Cancelar",
+      "manualObservationSaved": "Observación añadida y proyección recalculada",
+      "manualObservationInvalid": "Introduce un precio positivo válido.",
+      "manualObservationRangeInvalid": "Introduce un rango válido con el precio máximo igual o superior al mínimo.",
+      "priceMissing": "Falta el precio",
+      "priceMissingAction": "Haz clic para añadir",
+      "contributorPriceTitle": "Añadir precio usado",
+      "contributorPriceDescription": "Añade un precio en el mercado seleccionado. Aparecerá de inmediato y quedará marcado para revisión posterior.",
+      "contributorPriceSaved": "Precio añadido",
+      "contributorPriceAlreadyExists": "Este artículo ya tiene un precio.",
+      "contributorPriceFailed": "No se pudo añadir el precio. Inténtalo de nuevo."
+    },
     "renameDialog": {
       "title": "Cambiar nombre del equipo",
       "description": "Actualiza el nombre de este equipo. El slug y el índice de búsqueda se actualizarán automáticamente.",
@@ -811,6 +859,9 @@
             },
             "mpbMaxPriceUsdCents": {
               "label": "Precio máximo en MPB"
+            },
+            "estimatedUsedPrice": {
+              "label": "Precio usado estimado"
             },
             "weightGrams": {
               "label": "Peso"

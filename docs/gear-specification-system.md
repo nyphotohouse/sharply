@@ -21,7 +21,7 @@ The central table that stores common gear information:
 - **Brand & Mount**: References to brands and mounts
   - `mountId`: Single mount reference (kept for backward compatibility, stores "primary" mount)
   - Mount relationships managed via `gear_mounts` junction table for multi-mount support
-- **Metadata**: Announced, release, and discontinued dates with precision; price; thumbnail URL; optional stored Open Graph URL; optional top-view URL; optional rear-view URL; and optional camera side-view URLs
+- **Metadata**: Announced, release, and discontinued dates with precision; MSRP compatibility fields and legacy MPB compatibility price; thumbnail URL; optional stored Open Graph URL; optional top-view URL; optional rear-view URL; and optional camera side-view URLs
   - `thumbnailUrl` applies to all gear
   - `ogImageUrl` stores a precomputed padded social-preview image derived from the front thumbnail, or from a lens orthographic image when no front image exists
   - `topViewUrl` applies to cameras and lenses; lens UI labels this as "Orthographic"
@@ -34,7 +34,7 @@ The central table that stores common gear information:
   - `HIDDEN`: emergency off switch; hidden from all public surfaces and direct public gear URLs return 404
   - Indexed in the `gear` table to support public browse/search/trending/popularity filters
 - **User Notes**: `notes` — `text[]` for unstructured notes
-- **Commerce**: `mpbMaxPriceUsdCents` — optional MPB max price (USD cents)
+- **Commerce**: `mpbMaxPriceUsdCents` remains available for MPB-specific compatibility/fallback behavior. Source mappings, observations, estimates, projections, public display policy, and scheduled-fetch observability are documented in [`prices/`](./prices/) and summarized in [`used-price-system.md`](./used-price-system.md)
 - **Core Specs**: Physical dimensions (width, height, depth in mm), weight, and optional product lineage
   - `predecessorGearId` and `successorGearId` are nullable same-type self-references for the prior and next model respectively.
   - Editor relationship management keeps the two directions reciprocal. Deleting a referenced gear item sets the corresponding lineage field to `null`.
@@ -124,7 +124,7 @@ Stores detailed camera-specific specifications:
 
 - **Primary Key**: `gearId` (1:1 relationship with gear)
 - **Sensor**: Format reference, resolution in megapixels
-- **Performance**: native ISO range (`isoMin`/`isoMax`), optional expanded ISO bounds (`isoMinExpanded`/`isoMaxExpanded`, stored as `iso_min_expanded`/`iso_max_expanded`), and native base ISO values (`baseIso`, stored as the nullable, unrestricted `base_iso` integer array), plus IBIS, available shutter types, and viewfinder type. Base ISO values are positive integers stored uniquely in ascending order and displayed with ` / ` separators. The editor currently caps entry at three values; expanded and base ISO values do not affect native ISO search filters.
+- **Performance**: native ISO range (`isoMin`/`isoMax`), optional expanded ISO bounds (`isoMinExpanded`/`isoMaxExpanded`, stored as `iso_min_expanded`/`iso_max_expanded`), and native base ISO values (`baseIso`, stored as the nullable, unrestricted `base_iso` integer array), plus IBIS, available shutter types, and viewfinder type. Base ISO values are positive integers stored uniquely in ascending order and displayed with `/` separators. The editor currently caps entry at three values; expanded and base ISO values do not affect native ISO search filters.
 - **Focus**: `hasAutofocus` is nullable so unknown capability is distinct from a confirmed absence. When it is explicitly `false`, autofocus-specific detail rows (focus points, AF area modes, AF subject categories, and focus bracketing) are hidden; stored values are retained for a future correction. The edit form keeps those controls visible but disabled unless autofocus is explicitly `true`, while the edit sidebar hides them when autofocus is `false`.
 - **Burst rate**:
   - `max_fps_by_shutter` (JSONB, nullable) stores per-shutter continuous FPS for RAW/JPG. Keys: `mechanical`, `efc`, `electronic` with `{ raw, jpg }` numeric values.

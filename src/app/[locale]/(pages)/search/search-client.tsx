@@ -13,6 +13,7 @@ import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { useDebounce } from "~/lib/hooks/useDebounce";
 import { normalizeTagSlugs } from "~/lib/tags/normalize-tag-slugs";
+import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
 import {
   normalizeSearchGearTypeForApi,
   normalizeSearchGearTypeForUi,
@@ -38,9 +39,16 @@ type SearchClientProps = {
     page: number;
     pageSize: number;
   } | null;
+  market: PriceMarket;
+  initialExchangeRates?: ExchangeRates | null;
 };
 
-export function SearchClient({ initialPage, tagOptions }: SearchClientProps) {
+export function SearchClient({
+  initialPage,
+  tagOptions,
+  market,
+  initialExchangeRates,
+}: SearchClientProps) {
   const { view, setView } = useGearResultsView();
   const [q, setQ] = useQueryState("q");
   const [sort] = useQueryState("sort");
@@ -345,6 +353,8 @@ export function SearchClient({ initialPage, tagOptions }: SearchClientProps) {
             isLoadingMore={isLoadingMore}
             isReachingEnd={isReachingEnd}
             view={view}
+            market={market}
+            initialExchangeRates={initialExchangeRates}
           />
           <div ref={loadMoreRef} className="h-12 w-full" aria-hidden />
         </div>

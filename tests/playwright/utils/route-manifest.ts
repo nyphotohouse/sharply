@@ -150,6 +150,7 @@ export const routeManifest: RouteEntry[] = [
   // CardTitle ("Top Contributors") renders a <div>, not a heading role.
   { path: "/admin/leaderboard", pattern: "/admin/leaderboard", marker: { text: "Top Contributors" }, spec: "admin", auth: true },
   { path: "/admin/logs", pattern: "/admin/logs", marker: { role: "heading", name: "Logs" }, spec: "admin", auth: true },
+  { path: "/admin/prices", pattern: "/admin/prices", marker: { role: "heading", name: "Pricing" }, spec: "admin", auth: true },
   // No page-specific heading role (CardTitle divs only); the seeded invite
   // fixture ("E2E Invitee", scripts/e2e/seed-fixtures.ts) is the data-driven
   // proof the Invites card's data actually loaded.

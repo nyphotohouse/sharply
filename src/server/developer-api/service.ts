@@ -80,8 +80,16 @@ export type DeveloperApiFixedLensSpecs = Omit<
 
 export type DeveloperApiGear = Omit<
   GearItem,
-  "mountIds" | "mounts" | "cameraSpecs" | "lensSpecs" | "fixedLensSpecs"
+  | "mountIds"
+  | "mounts"
+  | "cameraSpecs"
+  | "lensSpecs"
+  | "fixedLensSpecs"
+  | "mpbMaxPriceUsdCents"
+  | "usedPriceProjection"
 > & {
+  mpbMaxPriceUsdCents: GearItem["mpbMaxPriceUsdCents"];
+  usedPriceProjection: GearItem["usedPriceProjection"];
   mounts: DeveloperApiMount[];
   cameraSpecs: DeveloperApiCameraSpecs | null;
   lensSpecs: DeveloperApiLensSpecs | null;

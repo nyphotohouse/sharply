@@ -1,31 +1,48 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useDeferredValue,useId,useState } from "react";
+import { useLocale } from "next-intl";
+import { useDeferredValue, useId, useState } from "react";
 import { Input } from "~/components/ui/input";
+import type { ExchangeRates, PriceMarket } from "~/lib/pricing/display-price";
+import { buildGearSpecsSections } from "~/lib/specs/registry";
 import { filterSpecsSections } from "~/lib/specs/filter";
-import type { GearItem,GearType } from "~/types/gear";
+import { usePriceView } from "~/lib/pricing/use-price-view";
+import type { GearRegion } from "~/lib/gear/region";
+import type { GearItem, GearType } from "~/types/gear";
 import type { SpecsTableSection } from "./specs-table";
 import SpecsTable from "./specs-table";
 import { SuggestEditButton } from "./suggest-edit-button";
 
 interface SpecsSectionProps {
   item: GearItem;
-  sections: SpecsTableSection[];
   slug: string;
   gearType: GearType;
+  initialMarket: PriceMarket;
+  initialExchangeRates?: ExchangeRates | null;
+  viewerRegion?: GearRegion | null;
 }
 
 export function SpecsSection({
   item,
-  sections,
   slug,
   gearType,
+  initialMarket,
+  initialExchangeRates,
+  viewerRegion,
 }: SpecsSectionProps) {
   const t = useTranslations("gearDetail");
+  const locale = useLocale();
+  const priceView = usePriceView(initialMarket, initialExchangeRates);
   const [query, setQuery] = useState("");
   const inputId = useId();
   const deferredQuery = useDeferredValue(query);
+  const sections: SpecsTableSection[] = buildGearSpecsSections(item, {
+    locale,
+    t,
+    viewerRegion,
+    priceView,
+  });
   const filteredSections = filterSpecsSections(sections, deferredQuery);
   const normalizedQuery = deferredQuery.trim();
   const emptyMessage = normalizedQuery

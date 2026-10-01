@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compareNullable,
+  compareEffectivePriceRows,
   formatMountNames,
   getCameraTypeDisplay,
   getEffectiveDateValue,
@@ -70,11 +71,28 @@ describe("gear table sort values", () => {
     expect(mounts.length - 3).toBe(1);
   });
 
-  it("uses announcement as the release fallback and MPB as the price preference", () => {
+  it("uses announcement as the release fallback and the shared price policy", () => {
     expect(getEffectiveDateValue(row)).toBe(
       Date.parse(row.announcedDate as string),
     );
     expect(getEffectivePrice(row)).toBe(75_000);
+    expect(
+      getEffectivePrice({
+        ...row,
+        usedPriceProjection: {
+          US: {
+            low: 80_000,
+            typical: 85_000,
+            high: 90_000,
+            asOf: "2026-09-29T00:00:00.000Z",
+            status: "stale",
+            sourceCount: 1,
+            observationCount: 2,
+            methodVersion: 1,
+          },
+        },
+      }),
+    ).toBe(85_000);
   });
 
   it("sorts unknown values last", () => {
@@ -87,5 +105,14 @@ describe("gear table sort values", () => {
     expect(
       compareNullable<number>(null, null, (left, right) => left - right),
     ).toBe(0);
+  });
+
+  it("uses stable name and id ties after the canonical price value", () => {
+    expect(
+      compareEffectivePriceRows(
+        { ...row, id: "gear-b", name: "Same Price B" },
+        { ...row, id: "gear-a", name: "Same Price A" },
+      ),
+    ).toBeGreaterThan(0);
   });
 });

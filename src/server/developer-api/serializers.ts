@@ -389,6 +389,8 @@ export function serializeSearchResponse(result: SearchResponse) {
       announceDatePrecision: item.announceDatePrecision ?? null,
       msrpNowUsdCents: item.msrpNowUsdCents ?? null,
       msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents ?? null,
+      estimatedUsedPrice: serializeJson(item.usedPriceProjection),
+      // MPB-specific price field retained alongside the estimate.
       mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents ?? null,
       regionalAliases: serializeAliases(item.regionalAliases),
     })),
@@ -462,6 +464,8 @@ export function serializeGear(item: DeveloperApiGear) {
       discontinuedDatePrecision: item.discontinuedDatePrecision,
       msrpNowUsdCents: item.msrpNowUsdCents,
       msrpAtLaunchUsdCents: item.msrpAtLaunchUsdCents,
+      estimatedUsedPrice: serializeJson(item.usedPriceProjection),
+      // MPB-specific price field retained alongside the estimate.
       mpbMaxPriceUsdCents: item.mpbMaxPriceUsdCents,
       thumbnailUrl: media.thumbnailUrl,
       ogImageUrl: media.ogImageUrl,

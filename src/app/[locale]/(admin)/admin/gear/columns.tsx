@@ -2,14 +2,15 @@
 // (client component) will contain our column definitions.
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Copy,Image as ImageIcon,Pencil,Trash2 } from "lucide-react";
-import { useLocale,useTranslations } from "next-intl";
+import { Copy, Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { RenameGearDialog } from "~/components/gear/rename-gear-dialog";
 import { GearImageModal } from "~/components/modals/gear-image-modal";
+import { ManagePriceModal } from "~/components/gear/manage-price-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,7 @@ import {
 } from "~/components/ui/tooltip";
 import { GEAR_PUBLICATION_STATES } from "~/lib/gear/publication-state";
 import { formatDate } from "~/lib/format/date";
+import { getUsedPricingPreview } from "~/lib/pricing/used-pricing-preview";
 import {
   actionDeleteGear,
   actionUpdateGearPublicationState,
@@ -164,7 +166,7 @@ function GearActionsCell({ row }: { row: { original: AdminGearTableRow } }) {
                 aria-label="Delete gear"
                 disabled={isDeleting}
               >
-                <Trash2 className="h-4 w-4 text-destructive" />
+                <Trash2 className="text-destructive h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
           </TooltipTrigger>
@@ -223,9 +225,7 @@ function PublicationStateCell({
       (key) =>
         typeof key === "string" && key.startsWith("/api/admin/gear/list?"),
       (
-        current:
-          | { items: AdminGearTableRow[]; totalCount: number }
-          | undefined,
+        current: { items: AdminGearTableRow[]; totalCount: number } | undefined,
       ) => {
         if (!current) return current;
         return {
@@ -286,21 +286,61 @@ function PublicationStateCell({
   );
 }
 
+function UsedPricingCell({ row }: { row: { original: AdminGearTableRow } }) {
+  const preview = getUsedPricingPreview(
+    row.original.usedPriceProjection,
+    row.original.usedPricingMode,
+  );
+
+  return (
+    <ManagePriceModal
+      gearId={row.original.id}
+      slug={row.original.slug}
+      trigger={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-auto min-h-8 justify-start px-2 py-1 text-left"
+          aria-label={`Manage used pricing for ${row.original.name}`}
+        >
+          {preview.price ? (
+            <span className="font-medium">
+              {preview.price}
+              {preview.modeLabel ? (
+                <span className="text-muted-foreground font-normal">
+                  {` - ${preview.modeLabel}`}
+                </span>
+              ) : null}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">No Pricing</span>
+          )}
+        </Button>
+      }
+    />
+  );
+}
+
 export const columns: ColumnDef<AdminGearTableRow>[] = [
   {
     header: "Name",
     accessorKey: "name",
     cell: ({ row }) => {
       return (
-        <Link className="hover:underline" href={`/gear/${row.original.slug}`}>
-          {row.original.name}
-        </Link>
+        <div className="min-w-0">
+          <Link
+            className="font-medium hover:underline"
+            href={`/gear/${row.original.slug}`}
+          >
+            {row.original.name}
+          </Link>
+          <span className="text-muted-foreground mt-0.5 block max-w-[18rem] truncate font-mono text-xs">
+            {row.original.slug}
+          </span>
+        </div>
       );
     },
-  },
-  {
-    header: "Slug",
-    accessorKey: "slug",
   },
   {
     header: "Brand",
@@ -314,6 +354,11 @@ export const columns: ColumnDef<AdminGearTableRow>[] = [
     header: "State",
     accessorKey: "publicationState",
     cell: ({ row }) => <PublicationStateCell row={row} />,
+  },
+  {
+    header: "Used Pricing",
+    accessorKey: "usedPricingMode",
+    cell: ({ row }) => <UsedPricingCell row={row} />,
   },
   {
     header: "Created At",

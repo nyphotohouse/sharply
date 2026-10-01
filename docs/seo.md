@@ -38,16 +38,15 @@ Which page emits what:
   `{"@id": ".../#website"}` / `{"@id": ".../#organization"}`.
 - **Gear pages**: `Product` (with `additionalType: ProductModel`) including
   brand, category, key specs as `additionalProperty`, and an `offers` node
-  that mirrors the *displayed* price (MPB used price first, else current
-  MSRP — same order as `price-map.ts`). Google renders Product snippets
-  only when one of `offers`/`review`/`aggregateRating` is present; an
-  offer from the displayed price is the only one emitted today (nesting
-  staff verdicts / editorial reviews as `review` is deferred until the
-  review system is built out), so items without price data emit no
-  `Product` node at all (the builder returns null and `buildJsonLdGraph`
-  drops nullish nodes). Plus `BreadcrumbList` on every gear page. Rumored
-  and under-construction gear pages emit nothing (they are noindexed or
-  thin).
+  only when the selected legacy value represents an actual MPB or current
+  MSRP offer. The visible price uses the shared used-price resolver, but a
+  derived current/stale projection is not emitted as a purchasable Offer.
+  Google renders Product snippets only when one of
+  `offers`/`review`/`aggregateRating` is present; items whose selected price is
+  only a derived estimate therefore emit no `Product` node until a suitable
+  non-Offer schema representation exists. Plus `BreadcrumbList` on every gear
+  page. Rumored and under-construction gear pages emit nothing (they are
+  noindexed or thin).
 - **Editorial review pages**: `Product` + nested `Review` with
   `positiveNotes`/`negativeNotes` from the review's good/bad points,
   targeting Google's pros-and-cons rich result. No `reviewRating`: the
@@ -57,7 +56,7 @@ Which page emits what:
 
 Rules of thumb:
 
-- Only mark up what is *visible on the page* (Google guideline). This is why
+- Only mark up what is _visible on the page_ (Google guideline). This is why
   gear pages have no `aggregateRating` — user reviews are thumbs-style and
   no aggregate stat is displayed. If a visible "% recommend" stat ships,
   an `aggregateRating` (`bestRating: 100`) may be added alongside it.

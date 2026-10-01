@@ -22,7 +22,7 @@ import type {
   BrowseListItem,
   BrowseListPage,
 } from "~/types/browse";
-import type { SearchGearResult } from "./data";
+import type { BrowseGearRow, SearchGearResult } from "./data";
 import {
   getBrandBySlug,
   getMountByShortName,
@@ -57,7 +57,9 @@ export type BrowseTrendingCardFields = {
   announcedDate: string | null;
   announceDatePrecision: "DAY" | "MONTH" | "YEAR" | null;
   msrpNowUsdCents: number | null;
+  msrpAtLaunchUsdCents?: number | null;
   mpbMaxPriceUsdCents: number | null;
+  usedPriceProjection?: BrowseGearRow["usedPriceProjection"];
 };
 
 export type BrowseTrendingRowItem = BrowseTrendingCardFields & {

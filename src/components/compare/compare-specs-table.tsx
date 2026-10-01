@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale,useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { SuggestEditButton } from "~/app/[locale]/(pages)/gear/_components/suggest-edit-button";
@@ -17,8 +17,10 @@ import {
 import { buildCompareSections } from "~/components/compare/compare-specs-table.helpers";
 import { useSession } from "~/lib/auth/auth-client";
 import { useGearDisplayName } from "~/lib/hooks/useGearDisplayName";
+import { getPriceMarketForLocale } from "~/lib/pricing/display-price";
+import { usePriceView } from "~/lib/pricing/use-price-view";
 import { buildGearSpecsSections } from "~/lib/specs/registry";
-import { cn,getConstructionState } from "~/lib/utils";
+import { cn, getConstructionState } from "~/lib/utils";
 import type { GearItem } from "~/types/gear";
 
 function countMissingSpecs(
@@ -47,6 +49,7 @@ export function CompareSpecsTable({
   const session = data?.session;
   const locale = useLocale();
   const t = useTranslations("gearDetail");
+  const priceView = usePriceView(getPriceMarketForLocale(locale));
   const aName = useGearDisplayName({
     name: a.name,
     regionalAliases: a.regionalAliases,
@@ -60,11 +63,13 @@ export function CompareSpecsTable({
     forceLeftAlign: true,
     locale,
     t,
+    priceView,
   });
   const bSections = buildGearSpecsSections(b, {
     forceLeftAlign: true,
     locale,
     t,
+    priceView,
   });
   const missingA = countMissingSpecs(aSections);
   const missingB = countMissingSpecs(bSections);
@@ -263,7 +268,10 @@ function CompareGearNameLink({
   return (
     <Link
       href={`/gear/${slug}`}
-      className={cn("transition-colors hover:text-foreground hover:underline", className)}
+      className={cn(
+        "hover:text-foreground transition-colors hover:underline",
+        className,
+      )}
     >
       {name}
     </Link>
