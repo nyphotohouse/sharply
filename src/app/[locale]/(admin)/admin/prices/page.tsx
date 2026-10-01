@@ -9,10 +9,6 @@ import {
   type PriceFetchRunLogRow,
 } from "./price-fetch-run-log";
 import {
-  PriceOverviewTable,
-  type PriceOverviewTableRow,
-} from "./price-overview-table";
-import {
   UpcomingPriceFetches,
   type UpcomingPriceFetchRow,
 } from "./upcoming-price-fetches";
@@ -30,11 +26,6 @@ export default async function AdminPricesPage() {
     listUpcomingPriceMappingsService(),
     listRecentPriceObservationsService(),
   ]);
-  const serializedRows: PriceOverviewTableRow[] = rows.map((row) => ({
-    ...row,
-    lastFetchedAt: row.lastFetchedAt?.toISOString() ?? null,
-    nextFetchAt: row.nextFetchAt?.toISOString() ?? null,
-  }));
   const serializedRuns: PriceFetchRunLogRow[] = runs.map((run) => ({
     ...run,
     startedAt: run.startedAt.toISOString(),
@@ -90,7 +81,6 @@ export default async function AdminPricesPage() {
       <UpcomingPriceFetches rows={serializedUpcoming} />
       <PriceFetchRunLog runs={serializedRuns} />
       <RecentPriceObservations rows={serializedObservations} />
-      <PriceOverviewTable rows={serializedRows} />
     </div>
   );
 }

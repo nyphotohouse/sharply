@@ -101,8 +101,8 @@ observation model as editorial entries.
 These observations are deliberately auto-accepted into the live estimate so a
 newly contributed item is useful immediately. The observation remains
 `status = VALID` with `needsReview = true`, which makes it visible in the
-recent-observations section of `/admin/prices`. Editors can approve it by
-clearing the flag or reject it by marking it invalid and rebuilding the item's
+**Needs Review** table on `/admin/prices`. Editors can approve it by clearing
+the flag or reject it by marking it invalid and rebuilding the item's
 projection. A valid observation already present at submission time prevents a
 second public seed contribution.
 
@@ -128,11 +128,17 @@ the application, so this flow does not add per-row locks or leases.
 
 The `/admin/prices` page provides:
 
-- an overview of active mappings and their fetch state;
-- an upcoming-fetch queue;
+- an upcoming-fetch queue limited to mappings due now or within the next 24
+  hours;
 - a clickable scheduled-run log with aggregate and per-mapping details;
-- a recent-observations queue with review warnings and approve/reject controls
-  for public first-price contributions.
+- a dedicated **Needs Review** table for public first-price contributions,
+  with approve/reject controls;
+- a paginated recent-observations table for the broader observation history.
+
+Per-gear pricing management is available from the **Used Pricing** column in
+the admin gear table. Each row shows the current US price when available and
+whether the item has an active automatic fetch mapping or manual pricing. The
+pricing page remains focused on fetch operations, runs, and observation review.
 
 Manual refetches are shown on the mapping itself and are not mixed into the
 scheduled batch history.

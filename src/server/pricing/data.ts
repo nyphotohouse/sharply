@@ -29,6 +29,7 @@ import type {
   PriceFetchResult,
   PriceOverviewRow,
 } from "./types";
+import { getUpcomingFetchCutoff } from "~/lib/pricing/upcoming-fetch-window";
 
 export async function getPriceManagementData(gearId: string) {
   const [gearRow] = await db
@@ -729,6 +730,8 @@ export async function listRecentPriceFetchRunsData(limit = 12) {
 }
 
 export async function listUpcomingPriceMappingsData(limit = 8) {
+  const upcomingCutoff = getUpcomingFetchCutoff();
+
   return db
     .select({
       mappingId: gearPriceMappings.id,
@@ -747,6 +750,10 @@ export async function listUpcomingPriceMappingsData(limit = 8) {
       and(
         eq(gearPriceMappings.status, "ACTIVE"),
         ne(gearPriceMappings.sourceKey, "manual"),
+        or(
+          isNull(gearPriceMappings.nextFetchAt),
+          lte(gearPriceMappings.nextFetchAt, upcomingCutoff),
+        ),
       ),
     )
     .orderBy(asc(gearPriceMappings.nextFetchAt))

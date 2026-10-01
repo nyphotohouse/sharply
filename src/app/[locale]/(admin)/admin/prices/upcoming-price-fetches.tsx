@@ -32,12 +32,12 @@ export function UpcomingPriceFetches({
       <div>
         <h3 className="text-lg font-semibold">Upcoming fetches</h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          The next active mappings the daily scheduler will consider.
+          Active mappings due now or within the next 24 hours.
         </p>
       </div>
       {rows.length === 0 ? (
         <div className="text-muted-foreground rounded-lg border p-6 text-center text-sm">
-          No active mappings are scheduled.
+          No active mappings are due soon.
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">

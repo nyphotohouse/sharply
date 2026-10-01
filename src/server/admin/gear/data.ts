@@ -23,12 +23,14 @@ import {
   cameraSpecs,
   fixedLensSpecs,
   gear,
+  gearPriceMappings,
   gearAliases,
   gearMounts,
   lensSpecs,
   mounts,
   recommendationItems,
 } from "~/server/db/schema";
+import { getUsedPricingMode } from "~/lib/pricing/used-pricing-preview";
 import type { GearPublicationState, GearType } from "~/types/gear";
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -496,6 +498,7 @@ const adminGearSelect = {
   rearViewUrl: gear.rearViewUrl,
   leftViewUrl: gear.leftViewUrl,
   rightViewUrl: gear.rightViewUrl,
+  usedPriceProjection: gear.usedPriceProjection,
   createdAt: gear.createdAt,
 };
 
@@ -533,8 +536,35 @@ export async function fetchAdminGearItemsData(
     whereFilter ? countQuery.where(whereFilter) : countQuery,
   ]);
 
+  const gearIds = items.map((item) => item.id);
+  const activePricingMappings = gearIds.length
+    ? await db
+        .select({
+          gearId: gearPriceMappings.gearId,
+          sourceKey: gearPriceMappings.sourceKey,
+        })
+        .from(gearPriceMappings)
+        .where(
+          and(
+            inArray(gearPriceMappings.gearId, gearIds),
+            eq(gearPriceMappings.status, "ACTIVE"),
+          ),
+        )
+    : [];
+  const sourceKeysByGearId = new Map<string, string[]>();
+  for (const mapping of activePricingMappings) {
+    const sourceKeys = sourceKeysByGearId.get(mapping.gearId) ?? [];
+    sourceKeys.push(mapping.sourceKey);
+    sourceKeysByGearId.set(mapping.gearId, sourceKeys);
+  }
+
   return {
-    items,
+    items: items.map((item) => ({
+      ...item,
+      usedPricingMode: getUsedPricingMode(
+        sourceKeysByGearId.get(item.id) ?? [],
+      ),
+    })),
     totalCount: Number(totalResult[0]?.count ?? 0),
   };
 }
