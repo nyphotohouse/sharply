@@ -33,3 +33,7 @@ Cached pages were regenerating with time-dependent output and live trending stat
 ## Update (2026-10-03)
 
 Home's ISR interval is now 15 minutes, with Home-specific news and review caches at the same interval. Its stable 7-day trending list is refreshed through `GET /api/trending/home` every two minutes while visible. The endpoint is Vercel-CDN cached for 120 seconds with 60 seconds of stale-while-revalidate and returns only the fields rendered by each row. Other pages retain their existing data-cache intervals and server-rendered trending behavior.
+
+## Update (2026-10-04)
+
+Payload News, editorial Reviews, and Learn data now use a one-hour fallback cache interval. Home's page interval remains 15 minutes for its other content, while its News and Review data caches use one hour. Publishing, unpublishing, or deleting published editorial content invalidates the relevant collection caches and public paths across supported locales, including affected article pages, listings, Home, related gear pages, and the sitemap. Draft saves and autosaves do not invalidate public content.

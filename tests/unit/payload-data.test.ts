@@ -106,4 +106,15 @@ describe("payload data client", () => {
       depth: 2,
     });
   });
+
+  it("returns null when a News slug is no longer available", async () => {
+    const payloadClient = {
+      find: vi.fn().mockResolvedValue({ docs: [] }),
+    };
+    payloadMocks.getPayload.mockResolvedValue(payloadClient);
+
+    const { getNewsPostBySlugData } = await import("~/server/payload/data");
+
+    await expect(getNewsPostBySlugData("old-slug")).resolves.toBeNull();
+  });
 });

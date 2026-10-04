@@ -34,10 +34,10 @@ function sortNewsPosts(posts: News[]): News[] {
   return sorted;
 }
 
-export const getNewsPostBySlug = async (slug: string): Promise<News> => {
+export const getNewsPostBySlug = async (slug: string): Promise<News | null> => {
   const newsPost = await getNewsPostBySlugData(slug);
-  if (newsPost._status !== "published") {
-    throw new Error("News post is not published");
+  if (newsPost?._status !== "published") {
+    return null;
   }
   return newsPost;
 };
@@ -63,7 +63,7 @@ function sortReviews(reviews: Review[]): Review[] {
 
 export const getReviewBySlug = async (slug: string): Promise<Review | null> => {
   const review = await getReviewBySlugData(slug);
-  if (review._status !== "published") {
+  if (review?._status !== "published") {
     return null;
   }
   return review;

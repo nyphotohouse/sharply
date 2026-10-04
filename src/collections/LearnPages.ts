@@ -2,6 +2,10 @@ import type { CollectionConfig } from "payload";
 import slugify from "slugify";
 import { relatedGearItemsField } from "~/payload-fields/custom-fields";
 import { lexicalFirstParagraphText } from "~/server/payload/richtext";
+import {
+  createEditorialAfterChangeHook,
+  createEditorialAfterDeleteHook,
+} from "./editorial-revalidation";
 
 export const LearnPages: CollectionConfig = {
   slug: "learn-pages",
@@ -205,6 +209,8 @@ export const LearnPages: CollectionConfig = {
   ],
 
   hooks: {
+    afterChange: [createEditorialAfterChangeHook("learn-pages")],
+    afterDelete: [createEditorialAfterDeleteHook("learn-pages")],
     beforeValidate: [
       ({ data }) => {
         // generate slug from title

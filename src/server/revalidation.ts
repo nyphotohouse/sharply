@@ -1,8 +1,9 @@
 import "server-only";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { defaultLocale, locales } from "~/i18n/config";
 import { localizePathname } from "~/i18n/routing";
+import { PAYLOAD_CACHE_TAGS } from "~/lib/payload-cache-tags";
 
 export type RevalidationPathType = "page" | "layout";
 
@@ -71,4 +72,68 @@ export function revalidateGearPages(
   if (options.includeBrowse) {
     revalidateBrowsePages();
   }
+}
+
+export type EditorialCollection = "news" | "review" | "learn-pages";
+
+/**
+ * Invalidate Payload-backed editorial data and every public surface that
+ * renders it. Called from the authenticated editorial revalidation route.
+ */
+export function revalidateEditorialContent(
+  collection: EditorialCollection,
+  documents: Array<{
+    slug?: string | null;
+    relatedGearSlugs?: string[];
+  }>,
+): void {
+  const tagGroups = {
+    news: [PAYLOAD_CACHE_TAGS.news, PAYLOAD_CACHE_TAGS.homeNews],
+    review: [PAYLOAD_CACHE_TAGS.reviews, PAYLOAD_CACHE_TAGS.homeReviews],
+    "learn-pages": [PAYLOAD_CACHE_TAGS.learnPages],
+  } satisfies Record<EditorialCollection, string[]>;
+
+  for (const tag of tagGroups[collection]) {
+    revalidateTag(tag, { expire: 0 });
+  }
+
+  const slugs = Array.from(
+    new Set(
+      documents
+        .map((document) => document.slug?.trim())
+        .filter((slug): slug is string => Boolean(slug)),
+    ),
+  );
+  const gearSlugs = Array.from(
+    new Set(
+      documents.flatMap((document) =>
+        (document.relatedGearSlugs ?? [])
+          .map((slug) => slug.trim())
+          .filter(Boolean),
+      ),
+    ),
+  );
+
+  const paths: string[] = ["/sitemap.xml"];
+  if (collection === "news") {
+    paths.push("/news", "/");
+    paths.push(...slugs.map((slug) => `/news/${slug}`));
+    paths.push(...gearSlugs.map((slug) => `/gear/${slug}`));
+  } else if (collection === "review") {
+    paths.push("/reviews", "/");
+    paths.push(...slugs.map((slug) => `/reviews/${slug}`));
+    paths.push(...gearSlugs.map((slug) => `/gear/${slug}`));
+  } else {
+    paths.push("/learn");
+    paths.push(...slugs.map((slug) => `/learn/${slug}`));
+  }
+
+  if (collection === "learn-pages") {
+    // Learn articles share a layout that renders the whole Learn navigation
+    // and Read Next relationships, so invalidating it refreshes all children.
+    revalidateLocalizedPaths(["/learn"], "layout");
+  } else {
+    revalidateLocalizedPaths(paths.filter((path) => path !== "/sitemap.xml"));
+  }
+  revalidatePath("/sitemap.xml");
 }
