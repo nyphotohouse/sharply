@@ -1,12 +1,16 @@
 import { Flame } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { formatDate } from "~/lib/format/date";
-import { fetchTrending } from "~/server/popularity/service";
+import { toTrendingListRowItems } from "~/lib/popularity/trending-display";
+import {
+  fetchStableTrending,
+  fetchTrending,
+} from "~/server/popularity/service";
 import type { GearType } from "~/types/gear";
-import type { TrendingEntry } from "~/types/popularity";
-import { TrendingListClient, type TrendingListRowItem } from "./trending-list.client";
-
-export type TrendingItem = TrendingEntry;
+import {
+  TrendingListClient,
+  type TrendingListRowItem,
+} from "./trending-list.client";
 
 function Skeleton({
   rows = 10,
@@ -54,6 +58,7 @@ export default async function TrendingList({
   title,
   loading = false,
   rows,
+  liveRefresh = false,
 }: {
   locale: string;
   timeframe?: "7d" | "30d";
@@ -66,13 +71,16 @@ export default async function TrendingList({
   title?: string;
   loading?: boolean;
   rows?: number;
+  liveRefresh?: boolean;
 }) {
   const t = await getTranslations({ locale, namespace: "nav" });
   const resolvedTitle = title ?? t("gearTrendingTitle");
 
   if (loading) return <Skeleton rows={rows} title={resolvedTitle} />;
 
-  const items = await fetchTrending({ timeframe, limit, filters });
+  const items = liveRefresh
+    ? await fetchStableTrending({ timeframe, limit, filters })
+    : await fetchTrending({ timeframe, limit, filters });
 
   if (!items.length) return null;
   const asOfDate = formatDate(items[0]!.asOfDate, {
@@ -80,16 +88,7 @@ export default async function TrendingList({
     preset: "date-short",
   });
 
-  const topScore = items[0]?.score ?? 0;
-  const calcFilled = (score: number) => {
-    if (topScore <= 0) return 0;
-    const scaled = (score / topScore) * 3;
-    return Math.max(0, Math.min(3, Math.round(scaled)));
-  };
-  const rowItems: TrendingListRowItem[] = items.map((item) => ({
-    ...item,
-    filled: calcFilled(item.score),
-  }));
+  const rowItems: TrendingListRowItem[] = toTrendingListRowItems(items);
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
@@ -98,7 +97,7 @@ export default async function TrendingList({
           {t("asOfDate", { date: asOfDate })}
         </span>
       </div>
-      <TrendingListClient items={rowItems} />
+      <TrendingListClient items={rowItems} liveRefresh={liveRefresh} />
     </div>
   );
 }

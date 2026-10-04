@@ -57,6 +57,7 @@ vi.mock("~/server/popularity/data", () => popularityDataMocks);
 vi.mock("~/server/popularity/live", () => popularityLiveMocks);
 
 import {
+  fetchStableTrending,
   fetchTrending,
   fetchTrendingSlugs,
   getLiveTrendingStatusForSlugs,
@@ -73,7 +74,7 @@ const liveSnapshot = {
   items: [{ gearId: "gear-live", slug: "live-camera", liveScore: 20 }],
 };
 
-type TestRankingItem = (typeof baselineItem) & { score: number };
+type TestRankingItem = typeof baselineItem & { score: number };
 type TestLiveItem = (typeof liveSnapshot.items)[number];
 
 describe("popularity service", () => {
@@ -114,6 +115,24 @@ describe("popularity service", () => {
     );
     expect(popularityDataMocks.getLiveTrendingSnapshot).not.toHaveBeenCalled();
     expect(popularityLiveMocks.applyLiveBoostToTrending).not.toHaveBeenCalled();
+  });
+
+  it("loads the stable ranking for the Home server-rendered baseline", async () => {
+    popularityDataMocks.getTrendingData.mockResolvedValue([baselineItem]);
+
+    const result = await fetchStableTrending({ timeframe: "7d", limit: 10 });
+
+    expect(result).toEqual([{ ...baselineItem, regionalAliases: [] }]);
+    expect(popularityDataMocks.getTrendingData).toHaveBeenCalledWith(
+      "7d",
+      10,
+      {},
+      0,
+    );
+    expect(gearDataMocks.fetchGearAliasesByGearIds).toHaveBeenCalledWith([
+      "gear-baseline",
+    ]);
+    expect(popularityDataMocks.getLiveTrendingSnapshot).not.toHaveBeenCalled();
   });
 
   it("still merges baseline and live data for full trending results", async () => {

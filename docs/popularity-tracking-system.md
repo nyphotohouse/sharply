@@ -42,6 +42,9 @@ This document describes the end‑to‑end popularity tracking in Sharply: inges
 - **Caching & revalidation**
   - Trending API and UI cache ~12h; revalidated proactively after rollup via `revalidateTag('trending')`.
   - Live boost snapshots cache ~2 minutes via `unstable_cache` tagged `trending-live` and expire naturally; the rollup does not invalidate this short-lived cache.
+  - Home uses a 15-minute ISR window. Its news and review collections use separate 15-minute Payload cache keys; shared Payload caches used by other routes retain their existing 60-second window.
+  - Home server-renders the stable 7-day ranking. After hydration, the visible list refreshes every two minutes from `GET /api/trending/home`; SWR pauses polling while the page is hidden and keeps the last successful list if refresh fails.
+  - `GET /api/trending/home` returns only the row fields Home renders (`gearId`, `slug`, `name`, `regionalAliases`, and the flame count). Vercel CDN caches it for 120 seconds and may serve stale data for a further 60 seconds while refreshing. Score and statistics changes therefore update the small live response without changing Home's ISR payload.
   - Gear stats endpoint caches ~1h with tags (`popularity`, `gear-stats:{slug}`).
   - Pair counts are direct reads from `compare_pair_counts` and do not participate in nightly rollups.
 
@@ -66,6 +69,10 @@ This document describes the end‑to‑end popularity tracking in Sharply: inges
   - Returns only the requested slugs that are present in the current live-boosted ranking.
   - Visible badge checks are batched (maximum 50 slugs per request) and use `Cache-Control: no-store`; the underlying live snapshot still uses its two-minute server cache.
   - Brand and mount filter IDs must be UUIDs. Mount-scoped rankings use `app.gear_mounts`, including gear with any matching canonical mount rather than only a legacy primary mount.
+
+- `GET /api/trending/home`
+  - Returns the top 10 live-boosted items from the 7-day ranking using only Home's rendered row fields.
+  - Vercel CDN cache: 120 seconds, with 60 seconds of stale-while-revalidate. Home polls every two minutes while visible.
 
 - Ingestion routes (append‑only):
   - `POST /api/gear/[slug]/visit` → records `view` (anonymous allowed; deduped per visitor/day)
@@ -108,8 +115,8 @@ await fetch(`${base}/api/gear/nikon-z6-iii/wishlist`, {
 
 - `TrendingList` (unified, server component)
   - File: `src/components/trending-list.tsx`
-  - Props: `{ timeframe?, limit?, filters?: { brandId?, mountId?, gearType? }, title?, loading?, rows? }`
-  - Fetches via the trending API; caches 12h; renders three‑flame score indicator relative to top item.
+  - Props: `{ timeframe?, limit?, filters?: { brandId?, mountId?, gearType? }, title?, loading?, rows?, liveRefresh? }`
+  - Renders a compact three-flame row. Home sets `liveRefresh` to use a stable server-rendered baseline and two-minute client refresh; other surfaces keep their existing server-rendered live ranking.
 
 - Browse hub trending strip
   - Files: `src/server/gear/browse/service.ts`, `src/app/[locale]/(pages)/browse/_components/all-gear-content.tsx`
@@ -139,7 +146,7 @@ await fetch(`${base}/api/gear/nikon-z6-iii/wishlist`, {
 - Lifecycle:
   - Rollup removes old intraday rows after finishing window calculations and revalidates `trending`; `trending-live` expires naturally within about two minutes.
   - Admin/Discord notifications summarize the top live movers so operators can confirm the live boost is healthy.
-- Dedicated Trending and Home lists read the live-boosted ranking on the server. General gear badges use the stable baseline in server markup and check live status only after their gear becomes visible.
+- Dedicated Trending and browse lists read the live-boosted ranking on the server. Home renders the stable 7-day ranking in its ISR output, then refreshes the compact list in the browser every two minutes while visible. General gear badges use the stable baseline in server markup and check live status only after their gear becomes visible.
 
 ## Rollup Flow (Detailed)
 

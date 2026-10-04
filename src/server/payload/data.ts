@@ -5,6 +5,7 @@ import type { LearnPage, News, Review } from "~/payload-types";
 import config from "~/payload.config";
 
 const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60;
+const HOME_CONTENT_REVALIDATE_SECONDS = 15 * 60;
 
 let payloadPromise: ReturnType<typeof getPayload> | undefined;
 
@@ -47,6 +48,34 @@ const getReviewsDataCached = unstable_cache(
   { revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS },
 );
 
+// Home has separate cache keys so its longer freshness window does not affect
+// the shared news and review caches used by other routes.
+const getHomeNewsPostsDataCached = unstable_cache(
+  async (): Promise<News[]> => {
+    const payload = await getPayloadClient();
+    const newsPosts = await payload.find({
+      collection: "news",
+      limit: -1,
+    });
+    return newsPosts.docs;
+  },
+  ["payload:home-news-posts"],
+  { revalidate: HOME_CONTENT_REVALIDATE_SECONDS },
+);
+
+const getHomeReviewsDataCached = unstable_cache(
+  async (): Promise<Review[]> => {
+    const payload = await getPayloadClient();
+    const reviews = await payload.find({
+      collection: "review",
+      limit: -1,
+    });
+    return reviews.docs;
+  },
+  ["payload:home-reviews"],
+  { revalidate: HOME_CONTENT_REVALIDATE_SECONDS },
+);
+
 const getLearnPagesDataCached = unstable_cache(
   async (): Promise<LearnPage[]> => {
     const payload = await getPayloadClient();
@@ -76,6 +105,14 @@ export const getNewsPostBySlugData = async (slug: string): Promise<News> => {
 
 export const getReviewsData = async (): Promise<Review[]> => {
   return getReviewsDataCached();
+};
+
+export const getHomeNewsPostsData = async (): Promise<News[]> => {
+  return getHomeNewsPostsDataCached();
+};
+
+export const getHomeReviewsData = async (): Promise<Review[]> => {
+  return getHomeReviewsDataCached();
 };
 
 export const getReviewBySlugData = async (slug: string): Promise<Review> => {

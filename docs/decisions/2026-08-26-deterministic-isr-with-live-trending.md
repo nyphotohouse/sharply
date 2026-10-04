@@ -12,7 +12,7 @@ Cached pages were regenerating with time-dependent output and live trending stat
 
 - Render deterministic localized absolute dates in cached HTML using an accessible `<time dateTime="…">` element, then replace only the displayed text with relative wording after hydration. The relative-time component performs no fetch and starts no timer.
 - Server-render shared gear badges from stable window rankings. After hydration, batch a small live-status request for visible badges and update them only when live ranking differs.
-- Keep the dedicated Trending page, Home trending list, and browse trending strip server-rendered with live-boosted rankings.
+- Keep the dedicated Trending page and browse trending strip server-rendered with live-boosted rankings. Home renders the stable 7-day ranking in its cached HTML and refreshes the compact list on the client.
 - Let the two-minute `trending-live` cache expire naturally instead of invalidating it nightly. Successful rollups continue to invalidate the stable `trending` baseline.
 - Keep live score calculation and caching unchanged while omitting the unused `generatedAt` value from the live snapshot.
 
@@ -27,5 +27,9 @@ Cached pages were regenerating with time-dependent output and live trending stat
 - Cached page output is deterministic for unchanged durable data.
 - Relative wording appears after hydration while preserving an accessible absolute timestamp.
 - Shared cards use stable rankings initially and may update after one batched client request.
-- Primary Trending surfaces retain server-rendered live rankings.
+- Dedicated Trending and browse surfaces retain server-rendered live rankings. Home avoids putting volatile score and statistics fields into its ISR output while still showing the stable ranking before hydration.
 - No schema, migration, translation-key, navigation, SEO-contract, or client-side gear-data-fetch change is required.
+
+## Update (2026-10-03)
+
+Home's ISR interval is now 15 minutes, with Home-specific news and review caches at the same interval. Its stable 7-day trending list is refreshed through `GET /api/trending/home` every two minutes while visible. The endpoint is Vercel-CDN cached for 120 seconds with 60 seconds of stale-while-revalidate and returns only the fields rendered by each row. Other pages retain their existing data-cache intervals and server-rendered trending behavior.

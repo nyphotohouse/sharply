@@ -21,9 +21,9 @@ import { formatDate } from "~/lib/format/date";
 import { buildLocalizedMetadata } from "~/lib/seo/metadata";
 import type { Review } from "~/payload-types";
 import { fetchHomeActivity } from "~/server/gear/service";
-import { getNewsPosts, getReviews } from "~/server/payload/service";
+import { getHomeNewsPosts, getHomeReviews } from "~/server/payload/service";
 
-export const revalidate = 60;
+export const revalidate = 900;
 
 export async function generateMetadata({
   params,
@@ -82,8 +82,8 @@ export default async function Home({
   const locale = isLocale(requestedLocale) ? requestedLocale : defaultLocale;
   const t = await getTranslations({ locale, namespace: "home" });
   const [posts, payloadReviews, activityItems] = await Promise.all([
-    getNewsPosts(),
-    getReviews(),
+    getHomeNewsPosts(),
+    getHomeReviews(),
     fetchHomeActivity(5),
   ]);
 
@@ -248,7 +248,12 @@ export default async function Home({
               <Suspense
                 fallback={<TrendingList locale={locale} loading rows={10} />}
               >
-                <TrendingList locale={locale} timeframe="7d" limit={10} />
+                <TrendingList
+                  locale={locale}
+                  timeframe="7d"
+                  limit={10}
+                  liveRefresh
+                />
               </Suspense>
               <Separator className="my-2" />
               {/* Banner link: New to Photography? */}
