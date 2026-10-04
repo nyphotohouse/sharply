@@ -10,6 +10,8 @@ The constants generator snapshots light-weight reference data (brands, mounts, s
 4. `BRANDS` mirrors the full `app.brands` snapshot, including nullable ordering metadata such as `sort_order` when present. Brand selectors use that metadata to show prioritized brands first, followed by the remaining brands alphabetically.
 5. `package.json` wires `npm run prebuild` to execute `npm run constants:generate`, so CI (Vercel, etc.) can regenerate before a build simply by setting `GENERATE_CONSTANTS=true`.
 
+Admins can add brands from the brand sorting tool on `/admin/tools`. This writes the brand to `app.brands` immediately; selectors backed by generated `BRANDS` arrays pick it up after the constants generator runs during a build with `GENERATE_CONSTANTS=true`. Review and commit the regenerated `src/lib/generated.ts` snapshot when maintaining the canonical catalog.
+
 ## Usage
 
 ### 1. Configure Environment
@@ -39,6 +41,7 @@ type MountValue = (typeof MOUNTS)[number]["value"];
 
 - After any migration or manual change that touches the source tables/enums.
 - After changing brand sort order values if the new order should be reflected in generated brand lists and select menus.
+- After adding a brand through the admin tool if it should be reflected in generated brand lists and select menus.
 - Before deployments to ensure `generated.ts` reflects the canonical data.
 - Whenever CI (or the `protect-generated` workflow) reports that `src/lib/generated.ts` is out of sync.
 

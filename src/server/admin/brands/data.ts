@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { asc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { brands } from "~/server/db/schema";
 
@@ -15,6 +15,66 @@ export type BrandSortOrderUpdate = {
   id: string;
   sortOrder: number | null;
 };
+
+export type CreateBrandInput = {
+  name: string;
+  slug: string;
+};
+
+export async function findBrandConflictsData(input: CreateBrandInput) {
+  const rows = await db
+    .select({ name: brands.name, slug: brands.slug })
+    .from(brands)
+    .where(
+      or(
+        sql`lower(${brands.name}) = ${input.name.toLowerCase()}`,
+        sql`lower(${brands.slug}) = ${input.slug.toLowerCase()}`,
+      ),
+    );
+
+  return {
+    name: rows.some(
+      (row) => row.name.toLowerCase() === input.name.toLowerCase(),
+    ),
+    slug: rows.some(
+      (row) => row.slug.toLowerCase() === input.slug.toLowerCase(),
+    ),
+  };
+}
+
+export async function createBrandData(
+  input: CreateBrandInput,
+): Promise<AdminBrand> {
+  try {
+    const [brand] = await db
+      .insert(brands)
+      .values({ name: input.name, slug: input.slug, sortOrder: null })
+      .returning({
+        id: brands.id,
+        name: brands.name,
+        slug: brands.slug,
+        sortOrder: brands.sortOrder,
+      });
+
+    if (!brand) throw new Error("Brand insert did not return a row");
+    return brand as AdminBrand;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23505"
+    ) {
+      throw Object.assign(
+        new Error("A brand with this name or slug already exists"),
+        {
+          status: 409,
+        },
+      );
+    }
+    throw error;
+  }
+}
 
 export async function fetchAdminBrandsData(): Promise<AdminBrand[]> {
   const rows = await db

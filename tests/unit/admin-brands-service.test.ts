@@ -10,6 +10,8 @@ const authHelperMocks = vi.hoisted(() => ({
 
 const dataMocks = vi.hoisted(() => ({
   fetchAdminBrandsData: vi.fn(),
+  findBrandConflictsData: vi.fn(),
+  createBrandData: vi.fn(),
   updateBrandSortOrdersData: vi.fn(),
 }));
 
@@ -19,6 +21,7 @@ vi.mock("~/lib/auth/auth-helpers", () => authHelperMocks);
 vi.mock("~/server/admin/brands/data", () => dataMocks);
 
 import {
+  createBrandService,
   fetchAdminBrands,
   updateBrandSortOrdersService,
 } from "~/server/admin/brands/service";
@@ -31,6 +34,16 @@ describe("admin brands service", () => {
     });
     authHelperMocks.requireRole.mockReturnValue(true);
     dataMocks.fetchAdminBrandsData.mockResolvedValue([]);
+    dataMocks.findBrandConflictsData.mockResolvedValue({
+      name: false,
+      slug: false,
+    });
+    dataMocks.createBrandData.mockResolvedValue({
+      id: "brand-new",
+      name: "Acme Cameras",
+      slug: "acme-cameras",
+      sortOrder: null,
+    });
     dataMocks.updateBrandSortOrdersData.mockResolvedValue([
       { id: "brand-1", name: "Canon", slug: "canon", sortOrder: 1 },
     ]);
@@ -52,6 +65,79 @@ describe("admin brands service", () => {
 
     await expect(fetchAdminBrands()).rejects.toThrow("Editor access required");
     expect(dataMocks.fetchAdminBrandsData).not.toHaveBeenCalled();
+  });
+
+  it("normalizes and creates an unranked brand for admins", async () => {
+    await expect(
+      createBrandService({ name: "  Acme   Cameras ", slug: "acme-cameras" }),
+    ).resolves.toEqual({
+      id: "brand-new",
+      name: "Acme Cameras",
+      slug: "acme-cameras",
+      sortOrder: null,
+    });
+    expect(authHelperMocks.requireRole).toHaveBeenCalledWith(
+      { id: "user-1", role: "ADMIN" },
+      ["ADMIN"],
+    );
+    expect(dataMocks.findBrandConflictsData).toHaveBeenCalledWith({
+      name: "Acme Cameras",
+      slug: "acme-cameras",
+    });
+    expect(dataMocks.createBrandData).toHaveBeenCalledWith({
+      name: "Acme Cameras",
+      slug: "acme-cameras",
+    });
+  });
+
+  it("rejects non-admins from creating brands", async () => {
+    authHelperMocks.requireRole.mockReturnValue(false);
+
+    await expect(
+      createBrandService({ name: "Acme", slug: "acme" }),
+    ).rejects.toThrow("Administrator access required");
+    expect(dataMocks.findBrandConflictsData).not.toHaveBeenCalled();
+  });
+
+  it("validates required, length-limited, and URL-safe brand fields", async () => {
+    await expect(
+      createBrandService({ name: "  ", slug: "acme" }),
+    ).rejects.toMatchObject({
+      field: "name",
+      status: 400,
+    });
+    await expect(
+      createBrandService({ name: "Acme", slug: "Upper Case" }),
+    ).rejects.toMatchObject({
+      field: "slug",
+      status: 400,
+    });
+    await expect(
+      createBrandService({ name: "a".repeat(201), slug: "acme" }),
+    ).rejects.toMatchObject({ field: "name", status: 400 });
+    await expect(
+      createBrandService({ name: "Acme", slug: "a".repeat(201) }),
+    ).rejects.toMatchObject({ field: "slug", status: 400 });
+    expect(dataMocks.createBrandData).not.toHaveBeenCalled();
+  });
+
+  it("reports duplicate name and slug conflicts on their respective fields", async () => {
+    dataMocks.findBrandConflictsData.mockResolvedValueOnce({
+      name: true,
+      slug: false,
+    });
+    await expect(
+      createBrandService({ name: "Canon", slug: "new-slug" }),
+    ).rejects.toMatchObject({ field: "name", status: 409 });
+
+    dataMocks.findBrandConflictsData.mockResolvedValueOnce({
+      name: false,
+      slug: true,
+    });
+    await expect(
+      createBrandService({ name: "New Brand", slug: "canon" }),
+    ).rejects.toMatchObject({ field: "slug", status: 409 });
+    expect(dataMocks.createBrandData).not.toHaveBeenCalled();
   });
 
   it("accepts nullable sort order updates", async () => {
