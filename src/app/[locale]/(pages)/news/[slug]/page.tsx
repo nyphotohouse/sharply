@@ -24,7 +24,7 @@ import { fetchGearBySlug } from "~/server/gear/service";
 import { getNewsPostBySlug, getNewsPosts } from "~/server/payload/service";
 import { getExchangeRates } from "~/server/pricing/exchange-rates";
 
-export const revalidate = 60 * 60;
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const posts = await getNewsPosts();

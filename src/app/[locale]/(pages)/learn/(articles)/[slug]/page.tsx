@@ -15,7 +15,7 @@ import {
   getLearnPageBySlug,
 } from "~/server/payload/service";
 
-export const revalidate = 60 * 60;
+export const revalidate = 3600;
 
 function ReadNextCard({
   article,
