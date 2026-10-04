@@ -212,6 +212,31 @@ export async function fetchTrending(params: {
   }));
 }
 
+/**
+ * Return only the durable ranking, without the short-lived live boost. Home
+ * uses this for its server-rendered baseline before client refreshes begin.
+ */
+export async function fetchStableTrending(params: {
+  timeframe?: "7d" | "30d";
+  limit?: number;
+  offset?: number;
+  filters?: TrendingFiltersInput;
+}) {
+  const timeframe = params.timeframe ?? "30d";
+  const limit = params.limit ?? 10;
+  const filters = params.filters ?? {};
+  const offset = params.offset ?? 0;
+  const items = await getTrendingData(timeframe, limit, filters, offset);
+  const aliasesById = await fetchGearAliasesByGearIds(
+    items.map((item) => item.gearId),
+  );
+
+  return items.map((item) => ({
+    ...item,
+    regionalAliases: aliasesById.get(item.gearId) ?? [],
+  }));
+}
+
 type TrendingSlugsParams = {
   timeframe?: "7d" | "30d";
   limit?: number;

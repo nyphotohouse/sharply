@@ -24,7 +24,7 @@ import { fetchGearBySlug } from "~/server/gear/service";
 import { getNewsPostBySlug, getNewsPosts } from "~/server/payload/service";
 import { getExchangeRates } from "~/server/pricing/exchange-rates";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const posts = await getNewsPosts();
@@ -39,6 +39,11 @@ export async function generateMetadata({
   const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: "newsPage" });
   const page = await getNewsPostBySlug(slug);
+  if (!page) {
+    return {
+      robots: { index: false, follow: false },
+    };
+  }
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ?? "https://www.sharplyphoto.com";
   const imageSrc =

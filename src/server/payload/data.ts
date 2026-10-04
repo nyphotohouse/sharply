@@ -3,8 +3,10 @@ import { getPayload } from "payload";
 import "server-only";
 import type { LearnPage, News, Review } from "~/payload-types";
 import config from "~/payload.config";
+import { PAYLOAD_CACHE_TAGS } from "~/lib/payload-cache-tags";
 
-const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60;
+const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60 * 60;
+const HOME_CONTENT_REVALIDATE_SECONDS = 60 * 60;
 
 let payloadPromise: ReturnType<typeof getPayload> | undefined;
 
@@ -30,8 +32,11 @@ const getNewsPostsDataCached = unstable_cache(
     });
     return newsPosts.docs;
   },
-  ["payload:news-posts"],
-  { revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS },
+  [PAYLOAD_CACHE_TAGS.news],
+  {
+    revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS,
+    tags: [PAYLOAD_CACHE_TAGS.news],
+  },
 );
 
 const getReviewsDataCached = unstable_cache(
@@ -43,8 +48,45 @@ const getReviewsDataCached = unstable_cache(
     });
     return reviews.docs;
   },
-  ["payload:reviews"],
-  { revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS },
+  [PAYLOAD_CACHE_TAGS.reviews],
+  {
+    revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS,
+    tags: [PAYLOAD_CACHE_TAGS.reviews],
+  },
+);
+
+// Home keeps separate cache entries so publish hooks can invalidate its
+// snapshot alongside the Home page.
+const getHomeNewsPostsDataCached = unstable_cache(
+  async (): Promise<News[]> => {
+    const payload = await getPayloadClient();
+    const newsPosts = await payload.find({
+      collection: "news",
+      limit: -1,
+    });
+    return newsPosts.docs;
+  },
+  [PAYLOAD_CACHE_TAGS.homeNews],
+  {
+    revalidate: HOME_CONTENT_REVALIDATE_SECONDS,
+    tags: [PAYLOAD_CACHE_TAGS.homeNews],
+  },
+);
+
+const getHomeReviewsDataCached = unstable_cache(
+  async (): Promise<Review[]> => {
+    const payload = await getPayloadClient();
+    const reviews = await payload.find({
+      collection: "review",
+      limit: -1,
+    });
+    return reviews.docs;
+  },
+  [PAYLOAD_CACHE_TAGS.homeReviews],
+  {
+    revalidate: HOME_CONTENT_REVALIDATE_SECONDS,
+    tags: [PAYLOAD_CACHE_TAGS.homeReviews],
+  },
 );
 
 const getLearnPagesDataCached = unstable_cache(
@@ -57,34 +99,49 @@ const getLearnPagesDataCached = unstable_cache(
     });
     return learnPages.docs;
   },
-  ["payload:learn-pages"],
-  { revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS },
+  [PAYLOAD_CACHE_TAGS.learnPages],
+  {
+    revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS,
+    tags: [PAYLOAD_CACHE_TAGS.learnPages],
+  },
 );
 
 export const getNewsPostsData = async (): Promise<News[]> => {
   return getNewsPostsDataCached();
 };
 
-export const getNewsPostBySlugData = async (slug: string): Promise<News> => {
+export const getNewsPostBySlugData = async (
+  slug: string,
+): Promise<News | null> => {
   const payload = await getPayloadClient();
   const newsPost = await payload.find({
     collection: "news",
     where: { slug: { equals: slug } },
   });
-  return newsPost.docs[0]!;
+  return newsPost.docs[0] ?? null;
 };
 
 export const getReviewsData = async (): Promise<Review[]> => {
   return getReviewsDataCached();
 };
 
-export const getReviewBySlugData = async (slug: string): Promise<Review> => {
+export const getHomeNewsPostsData = async (): Promise<News[]> => {
+  return getHomeNewsPostsDataCached();
+};
+
+export const getHomeReviewsData = async (): Promise<Review[]> => {
+  return getHomeReviewsDataCached();
+};
+
+export const getReviewBySlugData = async (
+  slug: string,
+): Promise<Review | null> => {
   const payload = await getPayloadClient();
   const review = await payload.find({
     collection: "review",
     where: { slug: { equals: slug } },
   });
-  return review.docs[0]!;
+  return review.docs[0] ?? null;
 };
 
 export const getReviewByGearSlugData = async (

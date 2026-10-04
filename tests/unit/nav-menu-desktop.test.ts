@@ -168,30 +168,5 @@ describe("desktop navigation featured content", () => {
 
     expect(markup).not.toContain('data-nav-featured-slot="true"');
     expect(markup).not.toContain('data-featured-background="true"');
-    expect(markup).toContain('data-nav-category-layout="vertical"');
-    expect(markup).toContain("divide-y");
-    expect(markup).not.toContain("rounded-xl border");
-  });
-
-  it("uses a vertical list for categories with fewer than four items", () => {
-    const markup = renderToStaticMarkup(
-      createElement(NavMenuDesktop, {
-        items: [
-          {
-            title: "Learn",
-            href: "/learn",
-            items: [
-              { title: "Guides", href: "/learn/guides" },
-              { title: "News", href: "/news" },
-              { title: "About", href: "/about" },
-            ],
-          },
-        ],
-      }),
-    );
-
-    expect(markup).toContain('data-nav-category-layout="vertical"');
-    expect(markup).toContain("divide-y");
-    expect(markup).not.toContain("grid-cols-2");
   });
 });

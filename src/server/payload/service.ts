@@ -2,6 +2,8 @@ import type { LearnPage, News, Review } from "~/payload-types";
 import { cache } from "react";
 import {
   getNewsByRelatedGearSlugData,
+  getHomeNewsPostsData,
+  getHomeReviewsData,
   getNewsPostBySlugData,
   getNewsPostsData,
   getReviewByGearSlugData,
@@ -10,7 +12,14 @@ import {
 } from "./data";
 
 export const getNewsPosts = async (): Promise<News[]> => {
-  const posts = await getNewsPostsData();
+  return sortNewsPosts(await getNewsPostsData());
+};
+
+export const getHomeNewsPosts = async (): Promise<News[]> => {
+  return sortNewsPosts(await getHomeNewsPostsData());
+};
+
+function sortNewsPosts(posts: News[]): News[] {
   const published = posts.filter((p) => p._status === "published");
   // sort by override date if it exists, otherwise sort by creation date
   const sorted = published.sort((a, b) => {
@@ -23,18 +32,25 @@ export const getNewsPosts = async (): Promise<News[]> => {
     return bTime - aTime;
   });
   return sorted;
-};
+}
 
-export const getNewsPostBySlug = async (slug: string): Promise<News> => {
+export const getNewsPostBySlug = async (slug: string): Promise<News | null> => {
   const newsPost = await getNewsPostBySlugData(slug);
-  if (newsPost._status !== "published") {
-    throw new Error("News post is not published");
+  if (newsPost?._status !== "published") {
+    return null;
   }
   return newsPost;
 };
 
 export const getReviews = async (): Promise<Review[]> => {
-  const reviews = await getReviewsData();
+  return sortReviews(await getReviewsData());
+};
+
+export const getHomeReviews = async (): Promise<Review[]> => {
+  return sortReviews(await getHomeReviewsData());
+};
+
+function sortReviews(reviews: Review[]): Review[] {
   const published = reviews.filter((r) => r._status === "published");
   // sort by creation date only (no override for reviews)
   const sorted = published.sort((a, b) => {
@@ -43,11 +59,11 @@ export const getReviews = async (): Promise<Review[]> => {
     return bTime - aTime;
   });
   return sorted;
-};
+}
 
 export const getReviewBySlug = async (slug: string): Promise<Review | null> => {
   const review = await getReviewBySlugData(slug);
-  if (review._status !== "published") {
+  if (review?._status !== "published") {
     return null;
   }
   return review;

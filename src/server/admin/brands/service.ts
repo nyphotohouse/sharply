@@ -1,13 +1,30 @@
 import "server-only";
 
+import slugify from "slugify";
+
 import { requireRole } from "~/lib/auth/auth-helpers";
 import { getSessionOrThrow } from "~/server/auth";
 import {
   fetchAdminBrandsData,
   type AdminBrand,
   type BrandSortOrderUpdate,
+  createBrandData,
+  findBrandConflictsData,
   updateBrandSortOrdersData,
 } from "./data";
+
+export type CreateAdminBrandInput = {
+  name: string;
+  slug: string;
+};
+
+function invalidBrandField(
+  field: "name" | "slug",
+  message: string,
+  status = 400,
+) {
+  return Object.assign(new Error(message), { status, field });
+}
 
 async function editorSession() {
   const session = await getSessionOrThrow();
@@ -47,6 +64,54 @@ function normalizeSortOrder(value: number | null) {
 export async function fetchAdminBrands(): Promise<AdminBrand[]> {
   await editorSession();
   return fetchAdminBrandsData();
+}
+
+export async function createBrandService(
+  input: CreateAdminBrandInput,
+): Promise<AdminBrand> {
+  await adminSession();
+
+  const name = input.name.trim().replace(/\s+/g, " ");
+  const slug = input.slug.trim();
+
+  if (!name) throw invalidBrandField("name", "Brand name is required");
+  if (name.length > 200) {
+    throw invalidBrandField(
+      "name",
+      "Brand name must be 200 characters or fewer",
+    );
+  }
+  if (!slug) throw invalidBrandField("slug", "Brand slug is required");
+  if (slug.length > 200) {
+    throw invalidBrandField(
+      "slug",
+      "Brand slug must be 200 characters or fewer",
+    );
+  }
+  if (slugify(slug, { lower: true, strict: true }) !== slug) {
+    throw invalidBrandField(
+      "slug",
+      "Use lowercase letters, numbers, and single hyphens in the slug",
+    );
+  }
+
+  const conflicts = await findBrandConflictsData({ name, slug });
+  if (conflicts.name) {
+    throw invalidBrandField(
+      "name",
+      "A brand with this name already exists",
+      409,
+    );
+  }
+  if (conflicts.slug) {
+    throw invalidBrandField(
+      "slug",
+      "A brand with this slug already exists",
+      409,
+    );
+  }
+
+  return createBrandData({ name, slug });
 }
 
 export async function updateBrandSortOrdersService(params: {

@@ -18,10 +18,20 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus, SearchIcon, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTrigger,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { Spinner } from "~/components/ui/spinner";
 import {
   Table,
@@ -33,7 +43,11 @@ import {
 } from "~/components/ui/table";
 import { splitBrandsWithPriority } from "~/lib/brands";
 import { resolveBrandSortSaveCompletion } from "~/lib/brand-sort-order-save";
-import { actionUpdateBrandSortOrders } from "~/server/admin/brands/actions";
+import {
+  actionCreateBrand,
+  actionUpdateBrandSortOrders,
+} from "~/server/admin/brands/actions";
+import slugify from "slugify";
 
 type AdminBrandRow = {
   id: string;
@@ -79,19 +93,199 @@ function buildDraftBrands(
   return [...ranked, ...unranked];
 }
 
-function buildChangedUpdates(draftBrands: BrandDraft[], savedBrands: AdminBrandRow[]) {
+function buildChangedUpdates(
+  draftBrands: BrandDraft[],
+  savedBrands: AdminBrandRow[],
+) {
   const savedById = new Map(savedBrands.map((brand) => [brand.id, brand]));
   return draftBrands
-    .filter((brand) => (savedById.get(brand.id)?.sortOrder ?? null) !== brand.sortOrder)
+    .filter(
+      (brand) =>
+        (savedById.get(brand.id)?.sortOrder ?? null) !== brand.sortOrder,
+    )
     .map((brand) => ({
       id: brand.id,
       sortOrder: brand.sortOrder ?? null,
     }));
 }
 
-export function BrandSortOrderTool({
-  initialBrands,
-}: BrandSortOrderToolProps) {
+function AddBrandDialog({
+  onCreated,
+}: {
+  onCreated: (brand: AdminBrandRow) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const slugOverridden = useRef(false);
+  const [errors, setErrors] = useState<
+    Partial<Record<"name" | "slug", string>>
+  >({});
+
+  function resetForm() {
+    setName("");
+    setSlug("");
+    slugOverridden.current = false;
+    setErrors({});
+  }
+
+  function validateForm() {
+    const nextErrors: Partial<Record<"name" | "slug", string>> = {};
+    const normalizedName = name.trim();
+    const normalizedSlug = slug.trim();
+    if (!normalizedName) nextErrors.name = "Brand name is required";
+    else if (normalizedName.length > 200) {
+      nextErrors.name = "Brand name must be 200 characters or fewer";
+    }
+    if (!normalizedSlug) nextErrors.slug = "Brand slug is required";
+    else if (normalizedSlug.length > 200) {
+      nextErrors.slug = "Brand slug must be 200 characters or fewer";
+    } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedSlug)) {
+      nextErrors.slug =
+        "Use lowercase letters, numbers, and single hyphens in the slug";
+    }
+    return nextErrors;
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextErrors = validateForm();
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    setCreating(true);
+    try {
+      const createdBrand = await actionCreateBrand({ name, slug });
+      onCreated(createdBrand);
+      setOpen(false);
+      resetForm();
+      toast.success(`Brand “${createdBrand.name}” added`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not add brand";
+      const field =
+        typeof error === "object" && error !== null && "field" in error
+          ? error.field
+          : undefined;
+      if (field === "name" || field === "slug") {
+        setErrors({ [field]: message });
+      }
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!creating) {
+          setOpen(nextOpen);
+          if (!nextOpen) resetForm();
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button type="button">
+          <Plus className="size-4" />
+          Add brand
+        </Button>
+      </DialogTrigger>
+      <DialogContent showCloseButton={!creating}>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Add brand</DialogTitle>
+            <DialogDescription>
+              Add a brand to the catalog. The slug is generated from the name
+              and can be edited.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-brand-name">Brand name</Label>
+              <Input
+                id="new-brand-name"
+                value={name}
+                maxLength={200}
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={
+                  errors.name ? "new-brand-name-error" : undefined
+                }
+                onChange={(event) => {
+                  const nextName = event.target.value;
+                  setName(nextName);
+                  setErrors((current) => ({ ...current, name: undefined }));
+                  if (!slugOverridden.current) {
+                    setSlug(slugify(nextName, { lower: true, strict: true }));
+                    setErrors((current) => ({ ...current, slug: undefined }));
+                  }
+                }}
+                autoFocus
+              />
+              {errors.name ? (
+                <p
+                  id="new-brand-name-error"
+                  className="text-destructive text-sm"
+                >
+                  {errors.name}
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-brand-slug">Slug</Label>
+              <Input
+                id="new-brand-slug"
+                value={slug}
+                maxLength={200}
+                aria-invalid={Boolean(errors.slug)}
+                aria-describedby={
+                  errors.slug ? "new-brand-slug-error" : undefined
+                }
+                onChange={(event) => {
+                  setSlug(event.target.value);
+                  slugOverridden.current = true;
+                  setErrors((current) => ({ ...current, slug: undefined }));
+                }}
+              />
+              <p className="text-muted-foreground text-xs">
+                Use lowercase letters, numbers, and hyphens.
+              </p>
+              {errors.slug ? (
+                <p
+                  id="new-brand-slug-error"
+                  className="text-destructive text-sm"
+                >
+                  {errors.slug}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={creating}
+              onClick={() => {
+                setOpen(false);
+                resetForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={creating}>
+              {creating ? <Spinner /> : null}
+              {creating ? "Adding…" : "Add brand"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function BrandSortOrderTool({ initialBrands }: BrandSortOrderToolProps) {
   const [savedBrands, setSavedBrands] = useState(() =>
     normalizeDraftBrands(initialBrands),
   );
@@ -235,9 +429,13 @@ export function BrandSortOrderTool({
 
   function handlePinBrand(brandId: string) {
     setDraftBrands((currentBrands) => {
-      const { orderedBrands: currentOrderedBrands, unrankedBrands: currentUnrankedBrands } =
-        splitDraftBrands(currentBrands);
-      const brandToPin = currentUnrankedBrands.find((brand) => brand.id === brandId);
+      const {
+        orderedBrands: currentOrderedBrands,
+        unrankedBrands: currentUnrankedBrands,
+      } = splitDraftBrands(currentBrands);
+      const brandToPin = currentUnrankedBrands.find(
+        (brand) => brand.id === brandId,
+      );
       if (!brandToPin) {
         return currentBrands;
       }
@@ -254,9 +452,13 @@ export function BrandSortOrderTool({
 
   function handleUnpinBrand(brandId: string) {
     setDraftBrands((currentBrands) => {
-      const { orderedBrands: currentOrderedBrands, unrankedBrands: currentUnrankedBrands } =
-        splitDraftBrands(currentBrands);
-      const brandToUnpin = currentOrderedBrands.find((brand) => brand.id === brandId);
+      const {
+        orderedBrands: currentOrderedBrands,
+        unrankedBrands: currentUnrankedBrands,
+      } = splitDraftBrands(currentBrands);
+      const brandToUnpin = currentOrderedBrands.find(
+        (brand) => brand.id === brandId,
+      );
       if (!brandToUnpin) {
         return currentBrands;
       }
@@ -275,8 +477,10 @@ export function BrandSortOrderTool({
     }
 
     setDraftBrands((currentBrands) => {
-      const { orderedBrands: currentOrderedBrands, unrankedBrands: currentUnrankedBrands } =
-        splitDraftBrands(currentBrands);
+      const {
+        orderedBrands: currentOrderedBrands,
+        unrankedBrands: currentUnrankedBrands,
+      } = splitDraftBrands(currentBrands);
       const oldIndex = currentOrderedBrands.findIndex(
         (brand) => brand.id === active.id,
       );
@@ -316,6 +520,22 @@ export function BrandSortOrderTool({
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <AddBrandDialog
+            onCreated={(createdBrand) => {
+              setSavedBrands((current) =>
+                normalizeDraftBrands([
+                  ...current.filter((brand) => brand.id !== createdBrand.id),
+                  createdBrand,
+                ]),
+              );
+              setDraftBrands((current) =>
+                normalizeDraftBrands([
+                  ...current.filter((brand) => brand.id !== createdBrand.id),
+                  createdBrand,
+                ]),
+              );
+            }}
+          />
           <div className="relative min-w-[260px]">
             <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input

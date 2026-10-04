@@ -5,6 +5,10 @@ import {
   relatedGearItemsField,
 } from "~/payload-fields/custom-fields";
 import { lexicalFirstParagraphText } from "~/server/payload/richtext";
+import {
+  createEditorialAfterChangeHook,
+  createEditorialAfterDeleteHook,
+} from "./editorial-revalidation";
 
 export const News: CollectionConfig = {
   slug: "news",
@@ -104,6 +108,8 @@ export const News: CollectionConfig = {
   ],
 
   hooks: {
+    afterChange: [createEditorialAfterChangeHook("news")],
+    afterDelete: [createEditorialAfterDeleteHook("news")],
     beforeValidate: [
       ({ data }) => {
         // generate slug from title

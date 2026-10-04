@@ -37,15 +37,15 @@ function NavMenuCardPendingState({ enabled }: { enabled: boolean }) {
 function NavMenuCard({
   item,
   featured = false,
-  list = false,
   featuredContent,
   pendingFeedback = false,
+  className,
 }: {
   item: HeaderNavSubItem;
   featured?: boolean;
-  list?: boolean;
   featuredContent?: ReactNode;
   pendingFeedback?: boolean;
+  className?: string;
 }) {
   const Icon = item.iconKey ? iconMap[item.iconKey] : null;
 
@@ -57,9 +57,8 @@ function NavMenuCard({
         "group hover:bg-accent/30 hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative block no-underline outline-none select-none has-[[data-nav-card-pending-overlay=true]]:pointer-events-none",
         featured
           ? "to-background dark:from-primary/10 dark:to-background relative flex min-h-55 flex-col justify-between overflow-hidden rounded-xl border bg-linear-to-br from-white p-4"
-          : list
-            ? "min-h-0 space-y-1 px-3 py-2 leading-none"
-            : "min-h-[96px] space-y-1 rounded-xl border p-3 leading-none",
+          : "min-h-[96px] space-y-1 rounded-xl border p-3 leading-none",
+        className,
       )}
     >
       {featured && featuredContent && (
@@ -118,38 +117,24 @@ function NavMenuCategory({
   featuredContent?: ReactNode;
   pendingFeedback?: boolean;
 }) {
-  if (items.length < 4) {
-    return (
-      <div
-        data-nav-category-layout="vertical"
-        className="divide-border flex w-[400px] flex-col divide-y px-1.5 py-1 md:w-[500px] lg:w-[600px]"
-      >
-        {items.map((subItem) => (
-          <NavMenuCard
-            key={subItem.title}
-            item={subItem}
-            list
-            pendingFeedback={pendingFeedback}
-          />
-        ))}
-      </div>
-    );
-  }
-
   const featuredItem = items.find((item) => item.featured);
 
   if (!featuredItem) {
     return (
       <div
         data-nav-category-layout="standard"
-        className="divide-border flex w-[400px] flex-col divide-y px-1.5 py-1 md:w-[500px] lg:w-[600px]"
+        className="grid w-[400px] grid-cols-2 gap-2 p-2 md:w-[520px]"
       >
-        {items.map((subItem) => (
+        {items.map((subItem, index) => (
           <NavMenuCard
             key={subItem.title}
             item={subItem}
-            list
             pendingFeedback={pendingFeedback}
+            className={
+              items.length % 2 === 1 && index === items.length - 1
+                ? "col-span-2"
+                : undefined
+            }
           />
         ))}
       </div>

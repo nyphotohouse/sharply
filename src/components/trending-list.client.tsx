@@ -2,14 +2,23 @@
 
 import { Flame } from "lucide-react";
 import Link, { useLinkStatus } from "next/link";
+import useSWR from "swr";
 import { GearDisplayName } from "~/components/gear/gear-display-name";
 import { Spinner } from "~/components/ui/spinner";
+import type { TrendingListRowItem } from "~/lib/popularity/trending-display";
 import { cn } from "~/lib/utils";
-import type { TrendingEntry } from "~/types/popularity";
 
-export type TrendingListRowItem = TrendingEntry & {
-  filled: number;
-};
+export type { TrendingListRowItem } from "~/lib/popularity/trending-display";
+
+type HomeTrendingResponse = { items: TrendingListRowItem[] };
+
+async function fetchHomeTrending(url: string): Promise<HomeTrendingResponse> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Unable to refresh trending gear");
+  }
+  return response.json() as Promise<HomeTrendingResponse>;
+}
 
 function TrendingRowPendingState({
   children,
@@ -23,12 +32,28 @@ function TrendingRowPendingState({
 
 export function TrendingListClient({
   items,
+  liveRefresh = false,
 }: {
   items: TrendingListRowItem[];
+  liveRefresh?: boolean;
 }) {
+  const { data } = useSWR<HomeTrendingResponse>(
+    liveRefresh ? "/api/trending/home" : null,
+    fetchHomeTrending,
+    liveRefresh
+      ? {
+          fallbackData: { items },
+          keepPreviousData: true,
+          refreshInterval: 120_000,
+        }
+      : undefined,
+  );
+  // Keep the server-rendered list visible if the first live request fails.
+  const displayItems = liveRefresh ? (data?.items ?? items) : items;
+
   return (
     <ol className="divide-border divide-y rounded-md border">
-      {items.map((item, idx) => {
+      {displayItems.map((item, idx) => {
         return (
           <li key={item.gearId} className="p-0">
             <Link

@@ -2,6 +2,10 @@ import type { CollectionConfig } from "payload";
 import slugify from "slugify";
 import { GENRES } from "~/lib/constants";
 import { reviewGearItemField } from "~/payload-fields/custom-fields";
+import {
+  createEditorialAfterChangeHook,
+  createEditorialAfterDeleteHook,
+} from "./editorial-revalidation";
 
 export const Review: CollectionConfig = {
   slug: "review",
@@ -173,6 +177,8 @@ export const Review: CollectionConfig = {
   ],
 
   hooks: {
+    afterChange: [createEditorialAfterChangeHook("review")],
+    afterDelete: [createEditorialAfterDeleteHook("review")],
     beforeValidate: [
       ({ data }) => {
         if (data?.title && !data?.slug) {

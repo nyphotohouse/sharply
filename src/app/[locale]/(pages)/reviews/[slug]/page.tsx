@@ -17,6 +17,8 @@ import { fetchGearBySlug } from "~/server/gear/service";
 import { getReviewBySlug } from "~/server/payload/service";
 import { GenreRatings } from "../_components/genre-ratings";
 
+export const revalidate = 3600;
+
 export async function generateMetadata({
   params,
 }: {
