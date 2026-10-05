@@ -43,10 +43,7 @@ export const env = createEnv({
     DISCORD_CHANGE_REQUEST_WEBHOOK_URL: z.string().url().optional(),
     DISCORD_GENERAL_LOGS_WEBHOOK_URL: z.string().url().optional(),
     DISCORD_BOT_INTERNAL_API_TOKEN: z.string().optional(),
-    OPENAI_API_KEY:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
     OPENROUTER_API_KEY: z.string().optional(),
     GEAR_IMAGE_REVIEW_MODEL: z.string().optional(),
     PAYLOAD_SECRET: z.string(),

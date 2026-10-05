@@ -152,7 +152,8 @@ E2E Test Strategy
 
 ### Environment & Deployment Notes
 
-- OpenAI client is initialized in `src/lib/open-ai/open-ai.ts` using `OPENAI_API_KEY`.
+- `OPENAI_API_KEY` is optional in all environments, including production. The OpenAI client is initialized in `src/lib/open-ai/open-ai.ts` only when a non-blank key is configured.
+- Without a key, automatic generation skips before database or API calls, and the summary read helper returns `null` so banners stay hidden. Existing stored summaries are preserved. The explicit script/testing generation helper reports a missing-key error.
 - For scripts outside Next runtime, `server-only` imports are guarded and `.env` is loaded via `dotenv`.
 - Follow server layering (`data → service → actions`) per `docs/server-structure.md`. Reads live in services; actions are only for client-triggered mutations (not used here).
 

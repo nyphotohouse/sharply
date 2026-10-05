@@ -6,6 +6,6 @@ if (process.env.NEXT_RUNTIME) {
 }
 import OpenAI from "openai";
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const apiKey = process.env.OPENAI_API_KEY?.trim();
+
+export const openai = apiKey ? new OpenAI({ apiKey }) : null;
