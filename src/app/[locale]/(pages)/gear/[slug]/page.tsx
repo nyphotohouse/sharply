@@ -331,18 +331,33 @@ export default async function GearPage({ params }: GearPageProps) {
       {sectionNavItems.length > 0 && (
         <section className="bg-background sticky top-16 z-20 hidden border-b py-2 md:block">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
-            {sectionNavItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-muted-foreground hover:text-primary text-sm transition-all hover:underline"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {sectionNavItems
+              .filter(
+                (item) => !["#raw-samples", "#reviews"].includes(item.href),
+              )
+              .map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="text-muted-foreground hover:text-primary text-sm transition-all hover:underline"
+                >
+                  {item.label}
+                </Link>
+              ))}
             <Suspense fallback={null}>
               <EditorialReviewNavItem label={t("review")} slug={item.slug} />
             </Suspense>
+            {sectionNavItems
+              .filter((item) => item.href === "#raw-samples")
+              .map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="text-muted-foreground hover:text-primary text-sm transition-all hover:underline"
+                >
+                  {item.label}
+                </Link>
+              ))}
             <Suspense fallback={null}>
               <AlternativesNavItem gearId={item.id} label={t("alternatives")} />
             </Suspense>
@@ -352,6 +367,12 @@ export default async function GearPage({ params }: GearPageProps) {
                 label={t("creatorVideos")}
               />
             </Suspense>
+            <Link
+              href="#reviews"
+              className="text-muted-foreground hover:text-primary text-sm transition-all hover:underline"
+            >
+              {t("reviews")}
+            </Link>
             <Suspense fallback={null}>
               <RelatedArticlesNavItem label={t("articles")} slug={item.slug} />
             </Suspense>
