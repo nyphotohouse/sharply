@@ -10,6 +10,7 @@ import {
   actionSetDeveloperWebhookTargetEnabled,
 } from "~/server/developer-api/actions";
 import { WebhookCreateDialog } from "./webhook-create-dialog";
+import { WebhookTestDialog } from "./webhook-test-dialog";
 import { WebhookTargetList } from "./webhook-target-list";
 import type { WebhookTarget } from "./webhook-types";
 
@@ -26,6 +27,7 @@ export function WebhooksSection({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
+  const [testTarget, setTestTarget] = useState<WebhookTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function toggleTarget(target: WebhookTarget) {
@@ -103,6 +105,13 @@ export function WebhooksSection({
         isPending={isPending}
         onToggle={toggleTarget}
         onDelete={deleteTarget}
+        onTest={setTestTarget}
+      />
+      <WebhookTestDialog
+        target={testTarget}
+        onOpenChange={(open) => {
+          if (!open) setTestTarget(null);
+        }}
       />
       <WebhookCreateDialog
         open={createOpen}

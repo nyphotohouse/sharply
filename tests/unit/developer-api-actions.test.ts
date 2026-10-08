@@ -4,6 +4,7 @@ import { DeveloperApiError } from "~/server/developer-api/errors";
 const mocks = vi.hoisted(() => ({
   createDeveloperApiKey: vi.fn(),
   createDeveloperWebhookTarget: vi.fn(),
+  sendDeveloperWebhookTestEvent: vi.fn(),
   deleteDeveloperWebhookTarget: vi.fn(),
   setDeveloperWebhookTargetEnabled: vi.fn(),
   revalidatePath: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock("~/server/developer-api/service", () => ({
 }));
 vi.mock("~/server/developer-api/webhooks/service", () => ({
   createDeveloperWebhookTarget: mocks.createDeveloperWebhookTarget,
+  sendDeveloperWebhookTestEvent: mocks.sendDeveloperWebhookTestEvent,
   deleteDeveloperWebhookTarget: mocks.deleteDeveloperWebhookTarget,
   setDeveloperWebhookTargetEnabled: mocks.setDeveloperWebhookTargetEnabled,
 }));
@@ -28,6 +30,7 @@ import {
   actionCreateDeveloperWebhookTarget,
   actionDeleteDeveloperWebhookTarget,
   actionSetDeveloperWebhookTargetEnabled,
+  actionSendDeveloperWebhookTestEvent,
 } from "~/server/developer-api/actions";
 
 describe("developer API actions", () => {
@@ -111,5 +114,19 @@ describe("developer API actions", () => {
       enabled: false,
     });
     expect(mocks.deleteDeveloperWebhookTarget).toHaveBeenCalledWith("target-1");
+  });
+
+  it("returns the test event delivery status", async () => {
+    mocks.sendDeveloperWebhookTestEvent.mockResolvedValue({
+      succeeded: false,
+      statusCode: 503,
+    });
+
+    await expect(
+      actionSendDeveloperWebhookTestEvent("target-1"),
+    ).resolves.toEqual({ ok: true, succeeded: false, statusCode: 503 });
+    expect(mocks.sendDeveloperWebhookTestEvent).toHaveBeenCalledWith(
+      "target-1",
+    );
   });
 });

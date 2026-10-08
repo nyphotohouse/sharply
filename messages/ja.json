@@ -2192,7 +2192,7 @@
         "eventCount": "{count, plural, one {# event type available} other {# event types available}}",
         "add": "Add endpoint",
         "targetAllowance": "{active} of {count} webhook targets configured",
-        "deliveryNote": "Signed delivery · up to 2 retries",
+        "deliveryNote": "署名付きリクエスト · 署名検証は任意 · 最大2回の再試行",
         "empty": "You have not created a webhook target yet.",
         "limitReached": "You can have up to {count} webhook targets.",
         "status": {
@@ -2212,8 +2212,20 @@
         "gearCreatedDescription": "Sent once when a gear item first becomes publicly available.",
         "create": "Create endpoint",
         "secretTitle": "Copy your webhook signing secret now",
-        "secretDescription": "Sharply signs each delivery with this secret. It will not be shown again.",
-        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply."
+        "secretDescription": "Sharply はすべての配信に署名します。必要に応じて、このシークレットで真正性を検証できます。シークレットは再表示されません。",
+        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply.",
+        "testButton": "エンドポイントをテスト",
+        "testDialogTitle": "テストイベントを送信",
+        "testDialogDescription": "署名付きの gear.created サンプルを {endpoint} に送信します。test: true が含まれ、カタログ項目は作成されず、自動再試行も行われません。エンドポイントが一時停止中でも送信できます。",
+        "testSend": "テストイベントを送信",
+        "testSending": "テストイベントを送信中…",
+        "testSuccessTitle": "エンドポイントがテストイベントを受け付けました",
+        "testHttpFailureTitle": "エンドポイントがエラーステータスを返しました",
+        "testHttpStatus": "HTTP {status}",
+        "testNetworkFailureTitle": "応答がありませんでした",
+        "testNetworkFailureDescription": "エンドポイントに接続できませんでした。HTTPS で到達できることを確認して、もう一度お試しください。",
+        "testRequestFailureTitle": "テストイベントを送信できませんでした",
+        "testRequestFailureDescription": "Sharply がリクエストを準備または送信できませんでした。しばらくしてからもう一度お試しください。"
       }
     },
     "docs": {
@@ -2259,8 +2271,8 @@
       "webhooksDescription": "Configure endpoints in the developer portal to receive signed notifications when gear first becomes public. Each endpoint subscribes to one event type.",
       "webhookEventTitle": "Available event: gear.created",
       "webhookEventDescription": "This event fires once when a gear item first becomes publicly available. Hidden or rumored items do not trigger it until they are published.",
-      "webhookSignatureTitle": "Verify webhook signatures",
-      "webhookSignatureDescription": "Each endpoint has a signing secret shown once at setup. Verify the HMAC-SHA256 signature against the exact raw request body before parsing it, and use the event ID to make processing idempotent.",
+      "webhookSignatureTitle": "任意: Webhook 署名を検証する",
+      "webhookSignatureDescription": "Sharply はすべての配信に署名しますが、署名を確認せずに JSON を処理することもできます。Sharply からのリクエストであることを確認したい場合は、エンドポイントの署名シークレットを使い、JSON の解析前に未加工のリクエスト本文に対する HMAC-SHA256 署名を検証してください。イベント ID を使うと冪等に処理できます。",
       "webhookDeliveryTitle": "Delivery behavior",
       "webhookDeliveryDescription": "Sharply expects a 2xx response. Network failures and other status codes are retried up to twice, five minutes apart. Deliveries are at least once, so handle duplicate event IDs safely."
     },

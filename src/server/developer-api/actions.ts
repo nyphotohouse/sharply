@@ -12,6 +12,7 @@ import {
 import {
   createDeveloperWebhookTarget,
   deleteDeveloperWebhookTarget,
+  sendDeveloperWebhookTestEvent,
   setDeveloperWebhookTargetEnabled,
 } from "./webhooks/service";
 
@@ -78,6 +79,17 @@ export async function actionDeleteDeveloperWebhookTarget(targetId: string) {
     await deleteDeveloperWebhookTarget(targetId);
     revalidatePath("/developer");
     return { ok: true as const };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function actionSendDeveloperWebhookTestEvent(targetId: string) {
+  try {
+    return {
+      ok: true as const,
+      ...(await sendDeveloperWebhookTestEvent(targetId)),
+    };
   } catch (error) {
     return actionError(error);
   }

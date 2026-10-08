@@ -59,6 +59,16 @@ test("creates, pauses, resumes, and deletes a webhook endpoint", async ({
 
   const target = page.locator("article").filter({ hasText: endpointUrl });
   await expect(target.getByText("Active")).toBeVisible();
+  await target.getByRole("button", { name: "Test endpoint" }).click();
+  const testDialog = page.getByRole("dialog");
+  await expect(
+    testDialog.getByRole("heading", { name: "Send a test event" }),
+  ).toBeVisible();
+  await expect(
+    testDialog.getByRole("button", { name: "Send test event" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+
   await target.getByRole("button", { name: "Pause" }).click();
   await expect(target.getByText("Paused")).toBeVisible();
   await target.getByRole("button", { name: "Resume" }).click();

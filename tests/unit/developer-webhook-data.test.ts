@@ -16,6 +16,7 @@ import {
   createDeveloperWebhookTargetData,
   deleteDeveloperWebhookTargetData,
   enqueueGearCreatedWebhookEvent,
+  getDeveloperWebhookTargetForTestData,
   listDeveloperWebhookDeliveriesForAdminData,
   listDeveloperWebhookTargetsForAdminData,
   setDeveloperWebhookTargetEnabledData,
@@ -414,6 +415,37 @@ describe("developer webhook data", () => {
     expect(query.limit).toHaveBeenCalledWith(
       DEVELOPER_WEBHOOK_ADMIN_RECENT_LIMIT,
     );
+  });
+
+  it("loads a test-send target and its secret only through the owner-scoped query", async () => {
+    const rows = [
+      {
+        eventType: "gear.created",
+        endpointUrl: "https://hooks.example.com",
+        signingSecretCiphertext: "encrypted-secret",
+      },
+    ];
+    const query = {
+      from: vi.fn(() => query),
+      where: vi.fn(() => query),
+      limit: vi.fn(async () => rows),
+    };
+    dbMocks.select.mockReturnValue(query);
+
+    await expect(
+      getDeveloperWebhookTargetForTestData({
+        targetId: "target-1",
+        userId: "user-1",
+      }),
+    ).resolves.toBe(rows[0]);
+
+    const selectedFields = dbMocks.select.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(selectedFields).toHaveProperty("signingSecretCiphertext");
+    expect(query.where).toHaveBeenCalledOnce();
+    expect(query.limit).toHaveBeenCalledWith(1);
   });
 
   it("lists recent admin deliveries with summarized event data and no secrets", async () => {
