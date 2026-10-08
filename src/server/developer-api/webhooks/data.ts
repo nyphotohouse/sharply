@@ -116,6 +116,28 @@ export async function listDeveloperWebhookTargetsData(userId: string) {
     .orderBy(asc(developerWebhookTargets.createdAt));
 }
 
+/** Loads an owned target and its encrypted secret for an explicit test send. */
+export async function getDeveloperWebhookTargetForTestData(params: {
+  targetId: string;
+  userId: string;
+}) {
+  const rows = await db
+    .select({
+      eventType: developerWebhookTargets.eventType,
+      endpointUrl: developerWebhookTargets.endpointUrl,
+      signingSecretCiphertext: developerWebhookTargets.signingSecretCiphertext,
+    })
+    .from(developerWebhookTargets)
+    .where(
+      and(
+        eq(developerWebhookTargets.id, params.targetId),
+        eq(developerWebhookTargets.userId, params.userId),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 /** Recent target summaries for the administrator's webhook observability view. */
 export async function listDeveloperWebhookTargetsForAdminData() {
   return db

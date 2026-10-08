@@ -1,6 +1,6 @@
 "use client";
 
-import { Pause, Play, Trash2, Webhook } from "lucide-react";
+import { Pause, Play, Send, Trash2, Webhook } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { Button } from "~/components/ui/button";
@@ -11,11 +11,13 @@ export function WebhookTargetList({
   isPending,
   onToggle,
   onDelete,
+  onTest,
 }: {
   targets: WebhookTarget[];
   isPending: boolean;
   onToggle: (target: WebhookTarget) => void;
   onDelete: (targetId: string) => void;
+  onTest: (target: WebhookTarget) => void;
 }) {
   const t = useTranslations("developerApi.portal.webhooks");
   const locale = useLocale();
@@ -59,6 +61,16 @@ export function WebhookTargetList({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isPending}
+              onClick={() => onTest(target)}
+            >
+              <Send className="size-4" aria-hidden="true" />
+              {t("testButton")}
+            </Button>
             <Button
               type="button"
               variant="outline"

@@ -2192,7 +2192,7 @@
         "eventCount": "{count, plural, one {# event type available} other {# event types available}}",
         "add": "Add endpoint",
         "targetAllowance": "{active} of {count} webhook targets configured",
-        "deliveryNote": "Signed delivery · up to 2 retries",
+        "deliveryNote": "Requêtes signées · vérification facultative · jusqu’à 2 nouvelles tentatives",
         "empty": "You have not created a webhook target yet.",
         "limitReached": "You can have up to {count} webhook targets.",
         "status": {
@@ -2212,8 +2212,20 @@
         "gearCreatedDescription": "Sent once when a gear item first becomes publicly available.",
         "create": "Create endpoint",
         "secretTitle": "Copy your webhook signing secret now",
-        "secretDescription": "Sharply signs each delivery with this secret. It will not be shown again.",
-        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply."
+        "secretDescription": "Sharply signe chaque livraison. Vous pouvez utiliser ce secret pour vérifier son authenticité si vous le souhaitez ; il ne sera plus affiché.",
+        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply.",
+        "testButton": "Tester le point de terminaison",
+        "testDialogTitle": "Envoyer un événement test",
+        "testDialogDescription": "Envoyez un exemple signé de gear.created à {endpoint}. Il contient test: true, ne crée pas d’élément du catalogue et ne sera pas renvoyé automatiquement. Vous pouvez aussi l’envoyer lorsque le point de terminaison est en pause.",
+        "testSend": "Envoyer l’événement test",
+        "testSending": "Envoi de l’événement test…",
+        "testSuccessTitle": "Le point de terminaison a accepté l’événement test",
+        "testHttpFailureTitle": "Le point de terminaison a renvoyé un statut d’erreur",
+        "testHttpStatus": "HTTP {status}",
+        "testNetworkFailureTitle": "Aucune réponse reçue",
+        "testNetworkFailureDescription": "Le point de terminaison n’a pas pu être joint. Vérifiez qu’il est accessible en HTTPS, puis réessayez.",
+        "testRequestFailureTitle": "Impossible d’envoyer l’événement test",
+        "testRequestFailureDescription": "Sharply n’a pas pu préparer ou envoyer cette requête. Veuillez réessayer plus tard."
       }
     },
     "docs": {
@@ -2259,8 +2271,8 @@
       "webhooksDescription": "Configure endpoints in the developer portal to receive signed notifications when gear first becomes public. Each endpoint subscribes to one event type.",
       "webhookEventTitle": "Available event: gear.created",
       "webhookEventDescription": "This event fires once when a gear item first becomes publicly available. Hidden or rumored items do not trigger it until they are published.",
-      "webhookSignatureTitle": "Verify webhook signatures",
-      "webhookSignatureDescription": "Each endpoint has a signing secret shown once at setup. Verify the HMAC-SHA256 signature against the exact raw request body before parsing it, and use the event ID to make processing idempotent.",
+      "webhookSignatureTitle": "Facultatif : vérifier les signatures des webhooks",
+      "webhookSignatureDescription": "Sharply signe chaque livraison, mais vous pouvez traiter le JSON sans vérifier la signature. Pour confirmer qu’une requête vient de Sharply, utilisez le secret de signature du point de terminaison pour vérifier la signature HMAC-SHA256 à partir du corps brut, avant de l’analyser. Utilisez l’identifiant de l’événement pour rendre le traitement idempotent.",
       "webhookDeliveryTitle": "Delivery behavior",
       "webhookDeliveryDescription": "Sharply expects a 2xx response. Network failures and other status codes are retried up to twice, five minutes apart. Deliveries are at least once, so handle duplicate event IDs safely."
     },

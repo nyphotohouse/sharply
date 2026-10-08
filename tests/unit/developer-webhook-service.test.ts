@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   requireDeveloperPortalUser: vi.fn(),
   listDeveloperWebhookTargetsData: vi.fn(),
   createDeveloperWebhookTargetData: vi.fn(),
+  getDeveloperWebhookTargetForTestData: vi.fn(),
   setDeveloperWebhookTargetEnabledData: vi.fn(),
   deleteDeveloperWebhookTargetData: vi.fn(),
   claimDueDeveloperWebhookDeliveries: vi.fn(),
@@ -18,6 +19,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("~/env", () => ({
+  env: { NEXT_PUBLIC_BASE_URL: "https://www.sharplyphoto.com" },
+}));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("~/server/developer-api/service", () => ({
   requireDeveloperPortalUser: mocks.requireDeveloperPortalUser,
@@ -27,6 +31,8 @@ vi.mock("~/server/developer-api/webhooks/data", () => ({
   claimDueDeveloperWebhookDeliveries: mocks.claimDueDeveloperWebhookDeliveries,
   completeDeveloperWebhookDelivery: mocks.completeDeveloperWebhookDelivery,
   createDeveloperWebhookTargetData: mocks.createDeveloperWebhookTargetData,
+  getDeveloperWebhookTargetForTestData:
+    mocks.getDeveloperWebhookTargetForTestData,
   deleteDeveloperWebhookTargetData: mocks.deleteDeveloperWebhookTargetData,
   listDeveloperWebhookTargetsData: mocks.listDeveloperWebhookTargetsData,
   setDeveloperWebhookTargetEnabledData:
@@ -45,6 +51,7 @@ import {
   deleteDeveloperWebhookTarget,
   dispatchDueDeveloperWebhookDeliveries,
   setDeveloperWebhookTargetEnabled,
+  sendDeveloperWebhookTestEvent,
 } from "~/server/developer-api/webhooks/service";
 
 describe("developer webhook service", () => {
@@ -131,6 +138,106 @@ describe("developer webhook service", () => {
       targetId: "target-1",
       userId: "user-1",
     });
+  });
+
+  it("sends an owned target a signed sample event without queueing a delivery", async () => {
+    const target = {
+      eventType: "gear.created",
+      endpointUrl: "https://hooks.example.com/gear",
+      signingSecretCiphertext: "ciphertext",
+    };
+    mocks.getDeveloperWebhookTargetForTestData.mockResolvedValue(target);
+    mocks.decryptWebhookSigningSecret.mockReturnValue("whsec_secret");
+    mocks.postSignedWebhook.mockResolvedValue({
+      succeeded: true,
+      statusCode: 204,
+    });
+
+    await expect(sendDeveloperWebhookTestEvent("target-1")).resolves.toEqual({
+      succeeded: true,
+      statusCode: 204,
+    });
+
+    expect(mocks.getDeveloperWebhookTargetForTestData).toHaveBeenCalledWith({
+      targetId: "target-1",
+      userId: "user-1",
+    });
+    expect(mocks.postSignedWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpointUrl: target.endpointUrl,
+        secret: "whsec_secret",
+        payload: expect.objectContaining({
+          id: expect.stringMatching(/^[0-9a-f-]{36}$/i),
+          type: "gear.created",
+          test: true,
+          data: expect.objectContaining({
+            name: "Sharply Webhook Test Camera",
+            gearType: "CAMERA",
+          }),
+        }),
+      }),
+    );
+    expect(mocks.claimDueDeveloperWebhookDeliveries).not.toHaveBeenCalled();
+    expect(mocks.completeDeveloperWebhookDelivery).not.toHaveBeenCalled();
+  });
+
+  it("reports an HTTP failure from a test send", async () => {
+    mocks.getDeveloperWebhookTargetForTestData.mockResolvedValue({
+      eventType: "gear.created",
+      endpointUrl: "https://hooks.example.com/gear",
+      signingSecretCiphertext: "ciphertext",
+    });
+    mocks.decryptWebhookSigningSecret.mockReturnValue("whsec_secret");
+    mocks.postSignedWebhook.mockResolvedValue({
+      succeeded: false,
+      statusCode: 503,
+    });
+
+    await expect(sendDeveloperWebhookTestEvent("target-1")).resolves.toEqual({
+      succeeded: false,
+      statusCode: 503,
+    });
+  });
+
+  it("returns a safe no-response result when a test send cannot reach its target", async () => {
+    mocks.getDeveloperWebhookTargetForTestData.mockResolvedValue({
+      eventType: "gear.created",
+      endpointUrl: "https://hooks.example.com/gear",
+      signingSecretCiphertext: "ciphertext",
+    });
+    mocks.decryptWebhookSigningSecret.mockReturnValue("whsec_secret");
+    mocks.postSignedWebhook.mockRejectedValue(new Error("socket timed out"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(sendDeveloperWebhookTestEvent("target-1")).resolves.toEqual({
+      succeeded: false,
+      statusCode: null,
+    });
+  });
+
+  it("does not send a test event for a target the account does not own", async () => {
+    mocks.getDeveloperWebhookTargetForTestData.mockResolvedValue(null);
+
+    await expect(
+      sendDeveloperWebhookTestEvent("other-user-target"),
+    ).rejects.toMatchObject({ code: "not_found", status: 404 });
+    expect(mocks.decryptWebhookSigningSecret).not.toHaveBeenCalled();
+    expect(mocks.postSignedWebhook).not.toHaveBeenCalled();
+  });
+
+  it("requires developer access before loading a target for a test send", async () => {
+    mocks.requireDeveloperPortalUser.mockRejectedValue(
+      new DeveloperApiError(
+        "developer_access_required",
+        403,
+        "Access required",
+      ),
+    );
+
+    await expect(
+      sendDeveloperWebhookTestEvent("target-1"),
+    ).rejects.toMatchObject({ code: "developer_access_required" });
+    expect(mocks.getDeveloperWebhookTargetForTestData).not.toHaveBeenCalled();
   });
 
   it("does not create a target when developer access is unavailable", async () => {

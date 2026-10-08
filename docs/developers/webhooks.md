@@ -25,9 +25,11 @@ The event contains the public gear identity and canonical URLs:
 }
 ```
 
-## Verify a delivery
+## Optional signature verification
 
-The developer portal shows the target's `whsec_...` signing secret only once, immediately after creation. Store it securely. Sharply stores an encrypted copy so it can sign deliveries; the encryption key is configured through `DEVELOPER_WEBHOOK_ENCRYPTION_KEY`.
+The developer portal shows the target's `whsec_...` signing secret only once, immediately after creation. If you want to verify signatures, copy the secret and store it securely. Sharply keeps an encrypted copy so it can sign deliveries; the encryption key is configured through `DEVELOPER_WEBHOOK_ENCRYPTION_KEY`.
+
+Sharply signs every delivery, but signature verification is optional. Your endpoint can process the JSON without checking the signature. Verifying it lets your server confirm the request came from Sharply, which is recommended if webhook events trigger sensitive actions.
 
 Every request includes:
 
@@ -35,7 +37,7 @@ Every request includes:
 - `X-Sharply-Timestamp`: Unix timestamp in seconds.
 - `X-Sharply-Signature`: `v1=<hex digest>`.
 
-The signature is HMAC-SHA256 over `${timestamp}.${rawBody}`, keyed by the exact signing secret shown by Sharply. Verify against the raw request body before parsing JSON. Compare digests in constant time and reject timestamps outside a short tolerance window.
+If you choose to verify a signature, it is HMAC-SHA256 over `${timestamp}.${rawBody}`, keyed by the exact signing secret shown by Sharply. Check it against the raw request body before parsing JSON. Compare digests in constant time and reject timestamps outside a short tolerance window.
 
 Example verification in Node.js:
 
@@ -81,7 +83,9 @@ Targets can be paused, resumed, or deleted in the developer portal. Paused targe
 
 Removing developer access pauses every target and cancels pending sends. Restoring access leaves targets paused until their owner resumes them. Existing API keys are revoked by the developer-access policy as documented in the [developer API overview](api/overview.md).
 
-The admin Developer API page shows the latest 100 webhook targets and the latest 100 delivery records. Delivery rows include the owner, endpoint, event, current status, attempt count, last attempt time, HTTP status, and latest error. Each row summarizes one event-to-target delivery and keeps the latest result rather than a full log of every attempt. Signing secrets are never shown. The v1 developer portal does not expose delivery history or a test-send action.
+The developer portal can send a test `gear.created` event to an endpoint. Test events include `"test": true`, use a sample camera, and are signed with the endpoint's secret. They do not create a catalog event or enter the automatic retry queue. A test can be sent while an endpoint is paused. The portal reports the HTTP response status or that no response was received; test sends are not stored in delivery history.
+
+The admin Developer API page shows the latest 100 webhook targets and the latest 100 delivery records. Delivery rows include the owner, endpoint, event, current status, attempt count, last attempt time, HTTP status, and latest error. Each row summarizes one event-to-target delivery and keeps the latest result rather than a full log of every attempt. Signing secrets are never shown.
 
 ## Deployment configuration
 

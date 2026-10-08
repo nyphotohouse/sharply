@@ -2192,7 +2192,7 @@
         "eventCount": "{count, plural, one {# event type available} other {# event types available}}",
         "add": "Add endpoint",
         "targetAllowance": "{active} of {count} webhook targets configured",
-        "deliveryNote": "Signed delivery · up to 2 retries",
+        "deliveryNote": "Solicitudes firmadas · verificación opcional · hasta 2 reintentos",
         "empty": "You have not created a webhook target yet.",
         "limitReached": "You can have up to {count} webhook targets.",
         "status": {
@@ -2212,8 +2212,20 @@
         "gearCreatedDescription": "Sent once when a gear item first becomes publicly available.",
         "create": "Create endpoint",
         "secretTitle": "Copy your webhook signing secret now",
-        "secretDescription": "Sharply signs each delivery with this secret. It will not be shown again.",
-        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply."
+        "secretDescription": "Sharply firma cada entrega. Puedes usar este secreto para verificar su autenticidad si quieres; no volverá a mostrarse.",
+        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply.",
+        "testButton": "Probar endpoint",
+        "testDialogTitle": "Enviar evento de prueba",
+        "testDialogDescription": "Envía un ejemplo firmado de gear.created a {endpoint}. Incluye test: true, no crea un elemento del catálogo y no se reintentará automáticamente. También puedes enviarlo si el endpoint está pausado.",
+        "testSend": "Enviar evento de prueba",
+        "testSending": "Enviando evento de prueba…",
+        "testSuccessTitle": "El endpoint aceptó el evento de prueba",
+        "testHttpFailureTitle": "El endpoint devolvió un estado de error",
+        "testHttpStatus": "HTTP {status}",
+        "testNetworkFailureTitle": "No se recibió respuesta",
+        "testNetworkFailureDescription": "No se pudo alcanzar el endpoint. Comprueba que sea accesible mediante HTTPS e inténtalo de nuevo.",
+        "testRequestFailureTitle": "No se pudo enviar el evento de prueba",
+        "testRequestFailureDescription": "Sharply no pudo preparar o enviar esta solicitud. Inténtalo de nuevo más tarde."
       }
     },
     "docs": {
@@ -2259,8 +2271,8 @@
       "webhooksDescription": "Configure endpoints in the developer portal to receive signed notifications when gear first becomes public. Each endpoint subscribes to one event type.",
       "webhookEventTitle": "Available event: gear.created",
       "webhookEventDescription": "This event fires once when a gear item first becomes publicly available. Hidden or rumored items do not trigger it until they are published.",
-      "webhookSignatureTitle": "Verify webhook signatures",
-      "webhookSignatureDescription": "Each endpoint has a signing secret shown once at setup. Verify the HMAC-SHA256 signature against the exact raw request body before parsing it, and use the event ID to make processing idempotent.",
+      "webhookSignatureTitle": "Opcional: verificar firmas de webhooks",
+      "webhookSignatureDescription": "Sharply firma cada entrega, pero puedes procesar el JSON sin comprobar la firma. Si quieres confirmar que una solicitud procede de Sharply, usa el secreto de firma del endpoint para verificar la firma HMAC-SHA256 con el cuerpo original de la solicitud antes de analizarlo. Usa el ID del evento para procesar cada evento de forma idempotente.",
       "webhookDeliveryTitle": "Delivery behavior",
       "webhookDeliveryDescription": "Sharply expects a 2xx response. Network failures and other status codes are retried up to twice, five minutes apart. Deliveries are at least once, so handle duplicate event IDs safely."
     },

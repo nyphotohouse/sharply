@@ -1,6 +1,8 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { after } from "next/server";
+import { env } from "~/env";
 import {
   DEVELOPER_WEBHOOK_DISPATCH_BATCH_SIZE,
   DEVELOPER_WEBHOOK_EVENT_TYPES,
@@ -18,6 +20,7 @@ import {
   completeDeveloperWebhookDelivery,
   createDeveloperWebhookTargetData,
   deleteDeveloperWebhookTargetData,
+  getDeveloperWebhookTargetForTestData,
   listDeveloperWebhookTargetsData,
   setDeveloperWebhookTargetEnabledData,
   type ClaimedWebhookDelivery,
@@ -112,6 +115,53 @@ export async function createDeveloperWebhookTarget(
   }
 
   return { target: result.target, secret };
+}
+
+export async function sendDeveloperWebhookTestEvent(targetId: string) {
+  const user = await requireDeveloperPortalUser();
+  const target = await getDeveloperWebhookTargetForTestData({
+    targetId,
+    userId: user.id,
+  });
+  if (!target) {
+    throw new DeveloperApiError("not_found", 404, "Webhook target not found.");
+  }
+
+  const eventType = parseEventType(target.eventType);
+  const now = new Date();
+  const slug = "test-camera";
+  const payload = {
+    id: randomUUID(),
+    type: eventType,
+    createdAt: now.toISOString(),
+    test: true,
+    data: {
+      slug,
+      name: "Sharply Webhook Test Camera",
+      gearType: "CAMERA",
+      url: new URL(`/gear/${slug}`, env.NEXT_PUBLIC_BASE_URL).toString(),
+      apiUrl: new URL(
+        `/api/v1/gear/${slug}`,
+        env.NEXT_PUBLIC_BASE_URL,
+      ).toString(),
+    },
+  };
+
+  try {
+    const secret = decryptWebhookSigningSecret(target.signingSecretCiphertext);
+    return await postSignedWebhook({
+      endpointUrl: target.endpointUrl,
+      secret,
+      payload,
+      now,
+    });
+  } catch (error) {
+    console.error("[developer-webhooks] test event send failed", {
+      targetId,
+      error,
+    });
+    return { succeeded: false, statusCode: null };
+  }
 }
 
 export async function setDeveloperWebhookTargetEnabled(params: {

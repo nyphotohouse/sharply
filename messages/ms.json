@@ -2192,7 +2192,7 @@
         "eventCount": "{count, plural, one {# event type available} other {# event types available}}",
         "add": "Add endpoint",
         "targetAllowance": "{active} of {count} webhook targets configured",
-        "deliveryNote": "Signed delivery · up to 2 retries",
+        "deliveryNote": "Permintaan ditandatangani · pengesahan tandatangan pilihan · sehingga 2 percubaan semula",
         "empty": "You have not created a webhook target yet.",
         "limitReached": "You can have up to {count} webhook targets.",
         "status": {
@@ -2212,8 +2212,20 @@
         "gearCreatedDescription": "Sent once when a gear item first becomes publicly available.",
         "create": "Create endpoint",
         "secretTitle": "Copy your webhook signing secret now",
-        "secretDescription": "Sharply signs each delivery with this secret. It will not be shown again.",
-        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply."
+        "secretDescription": "Sharply menandatangani setiap penghantaran. Anda boleh menggunakan rahsia ini untuk mengesahkan ketulenan jika mahu; ia tidak akan dipaparkan lagi.",
+        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply.",
+        "testButton": "Uji endpoint",
+        "testDialogTitle": "Hantar peristiwa ujian",
+        "testDialogDescription": "Hantar contoh gear.created yang ditandatangani ke {endpoint}. Ia mengandungi test: true, tidak mencipta item katalog dan tidak akan dicuba semula secara automatik. Anda juga boleh menghantarnya semasa endpoint dijeda.",
+        "testSend": "Hantar peristiwa ujian",
+        "testSending": "Menghantar peristiwa ujian…",
+        "testSuccessTitle": "Endpoint menerima peristiwa ujian",
+        "testHttpFailureTitle": "Endpoint memulangkan status ralat",
+        "testHttpStatus": "HTTP {status}",
+        "testNetworkFailureTitle": "Tiada respons diterima",
+        "testNetworkFailureDescription": "Endpoint tidak dapat dicapai. Pastikan endpoint boleh dicapai melalui HTTPS dan cuba lagi.",
+        "testRequestFailureTitle": "Peristiwa ujian tidak dapat dihantar",
+        "testRequestFailureDescription": "Sharply tidak dapat menyediakan atau menghantar permintaan ini. Sila cuba lagi kemudian."
       }
     },
     "docs": {
@@ -2259,8 +2271,8 @@
       "webhooksDescription": "Configure endpoints in the developer portal to receive signed notifications when gear first becomes public. Each endpoint subscribes to one event type.",
       "webhookEventTitle": "Available event: gear.created",
       "webhookEventDescription": "This event fires once when a gear item first becomes publicly available. Hidden or rumored items do not trigger it until they are published.",
-      "webhookSignatureTitle": "Verify webhook signatures",
-      "webhookSignatureDescription": "Each endpoint has a signing secret shown once at setup. Verify the HMAC-SHA256 signature against the exact raw request body before parsing it, and use the event ID to make processing idempotent.",
+      "webhookSignatureTitle": "Pilihan: sahkan tandatangan webhook",
+      "webhookSignatureDescription": "Sharply menandatangani setiap penghantaran, tetapi anda boleh memproses JSON tanpa menyemak tandatangan. Jika anda mahu mengesahkan permintaan itu daripada Sharply, gunakan rahsia tandatangan endpoint untuk mengesahkan tandatangan HMAC-SHA256 pada badan permintaan mentah sebelum menghuraikannya. Gunakan ID peristiwa untuk pemprosesan idempoten.",
       "webhookDeliveryTitle": "Delivery behavior",
       "webhookDeliveryDescription": "Sharply expects a 2xx response. Network failures and other status codes are retried up to twice, five minutes apart. Deliveries are at least once, so handle duplicate event IDs safely."
     },
