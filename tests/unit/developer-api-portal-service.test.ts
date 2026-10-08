@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   revokeApiKeyData: vi.fn(),
   setDeveloperAccessData: vi.fn(),
   touchApiKeyLastUsed: vi.fn(),
+  listDeveloperWebhookTargetsData: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -51,6 +52,9 @@ vi.mock("~/server/developer-api/data", () => ({
   revokeApiKeyData: mocks.revokeApiKeyData,
   setDeveloperAccessData: mocks.setDeveloperAccessData,
   touchApiKeyLastUsed: mocks.touchApiKeyLastUsed,
+}));
+vi.mock("~/server/developer-api/webhooks/data", () => ({
+  listDeveloperWebhookTargetsData: mocks.listDeveloperWebhookTargetsData,
 }));
 
 import {
@@ -88,6 +92,7 @@ describe("getDeveloperPortalData", () => {
       },
     ]);
     mocks.getUsageForKeyIdsSince.mockResolvedValue([]);
+    mocks.listDeveloperWebhookTargetsData.mockResolvedValue([]);
   });
 
   it("returns only active keys to the developer portal", async () => {
@@ -100,6 +105,9 @@ describe("getDeveloperPortalData", () => {
       ["active-key"],
       expect.any(Date),
     );
+    expect(portal.webhookTargetLimit).toBe(3);
+    expect(portal.webhookEventTypes).toEqual(["gear.created"]);
+    expect(portal.webhookTargets).toEqual([]);
   });
 
   it("creates a key through the atomic active-key limit data operation", async () => {

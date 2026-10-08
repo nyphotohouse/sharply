@@ -155,6 +155,10 @@ Treat `id` and `raw` as the durable contract. `display` is English current prese
 
 Expanded digital-camera ISO is available as `camera.sensor.isoExpandedRange`. Its raw value is `{ "min": number | null, "max": number | null }`, and partial bounds are retained; for example, a minimum-only value displays as `ISO 50+` and a maximum-only value as `ISO ≤ 204,800`.
 
+## Webhooks
+
+Webhook setup, event payloads, signature verification, and delivery behavior are documented in [the webhook guide](../webhooks.md).
+
 ## Error format
 
 ```json

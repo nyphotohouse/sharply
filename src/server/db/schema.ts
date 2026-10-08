@@ -3040,6 +3040,90 @@ export const developerApiUsageDaily = appSchema.table(
   ],
 );
 
+/** User-owned outbound webhook destinations for developer API events. */
+export const developerWebhookTargets = appSchema.table(
+  "developer_webhook_targets",
+  (d) => ({
+    id: d
+      .varchar({ length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    userId: d
+      .varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    eventType: d.varchar("event_type", { length: 100 }).notNull(),
+    endpointUrl: text("endpoint_url").notNull(),
+    signingSecretCiphertext: text("signing_secret_ciphertext").notNull(),
+    isEnabled: d.boolean("is_enabled").notNull().default(true),
+    createdAt,
+    updatedAt,
+  }),
+  (t) => [
+    index("developer_webhook_targets_user_idx").on(t.userId, t.createdAt),
+    index("developer_webhook_targets_event_idx").on(t.eventType, t.isEnabled),
+  ],
+);
+
+/** Durable event snapshots prevent publication changes from losing webhooks. */
+export const developerWebhookEvents = appSchema.table(
+  "developer_webhook_events",
+  (d) => ({
+    id: d
+      .varchar({ length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    eventType: d.varchar("event_type", { length: 100 }).notNull(),
+    // Preserve the event snapshot even if the catalog row is deleted.
+    gearId: d.varchar("gear_id", { length: 36 }).notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    createdAt,
+  }),
+  (t) => [
+    uniqueIndex("developer_webhook_events_identity_uidx").on(
+      t.eventType,
+      t.gearId,
+    ),
+  ],
+);
+
+/** Per-target delivery outbox with bounded retries and claim leases. */
+export const developerWebhookDeliveries = appSchema.table(
+  "developer_webhook_deliveries",
+  (d) => ({
+    id: d
+      .varchar({ length: 36 })
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    eventId: d
+      .varchar("event_id", { length: 36 })
+      .notNull()
+      .references(() => developerWebhookEvents.id, { onDelete: "cascade" }),
+    targetId: d
+      .varchar("target_id", { length: 36 })
+      .notNull()
+      .references(() => developerWebhookTargets.id, { onDelete: "cascade" }),
+    status: d.varchar("status", { length: 20 }).notNull().default("PENDING"),
+    attemptCount: d.integer("attempt_count").notNull().default(0),
+    nextAttemptAt: d
+      .timestamp("next_attempt_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lockedAt: d.timestamp("locked_at", { withTimezone: true }),
+    deliveredAt: d.timestamp("delivered_at", { withTimezone: true }),
+    lastStatusCode: d.integer("last_status_code"),
+    lastError: text("last_error"),
+    createdAt,
+  }),
+  (t) => [
+    uniqueIndex("developer_webhook_deliveries_identity_uidx").on(
+      t.eventId,
+      t.targetId,
+    ),
+    index("developer_webhook_deliveries_due_idx").on(t.status, t.nextAttemptAt),
+  ],
+);
+
 export const authSessions = appSchema.table(
   "auth_sessions",
   {

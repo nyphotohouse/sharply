@@ -24,11 +24,20 @@ import { assertLocalDatabase } from "./assert-local-e2e-db";
 const Z6III_ID = "ec11113e-ae24-44cb-871f-4eb763d2d378"; // scripts/seed.ts liveZ6iii
 
 async function ensureDevUser() {
-  const existing = await db.select().from(users).where(eq(users.email, "dev@sharply.local")).limit(1);
+  const existing = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, "dev@sharply.local"))
+    .limit(1);
   if (existing[0]) {
     const [updated] = await db
       .update(users)
-      .set({ role: "SUPERADMIN", handle: "sharply-dev", name: "Sharply Dev User" })
+      .set({
+        role: "SUPERADMIN",
+        handle: "sharply-dev",
+        name: "Sharply Dev User",
+        developerAccessEnabled: true,
+      })
       .where(eq(users.id, existing[0].id))
       .returning();
     return updated ?? existing[0];
@@ -40,6 +49,7 @@ async function ensureDevUser() {
       email: "dev@sharply.local",
       role: "SUPERADMIN",
       handle: "sharply-dev",
+      developerAccessEnabled: true,
     })
     .returning();
   return created!;
@@ -56,7 +66,14 @@ async function ensureTag() {
     .onConflictDoNothing({ target: tags.slug })
     .returning();
   const record =
-    tag ?? (await db.select().from(tags).where(eq(tags.slug, "e2e-seed-collection")).limit(1))[0]!;
+    tag ??
+    (
+      await db
+        .select()
+        .from(tags)
+        .where(eq(tags.slug, "e2e-seed-collection"))
+        .limit(1)
+    )[0]!;
   await db
     .insert(gearTags)
     .values({ gearId: Z6III_ID, tagId: record.id })
@@ -80,7 +97,9 @@ async function ensureSharedList(userId: string) {
       .insert(userLists)
       .values({ userId, name: "E2E Shared List" })
       .returning();
-    await tx.insert(userListItems).values({ listId: list!.id, gearId: Z6III_ID });
+    await tx
+      .insert(userListItems)
+      .values({ listId: list!.id, gearId: Z6III_ID });
     await tx.insert(sharedLists).values({
       listId: list!.id,
       slug: "e2e-shared-list",

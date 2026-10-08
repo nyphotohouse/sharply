@@ -23,6 +23,8 @@ import {
   DEVELOPER_API_MAX_ACTIVE_KEYS,
   DEVELOPER_API_RATE_LIMIT,
   DEVELOPER_API_RATE_LIMIT_WINDOW_MS,
+  DEVELOPER_WEBHOOK_EVENT_TYPES,
+  DEVELOPER_WEBHOOK_MAX_TARGETS,
   type DeveloperApiEndpoint,
 } from "./constants";
 import {
@@ -50,6 +52,7 @@ import {
 import { DeveloperApiError } from "./errors";
 import { parseKeyName } from "./schemas";
 import { serializeDeveloperCatalogData } from "./serializers";
+import { listDeveloperWebhookTargetsData } from "./webhooks/data";
 
 export type DeveloperApiCredential = {
   apiKeyId: string;
@@ -274,9 +277,11 @@ function summarizeUsage(
 
 export async function getDeveloperPortalData() {
   const user = await requireDeveloperPortalUser();
-  const keys = (await listApiKeysForUser(user.id)).filter(
-    (key) => key.revokedAt === null,
-  );
+  const [allKeys, webhookTargets] = await Promise.all([
+    listApiKeysForUser(user.id),
+    listDeveloperWebhookTargetsData(user.id),
+  ]);
+  const keys = allKeys.filter((key) => key.revokedAt === null);
   const since = utcDay(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000));
   const usage = await getUsageForKeyIdsSince(
     keys.map((key) => key.id),
@@ -295,6 +300,9 @@ export async function getDeveloperPortalData() {
       lastUsedAt: key.lastUsedAt,
       usage: summarizeUsage(usage, key.id, today),
     })),
+    webhookTargetLimit: DEVELOPER_WEBHOOK_MAX_TARGETS,
+    webhookEventTypes: DEVELOPER_WEBHOOK_EVENT_TYPES,
+    webhookTargets,
   };
 }
 

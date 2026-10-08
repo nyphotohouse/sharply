@@ -119,6 +119,38 @@ export default async function DeveloperDocsPage({
         </p>
       </section>
 
+      <section className="border-b py-8">
+        <h2 className="text-2xl font-semibold tracking-tight">
+          {t("webhooksTitle")}
+        </h2>
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+          {t("webhooksDescription")}
+        </p>
+        <h3 className="mt-6 text-lg font-semibold tracking-tight">
+          {t("webhookEventTitle")}
+        </h3>
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+          {t("webhookEventDescription")}
+        </p>
+        <h3 className="mt-6 text-lg font-semibold tracking-tight">
+          {t("webhookSignatureTitle")}
+        </h3>
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+          {t("webhookSignatureDescription")}
+        </p>
+        <CodeBlock>{`X-Sharply-Event-Id: f3483f3a-c820-4f08-864f-e5f1f6fe3886
+X-Sharply-Timestamp: 1791471845
+X-Sharply-Signature: v1=<hex digest>
+
+HMAC-SHA256(signing_secret, timestamp + "." + raw_request_body)`}</CodeBlock>
+        <h3 className="mt-6 text-lg font-semibold tracking-tight">
+          {t("webhookDeliveryTitle")}
+        </h3>
+        <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+          {t("webhookDeliveryDescription")}
+        </p>
+      </section>
+
       <section className="mt-10 pb-5">
         <h2 className="text-2xl font-semibold tracking-tight">
           {t("endpointsTitle")}

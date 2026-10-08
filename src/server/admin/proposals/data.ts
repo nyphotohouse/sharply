@@ -6,6 +6,8 @@ import type { VideoModeNormalized } from "~/lib/video/mode-schema";
 import { db } from "~/server/db";
 import { getResolvedUserImageSql } from "~/server/users/data";
 import { normalizeProposalPayloadForDb } from "~/server/db/normalizers";
+import { GEAR_PUBLICATION_STATES } from "~/lib/gear/publication-state";
+import { enqueueGearCreatedWebhookEvent } from "~/server/developer-api/webhooks/data";
 import {
   analogCameraSpecs,
   auditLogs,
@@ -302,7 +304,8 @@ export async function approveProposalData(
   userId: string,
   filteredPayload?: any,
 ) {
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
+    let createdEvent = false;
     // Determine final payload (filtered if provided) and normalize to DB types
     const source = filteredPayload ?? payload;
     const normalized = normalizeProposalPayloadForDb(source);
@@ -414,7 +417,36 @@ export async function approveProposalData(
         }
 
         if (Object.keys(coreUpdate).length > 0) {
+          const publicationTarget =
+            coreUpdate.publicationState === GEAR_PUBLICATION_STATES.PUBLISHED
+              ? await tx
+                  .select({
+                    id: gear.id,
+                    name: gear.name,
+                    slug: gear.slug,
+                    gearType: gear.gearType,
+                    publicationState: gear.publicationState,
+                  })
+                  .from(gear)
+                  .where(eq(gear.id, gearId))
+                  .limit(1)
+              : [];
           await tx.update(gear).set(coreUpdate).where(eq(gear.id, gearId));
+          if (
+            publicationTarget[0] &&
+            publicationTarget[0].publicationState !==
+              GEAR_PUBLICATION_STATES.PUBLISHED
+          ) {
+            createdEvent = Boolean(
+              await enqueueGearCreatedWebhookEvent(tx, {
+                gearId: publicationTarget[0].id,
+                name: publicationTarget[0].name,
+                slug: publicationTarget[0].slug,
+                gearType: publicationTarget[0].gearType,
+                publicBaseUrl: getPublicBaseUrl(),
+              }),
+            );
+          }
         }
       }
 
@@ -572,7 +604,16 @@ export async function approveProposalData(
       gearId: gearId,
       gearEditId: proposalId,
     });
+
+    return createdEvent;
   });
+}
+
+function getPublicBaseUrl() {
+  const value = process.env.NEXT_PUBLIC_BASE_URL;
+  if (!value)
+    throw new Error("NEXT_PUBLIC_BASE_URL is required for webhook URLs.");
+  return value;
 }
 
 export async function mergeProposalData(

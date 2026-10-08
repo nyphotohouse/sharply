@@ -82,6 +82,7 @@ describe("optional OpenAI configuration", () => {
         "AUTH_GOOGLE_ID",
         "AUTH_GOOGLE_SECRET",
         "CRON_SECRET",
+        "DEVELOPER_WEBHOOK_ENCRYPTION_KEY",
         "PAYLOAD_SECRET",
         "UPLOADTHING_TOKEN",
       ]) {
@@ -90,6 +91,7 @@ describe("optional OpenAI configuration", () => {
       vi.stubEnv("DATABASE_URL", "postgres://localhost/sharply");
       vi.stubEnv("DISCORD_ROLLUP_WEBHOOK_URL", "https://example.com/webhook");
       vi.stubEnv("NEXT_PUBLIC_BASE_URL", "https://example.com");
+      vi.stubEnv("DEVELOPER_WEBHOOK_ENCRYPTION_KEY", "01".repeat(32));
       const { env } = await import("~/env.js");
       expect(env.OPENAI_API_KEY).toBeUndefined();
     },

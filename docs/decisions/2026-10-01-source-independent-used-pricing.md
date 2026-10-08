@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-01
 - **Status:** Accepted
-- **Related:** `docs/prices/README.md`, `docs/prices/fetching.md`, `docs/prices/display.md`, `docs/used-price-system.md`, `docs/developer-api.md`, `docs/seo.md`
+- **Related:** `docs/prices/README.md`, `docs/prices/fetching.md`, `docs/prices/display.md`, `docs/used-price-system.md`, `docs/developers/api/overview.md`, `docs/seo.md`
 
 ## Context
 

@@ -9,6 +9,11 @@ import {
   revokeDeveloperApiKeyForAdmin,
   setDeveloperAccessForUser,
 } from "./service";
+import {
+  createDeveloperWebhookTarget,
+  deleteDeveloperWebhookTarget,
+  setDeveloperWebhookTargetEnabled,
+} from "./webhooks/service";
 
 function actionError(error: unknown) {
   if (error instanceof DeveloperApiError) {
@@ -35,6 +40,42 @@ export async function actionCreateDeveloperApiKey(formData: FormData) {
 export async function actionRevokeDeveloperApiKey(keyId: string) {
   try {
     await revokeDeveloperApiKey(keyId);
+    revalidatePath("/developer");
+    return { ok: true as const };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function actionCreateDeveloperWebhookTarget(formData: FormData) {
+  try {
+    const result = await createDeveloperWebhookTarget({
+      endpointUrl: formData.get("endpointUrl"),
+      eventType: formData.get("eventType"),
+    });
+    revalidatePath("/developer");
+    return { ok: true as const, ...result };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function actionSetDeveloperWebhookTargetEnabled(
+  targetId: string,
+  enabled: boolean,
+) {
+  try {
+    await setDeveloperWebhookTargetEnabled({ targetId, enabled });
+    revalidatePath("/developer");
+    return { ok: true as const };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function actionDeleteDeveloperWebhookTarget(targetId: string) {
+  try {
+    await deleteDeveloperWebhookTarget(targetId);
     revalidatePath("/developer");
     return { ok: true as const };
   } catch (error) {

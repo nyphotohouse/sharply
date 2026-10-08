@@ -1151,7 +1151,9 @@
             "minAperture": {
               "label": "Apertura mínima"
             },
-            "apertureProfileJson": { "label": "Variable Aperture Profile" },
+            "apertureProfileJson": {
+              "label": "Variable Aperture Profile"
+            },
             "numberDiaphragmBlades": {
               "label": "Número de láminas del diafragma"
             },
@@ -2184,7 +2186,35 @@
       "keyName": "Key name",
       "keyNamePlaceholder": "Production integration",
       "create": "Create API key",
-      "actionFailed": "Unable to complete that action."
+      "actionFailed": "Unable to complete that action.",
+      "webhooks": {
+        "title": "Webhooks",
+        "eventCount": "{count, plural, one {# event type available} other {# event types available}}",
+        "add": "Add endpoint",
+        "targetAllowance": "{active} of {count} webhook targets configured",
+        "deliveryNote": "Signed delivery · up to 2 retries",
+        "empty": "You have not created a webhook target yet.",
+        "limitReached": "You can have up to {count} webhook targets.",
+        "status": {
+          "active": "Active",
+          "paused": "Paused"
+        },
+        "created": "Created {date}",
+        "pause": "Pause",
+        "resume": "Resume",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this webhook target? Pending deliveries will be canceled.",
+        "createTitle": "Add a webhook endpoint",
+        "createDescription": "Choose a public HTTPS URL and the event Sharply should send to it.",
+        "endpointUrl": "Endpoint URL",
+        "endpointPlaceholder": "https://api.example.com/webhooks/sharply",
+        "eventsTitle": "Events to send",
+        "gearCreatedDescription": "Sent once when a gear item first becomes publicly available.",
+        "create": "Create endpoint",
+        "secretTitle": "Copy your webhook signing secret now",
+        "secretDescription": "Sharply signs each delivery with this secret. It will not be shown again.",
+        "invalidEndpoint": "Use a public HTTPS endpoint that can be reached from Sharply."
+      }
     },
     "docs": {
       "link": "Documentation",
@@ -2224,7 +2254,15 @@
       "selectedSpecsDescription": "Returns selected fields or categories for one published gear item.",
       "specFields": "One to 50 comma-separated field IDs or category IDs, such as camera.sensor.",
       "errorsTitle": "Errors and limits",
-      "errorsDescription": "Requests return JSON errors for invalid input, missing or invalid keys, unpublished gear, and rate limits. Each key allows 60 requests per fixed UTC minute."
+      "errorsDescription": "Requests return JSON errors for invalid input, missing or invalid keys, unpublished gear, and rate limits. Each key allows 60 requests per fixed UTC minute.",
+      "webhooksTitle": "Webhooks",
+      "webhooksDescription": "Configure endpoints in the developer portal to receive signed notifications when gear first becomes public. Each endpoint subscribes to one event type.",
+      "webhookEventTitle": "Available event: gear.created",
+      "webhookEventDescription": "This event fires once when a gear item first becomes publicly available. Hidden or rumored items do not trigger it until they are published.",
+      "webhookSignatureTitle": "Verify webhook signatures",
+      "webhookSignatureDescription": "Each endpoint has a signing secret shown once at setup. Verify the HMAC-SHA256 signature against the exact raw request body before parsing it, and use the event ID to make processing idempotent.",
+      "webhookDeliveryTitle": "Delivery behavior",
+      "webhookDeliveryDescription": "Sharply expects a 2xx response. Network failures and other status codes are retried up to twice, five minutes apart. Deliveries are at least once, so handle duplicate event IDs safely."
     },
     "admin": {
       "navLabel": "Developer API",

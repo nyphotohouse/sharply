@@ -25,6 +25,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/admin/developer-webhooks/flush",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/admin/pricing/refresh",
       "schedule": "0 3 * * *"
     }

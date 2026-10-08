@@ -32,6 +32,7 @@ import {
 } from "~/server/db/schema";
 import { getUsedPricingMode } from "~/lib/pricing/used-pricing-preview";
 import type { GearPublicationState, GearType } from "~/types/gear";
+import { enqueueGearCreatedWebhookEvent } from "~/server/developer-api/webhooks/data";
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type DbLike = typeof db | DbTx;
@@ -455,6 +456,16 @@ export async function createGearData(
       await tx.insert(fixedLensSpecs).values(values);
     }
 
+    if (publicationState === GEAR_PUBLICATION_STATES.PUBLISHED) {
+      await enqueueGearCreatedWebhookEvent(tx, {
+        gearId: createdGear.id,
+        name: displayName,
+        slug: createdGear.slug,
+        gearType,
+        publicBaseUrl: getPublicBaseUrl(),
+      });
+    }
+
     return createdGear;
   });
 
@@ -588,25 +599,63 @@ export interface UpdateGearPublicationStateResult {
 
 export async function updateGearPublicationStateData(
   params: UpdateGearPublicationStateParams,
+  publicBaseUrl?: string,
 ): Promise<UpdateGearPublicationStateResult> {
-  const updated = await db
-    .update(gear)
-    .set({
-      publicationState: params.publicationState,
-      updatedAt: new Date(),
-    })
-    .where(eq(gear.id, params.gearId))
-    .returning({
-      id: gear.id,
-      slug: gear.slug,
-      publicationState: gear.publicationState,
-    });
+  return db.transaction(async (tx) => {
+    const existing = await tx
+      .select({
+        id: gear.id,
+        name: gear.name,
+        slug: gear.slug,
+        gearType: gear.gearType,
+        publicationState: gear.publicationState,
+      })
+      .from(gear)
+      .where(eq(gear.id, params.gearId))
+      .limit(1);
+    if (!existing[0]) {
+      throw Object.assign(new Error("Gear not found"), { status: 404 });
+    }
 
-  if (!updated[0]) {
-    throw Object.assign(new Error("Gear not found"), { status: 404 });
-  }
+    const updated = await tx
+      .update(gear)
+      .set({
+        publicationState: params.publicationState,
+        updatedAt: new Date(),
+      })
+      .where(eq(gear.id, params.gearId))
+      .returning({
+        id: gear.id,
+        slug: gear.slug,
+        publicationState: gear.publicationState,
+      });
+    const result = updated[0];
+    if (!result) {
+      throw Object.assign(new Error("Gear not found"), { status: 404 });
+    }
 
-  return updated[0];
+    if (
+      existing[0].publicationState !== GEAR_PUBLICATION_STATES.PUBLISHED &&
+      params.publicationState === GEAR_PUBLICATION_STATES.PUBLISHED
+    ) {
+      await enqueueGearCreatedWebhookEvent(tx, {
+        gearId: existing[0].id,
+        name: existing[0].name,
+        slug: existing[0].slug,
+        gearType: existing[0].gearType,
+        publicBaseUrl: publicBaseUrl ?? getPublicBaseUrl(),
+      });
+    }
+
+    return result;
+  });
+}
+
+function getPublicBaseUrl() {
+  const value = process.env.NEXT_PUBLIC_BASE_URL;
+  if (!value)
+    throw new Error("NEXT_PUBLIC_BASE_URL is required for webhook URLs.");
+  return value;
 }
 
 export interface RenameGearParams {

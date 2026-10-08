@@ -61,7 +61,7 @@ Helper utilities for URLs live in `src/lib/utils/url.ts` (`buildSearchHref`, `me
 
 ### Developer API
 
-The key-authenticated developer API has separate public endpoints at `/api/v1/search` and `/api/v1/search/suggestions`. Both reuse `searchGear` and `getSuggestions` from the search service, preserving one ranking implementation. The developer suggestion serializer omits website-specific `href` and smart compare-action data; see `docs/developer-api.md` for its public contract.
+The key-authenticated developer API has separate public endpoints at `/api/v1/search` and `/api/v1/search/suggestions`. Both reuse `searchGear` and `getSuggestions` from the search service, preserving one ranking implementation. The developer suggestion serializer omits website-specific `href` and smart compare-action data; see `docs/developers/api/overview.md` for its public contract.
 
 ## Database prerequisites
 

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+process.env.NEXT_PUBLIC_BASE_URL ??= "https://www.sharplyphoto.com";
+
 const dbState = vi.hoisted(() => ({
   selectResults: [] as unknown[][],
   insertValues: [] as Array<{ table: unknown; payload: unknown }>,
@@ -40,9 +42,17 @@ const dbMocks = vi.hoisted(() => ({
   }),
 }));
 
+const webhookMocks = vi.hoisted(() => ({
+  enqueueGearCreatedWebhookEvent: vi.fn(),
+}));
+
 vi.mock("server-only", () => ({}));
 vi.mock("~/server/db", () => ({
   db: dbMocks,
+}));
+vi.mock("~/server/developer-api/webhooks/data", () => webhookMocks);
+vi.mock("~/env", () => ({
+  env: { NEXT_PUBLIC_BASE_URL: "https://www.sharplyphoto.com" },
 }));
 
 import { createGearData } from "~/server/admin/gear/data";
@@ -52,6 +62,7 @@ describe("createGearData bulk import initial values", () => {
     vi.clearAllMocks();
     dbState.selectResults = [];
     dbState.insertValues = [];
+    webhookMocks.enqueueGearCreatedWebhookEvent.mockResolvedValue("event-1");
   });
 
   it("writes multiple mounts and initial lens specs in the creation transaction", async () => {
@@ -102,6 +113,15 @@ describe("createGearData bulk import initial values", () => {
       maxApertureWide: "2.8",
       hasAutofocus: true,
     });
+    expect(webhookMocks.enqueueGearCreatedWebhookEvent).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        gearId: "gear-1",
+        name: "Nikon Nikkor Z 60mm f/2.8",
+        slug: "nikon-z-60mm-f-2-8",
+        gearType: "LENS",
+      }),
+    );
   });
 
   it("writes digital camera completeness fields during creation", async () => {

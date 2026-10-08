@@ -8,6 +8,7 @@ export class DeveloperApiError extends Error {
       | "rate_limit_exceeded"
       | "developer_access_required"
       | "key_limit_reached"
+      | "target_limit_reached"
       | "forbidden",
     public readonly status: number,
     message: string,
