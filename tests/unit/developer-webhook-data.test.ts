@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMocks = vi.hoisted(() => ({
   transaction: vi.fn(),
+  select: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
 }));
@@ -10,12 +11,16 @@ vi.mock("server-only", () => ({}));
 vi.mock("~/server/db", () => ({ db: dbMocks }));
 
 import {
+  claimDueDeveloperWebhookDeliveries,
   completeDeveloperWebhookDelivery,
   createDeveloperWebhookTargetData,
   deleteDeveloperWebhookTargetData,
   enqueueGearCreatedWebhookEvent,
+  listDeveloperWebhookDeliveriesForAdminData,
+  listDeveloperWebhookTargetsForAdminData,
   setDeveloperWebhookTargetEnabledData,
 } from "~/server/developer-api/webhooks/data";
+import { DEVELOPER_WEBHOOK_ADMIN_RECENT_LIMIT } from "~/server/developer-api/constants";
 import { setDeveloperAccessData } from "~/server/developer-api/data";
 import {
   developerWebhookDeliveries,
@@ -195,6 +200,52 @@ describe("developer webhook data", () => {
     );
   });
 
+  it("records the time when an admin-visible delivery attempt is claimed", async () => {
+    const now = new Date("2026-10-08T15:04:05.000Z");
+    const candidate = {
+      id: "delivery-1",
+      attemptCount: 0,
+      targetId: "target-1",
+      userId: "user-1",
+      userAccessEnabled: true,
+      targetEnabled: true,
+      endpointUrl: "https://hooks.example.com",
+      signingSecretCiphertext: "encrypted",
+      payload: { id: "event-1", type: "gear.created" },
+    };
+    const selection = {
+      from: vi.fn(() => selection),
+      innerJoin: vi.fn(() => selection),
+      where: vi.fn(() => selection),
+      orderBy: vi.fn(() => selection),
+      limit: vi.fn(() => selection),
+      for: vi.fn(async () => [candidate]),
+    };
+    const update = {
+      set: vi.fn(() => update),
+      where: vi.fn(() => update),
+      returning: vi.fn(async () => [{ id: "delivery-1", attemptCount: 1 }]),
+    };
+    const tx = {
+      select: vi.fn(() => selection),
+      update: vi.fn(() => update),
+    };
+    dbMocks.transaction.mockImplementation(async (callback) =>
+      callback(tx as never),
+    );
+
+    const claimed = await claimDueDeveloperWebhookDeliveries({
+      now,
+      staleLockBefore: new Date(now.getTime() - 120_000),
+      limit: 50,
+    });
+
+    expect(claimed[0]?.attemptCount).toBe(1);
+    expect(update.set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastAttemptAt: now }),
+    );
+  });
+
   it("pauses targets and cancels queued deliveries in the access revocation transaction", async () => {
     const updateTables: unknown[] = [];
     let accessEnabled = false;
@@ -341,5 +392,53 @@ describe("developer webhook data", () => {
     ).resolves.toBe(true);
     expect(dbMocks.delete).toHaveBeenCalledWith(developerWebhookTargets);
     expect(where).toHaveBeenCalledOnce();
+  });
+
+  it("lists recent admin targets without selecting signing secrets", async () => {
+    const rows = [{ id: "target-1", endpointUrl: "https://hooks.example.com" }];
+    const query = {
+      from: vi.fn(() => query),
+      innerJoin: vi.fn(() => query),
+      orderBy: vi.fn(() => query),
+      limit: vi.fn(async () => rows),
+    };
+    dbMocks.select.mockReturnValue(query);
+
+    await expect(listDeveloperWebhookTargetsForAdminData()).resolves.toBe(rows);
+
+    const selectedFields = dbMocks.select.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(selectedFields).not.toHaveProperty("signingSecretCiphertext");
+    expect(query.limit).toHaveBeenCalledWith(
+      DEVELOPER_WEBHOOK_ADMIN_RECENT_LIMIT,
+    );
+  });
+
+  it("lists recent admin deliveries with summarized event data and no secrets", async () => {
+    const rows = [{ id: "delivery-1", status: "FAILED" }];
+    const query = {
+      from: vi.fn(() => query),
+      innerJoin: vi.fn(() => query),
+      orderBy: vi.fn(() => query),
+      limit: vi.fn(async () => rows),
+    };
+    dbMocks.select.mockReturnValue(query);
+
+    await expect(listDeveloperWebhookDeliveriesForAdminData()).resolves.toBe(
+      rows,
+    );
+
+    const selectedFields = dbMocks.select.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(selectedFields).toHaveProperty("gearSlug");
+    expect(selectedFields).toHaveProperty("lastAttemptAt");
+    expect(selectedFields).not.toHaveProperty("signingSecretCiphertext");
+    expect(query.limit).toHaveBeenCalledWith(
+      DEVELOPER_WEBHOOK_ADMIN_RECENT_LIMIT,
+    );
   });
 });

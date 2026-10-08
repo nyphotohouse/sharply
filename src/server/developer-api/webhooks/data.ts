@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
   developerWebhookDeliveries,
@@ -11,6 +11,7 @@ import {
 } from "~/server/db/schema";
 import {
   DEVELOPER_WEBHOOK_EVENT_TYPES,
+  DEVELOPER_WEBHOOK_ADMIN_RECENT_LIMIT,
   type DeveloperWebhookEventType,
 } from "../constants";
 
@@ -113,6 +114,65 @@ export async function listDeveloperWebhookTargetsData(userId: string) {
     .from(developerWebhookTargets)
     .where(eq(developerWebhookTargets.userId, userId))
     .orderBy(asc(developerWebhookTargets.createdAt));
+}
+
+/** Recent target summaries for the administrator's webhook observability view. */
+export async function listDeveloperWebhookTargetsForAdminData() {
+  return db
+    .select({
+      id: developerWebhookTargets.id,
+      eventType: developerWebhookTargets.eventType,
+      endpointUrl: developerWebhookTargets.endpointUrl,
+      isEnabled: developerWebhookTargets.isEnabled,
+      createdAt: developerWebhookTargets.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+      developerAccessEnabled: users.developerAccessEnabled,
+    })
+    .from(developerWebhookTargets)
+    .innerJoin(users, eq(developerWebhookTargets.userId, users.id))
+    .orderBy(desc(developerWebhookTargets.createdAt))
+    .limit(DEVELOPER_WEBHOOK_ADMIN_RECENT_LIMIT);
+}
+
+/** Recent delivery state and last-attempt details, without selecting secrets. */
+export async function listDeveloperWebhookDeliveriesForAdminData() {
+  return db
+    .select({
+      id: developerWebhookDeliveries.id,
+      eventId: developerWebhookEvents.id,
+      eventType: developerWebhookEvents.eventType,
+      gearSlug: sql<
+        string | null
+      >`${developerWebhookEvents.payload}->'data'->>'slug'`,
+      endpointUrl: developerWebhookTargets.endpointUrl,
+      status: developerWebhookDeliveries.status,
+      attemptCount: developerWebhookDeliveries.attemptCount,
+      lastAttemptAt: developerWebhookDeliveries.lastAttemptAt,
+      nextAttemptAt: developerWebhookDeliveries.nextAttemptAt,
+      deliveredAt: developerWebhookDeliveries.deliveredAt,
+      lastStatusCode: developerWebhookDeliveries.lastStatusCode,
+      lastError: developerWebhookDeliveries.lastError,
+      createdAt: developerWebhookDeliveries.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(developerWebhookDeliveries)
+    .innerJoin(
+      developerWebhookEvents,
+      eq(developerWebhookDeliveries.eventId, developerWebhookEvents.id),
+    )
+    .innerJoin(
+      developerWebhookTargets,
+      eq(developerWebhookDeliveries.targetId, developerWebhookTargets.id),
+    )
+    .innerJoin(users, eq(developerWebhookTargets.userId, users.id))
+    .orderBy(
+      desc(
+        sql`coalesce(${developerWebhookDeliveries.lastAttemptAt}, ${developerWebhookDeliveries.createdAt})`,
+      ),
+    )
+    .limit(DEVELOPER_WEBHOOK_ADMIN_RECENT_LIMIT);
 }
 
 export async function createDeveloperWebhookTargetData(params: {
@@ -280,6 +340,7 @@ export async function claimDueDeveloperWebhookDeliveries(params: {
       .set({
         status: "PROCESSING",
         lockedAt: params.now,
+        lastAttemptAt: params.now,
         attemptCount: sql`${developerWebhookDeliveries.attemptCount} + 1`,
       })
       .where(inArray(developerWebhookDeliveries.id, ids))

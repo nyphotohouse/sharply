@@ -3105,6 +3105,7 @@ export const developerWebhookDeliveries = appSchema.table(
       .references(() => developerWebhookTargets.id, { onDelete: "cascade" }),
     status: d.varchar("status", { length: 20 }).notNull().default("PENDING"),
     attemptCount: d.integer("attempt_count").notNull().default(0),
+    lastAttemptAt: d.timestamp("last_attempt_at", { withTimezone: true }),
     nextAttemptAt: d
       .timestamp("next_attempt_at", { withTimezone: true })
       .notNull()

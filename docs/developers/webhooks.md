@@ -81,7 +81,7 @@ Targets can be paused, resumed, or deleted in the developer portal. Paused targe
 
 Removing developer access pauses every target and cancels pending sends. Restoring access leaves targets paused until their owner resumes them. Existing API keys are revoked by the developer-access policy as documented in the [developer API overview](api/overview.md).
 
-Delivery attempts and their final status are retained internally for retry processing. The v1 portal does not expose a delivery history or test-send action.
+The admin Developer API page shows the latest 100 webhook targets and the latest 100 delivery records. Delivery rows include the owner, endpoint, event, current status, attempt count, last attempt time, HTTP status, and latest error. Each row summarizes one event-to-target delivery and keeps the latest result rather than a full log of every attempt. Signing secrets are never shown. The v1 developer portal does not expose delivery history or a test-send action.
 
 ## Deployment configuration
 

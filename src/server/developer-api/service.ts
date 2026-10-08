@@ -52,7 +52,11 @@ import {
 import { DeveloperApiError } from "./errors";
 import { parseKeyName } from "./schemas";
 import { serializeDeveloperCatalogData } from "./serializers";
-import { listDeveloperWebhookTargetsData } from "./webhooks/data";
+import {
+  listDeveloperWebhookDeliveriesForAdminData,
+  listDeveloperWebhookTargetsData,
+  listDeveloperWebhookTargetsForAdminData,
+} from "./webhooks/data";
 
 export type DeveloperApiCredential = {
   apiKeyId: string;
@@ -351,9 +355,11 @@ async function requireDeveloperAdmin() {
 
 export async function getDeveloperAdminData() {
   await requireDeveloperAdmin();
-  const [users, keys] = await Promise.all([
+  const [users, keys, webhookTargets, webhookDeliveries] = await Promise.all([
     listDeveloperUsersData(),
     listAllApiKeysData(),
+    listDeveloperWebhookTargetsForAdminData(),
+    listDeveloperWebhookDeliveriesForAdminData(),
   ]);
   const usage = await getUsageForKeyIdsSince(
     keys.map((key) => key.id),
@@ -388,6 +394,8 @@ export async function getDeveloperAdminData() {
       lastUsedAt: key.lastUsedAt,
       revokedAt: key.revokedAt,
     })),
+    webhookTargets,
+    webhookDeliveries,
   };
 }
 
