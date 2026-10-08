@@ -39,7 +39,7 @@ env:
   # src/lib/open-ai constructs an OpenAI client at module scope; the SDK
   # throws at import time without a key. Never called by any spec.
   OPENAI_API_KEY: e2e-ci-dummy
-  DEVELOPER_WEBHOOK_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+  DEVELOPER_WEBHOOK_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
   NEXT_PUBLIC_BASE_URL: http://localhost:3000
   SKIP_ENV_VALIDATION: "1"
   PLAYWRIGHT_ALL_PROJECTS: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'true' || '' }}
