@@ -83,6 +83,9 @@ This document explains how to organize server-only code under `src/server/**`.
   - `server/developer-api/service.ts`: access checks, key lifecycle, rate limiting, and composition of existing search/gear domain reads.
   - `server/developer-api/actions.ts`: authenticated portal/admin mutations only.
   - `server/developer-api/http.ts`: shared public-route authentication and response handling.
+  - `server/developer-api/webhooks/data.ts`: durable webhook event, target, and per-target delivery persistence.
+  - `server/developer-api/webhooks/service.ts`: developer-access checks, target lifecycle, signed delivery, retries, and dispatch orchestration.
+  - `server/developer-api/webhooks/security.ts`: endpoint validation, pinned public DNS resolution, signing, and encryption of target secrets.
   - Developer route handlers must not call the website’s API routes or access Drizzle directly.
 
 ## Import Rules

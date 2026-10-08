@@ -17,10 +17,13 @@ const mocks = vi.hoisted(() => ({
   listApiKeysForUser: vi.fn(),
   listAllApiKeysData: vi.fn(),
   listDeveloperUsersData: vi.fn(),
+  listDeveloperWebhookTargetsForAdminData: vi.fn(),
+  listDeveloperWebhookDeliveriesForAdminData: vi.fn(),
   revokeAllApiKeysForUser: vi.fn(),
   revokeApiKeyData: vi.fn(),
   setDeveloperAccessData: vi.fn(),
   touchApiKeyLastUsed: vi.fn(),
+  listDeveloperWebhookTargetsData: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -52,9 +55,17 @@ vi.mock("~/server/developer-api/data", () => ({
   setDeveloperAccessData: mocks.setDeveloperAccessData,
   touchApiKeyLastUsed: mocks.touchApiKeyLastUsed,
 }));
+vi.mock("~/server/developer-api/webhooks/data", () => ({
+  listDeveloperWebhookDeliveriesForAdminData:
+    mocks.listDeveloperWebhookDeliveriesForAdminData,
+  listDeveloperWebhookTargetsData: mocks.listDeveloperWebhookTargetsData,
+  listDeveloperWebhookTargetsForAdminData:
+    mocks.listDeveloperWebhookTargetsForAdminData,
+}));
 
 import {
   createDeveloperApiKey,
+  getDeveloperAdminData,
   getDeveloperPortalData,
 } from "~/server/developer-api/service";
 
@@ -88,6 +99,7 @@ describe("getDeveloperPortalData", () => {
       },
     ]);
     mocks.getUsageForKeyIdsSince.mockResolvedValue([]);
+    mocks.listDeveloperWebhookTargetsData.mockResolvedValue([]);
   });
 
   it("returns only active keys to the developer portal", async () => {
@@ -100,6 +112,9 @@ describe("getDeveloperPortalData", () => {
       ["active-key"],
       expect.any(Date),
     );
+    expect(portal.webhookTargetLimit).toBe(3);
+    expect(portal.webhookEventTypes).toEqual(["gear.created"]);
+    expect(portal.webhookTargets).toEqual([]);
   });
 
   it("creates a key through the atomic active-key limit data operation", async () => {
@@ -124,5 +139,45 @@ describe("getDeveloperPortalData", () => {
       code: "key_limit_reached",
       status: 409,
     });
+  });
+
+  it("includes recent webhook targets and delivery records in admin data", async () => {
+    mocks.getSessionOrThrow.mockResolvedValue({ user: { id: "admin-1" } });
+    mocks.requireRole.mockReturnValue(true);
+    mocks.listDeveloperUsersData.mockResolvedValue([]);
+    mocks.listAllApiKeysData.mockResolvedValue([]);
+    mocks.getUsageForKeyIdsSince.mockResolvedValue([]);
+    const targets = [
+      { id: "target-1", endpointUrl: "https://hooks.example.com" },
+    ];
+    const deliveries = [{ id: "delivery-1", status: "FAILED" }];
+    mocks.listDeveloperWebhookTargetsForAdminData.mockResolvedValue(targets);
+    mocks.listDeveloperWebhookDeliveriesForAdminData.mockResolvedValue(
+      deliveries,
+    );
+
+    const data = await getDeveloperAdminData();
+
+    expect(data.webhookTargets).toBe(targets);
+    expect(data.webhookDeliveries).toBe(deliveries);
+    expect(mocks.requireRole).toHaveBeenCalledWith({ id: "admin-1" }, [
+      "ADMIN",
+    ]);
+  });
+
+  it("does not expose webhook observability data to non-admins", async () => {
+    mocks.getSessionOrThrow.mockResolvedValue({ user: { id: "developer-1" } });
+    mocks.requireRole.mockReturnValue(false);
+
+    await expect(getDeveloperAdminData()).rejects.toMatchObject({
+      code: "forbidden",
+      status: 403,
+    });
+    expect(
+      mocks.listDeveloperWebhookTargetsForAdminData,
+    ).not.toHaveBeenCalled();
+    expect(
+      mocks.listDeveloperWebhookDeliveriesForAdminData,
+    ).not.toHaveBeenCalled();
   });
 });

@@ -246,6 +246,13 @@
       "when": 1790873778072,
       "tag": "0034_normal_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791473458603,
+      "tag": "0035_legal_power_pack",
+      "breakpoints": true
     }
   ]
 }

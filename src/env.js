@@ -36,6 +36,15 @@ export const env = createEnv({
       process.env.NODE_ENV === "production"
         ? z.string()
         : z.string().optional(),
+    DEVELOPER_WEBHOOK_ENCRYPTION_KEY:
+      process.env.NODE_ENV === "production"
+        ? z
+            .string()
+            .regex(/^[a-f0-9]{64}$/i, "Must be a 32-byte hexadecimal key")
+        : z
+            .string()
+            .regex(/^[a-f0-9]{64}$/i, "Must be a 32-byte hexadecimal key")
+            .optional(),
     DISCORD_ROLLUP_WEBHOOK_URL:
       process.env.NODE_ENV === "production"
         ? z.string().url()
@@ -43,10 +52,7 @@ export const env = createEnv({
     DISCORD_CHANGE_REQUEST_WEBHOOK_URL: z.string().url().optional(),
     DISCORD_GENERAL_LOGS_WEBHOOK_URL: z.string().url().optional(),
     DISCORD_BOT_INTERNAL_API_TOKEN: z.string().optional(),
-    OPENAI_API_KEY:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
     OPENROUTER_API_KEY: z.string().optional(),
     GEAR_IMAGE_REVIEW_MODEL: z.string().optional(),
     PAYLOAD_SECRET: z.string(),
@@ -106,6 +112,8 @@ export const env = createEnv({
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     DATABASE_URL: process.env.DATABASE_URL,
     CRON_SECRET: process.env.CRON_SECRET,
+    DEVELOPER_WEBHOOK_ENCRYPTION_KEY:
+      process.env.DEVELOPER_WEBHOOK_ENCRYPTION_KEY,
     DISCORD_ROLLUP_WEBHOOK_URL: process.env.DISCORD_ROLLUP_WEBHOOK_URL,
     DISCORD_CHANGE_REQUEST_WEBHOOK_URL:
       process.env.DISCORD_CHANGE_REQUEST_WEBHOOK_URL,

@@ -101,8 +101,6 @@ export function buildGearSectionNavItems({
     items.push({ href: "#editorial-review", label: resolvedLabels.review });
   }
 
-  items.push({ href: "#reviews", label: resolvedLabels.reviews });
-
   if (hasRawSamples) {
     items.push({ href: "#raw-samples", label: resolvedLabels.rawSamples });
   }
@@ -112,8 +110,13 @@ export function buildGearSectionNavItems({
   }
 
   if (hasCreatorVideos) {
-    items.push({ href: "#creator-videos", label: resolvedLabels.creatorVideos });
+    items.push({
+      href: "#creator-videos",
+      label: resolvedLabels.creatorVideos,
+    });
   }
+
+  items.push({ href: "#reviews", label: resolvedLabels.reviews });
 
   if (hasRelatedArticles) {
     items.push({ href: "#related-articles", label: resolvedLabels.articles });

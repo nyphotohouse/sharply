@@ -29,6 +29,8 @@ import {
   actionCreateDeveloperApiKey,
   actionRevokeDeveloperApiKey,
 } from "~/server/developer-api/actions";
+import { WebhooksSection } from "./_components/webhooks-section";
+import type { WebhookTarget } from "./_components/webhook-types";
 
 type PortalKey = {
   id: string;
@@ -47,6 +49,9 @@ export function DeveloperPortal({
     keyLimit: number;
     rateLimit: number;
     keys: PortalKey[];
+    webhookTargetLimit: number;
+    webhookEventTypes: readonly string[];
+    webhookTargets: WebhookTarget[];
   };
 }) {
   const t = useTranslations("developerApi");
@@ -187,6 +192,12 @@ export function DeveloperPortal({
           )}
         </div>
       </section>
+
+      <WebhooksSection
+        targetLimit={data.webhookTargetLimit}
+        eventTypes={data.webhookEventTypes}
+        targets={data.webhookTargets}
+      />
 
       <Dialog
         open={createDialogOpen}

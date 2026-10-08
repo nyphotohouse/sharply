@@ -62,7 +62,7 @@ non-native comparison. Formatting remains in `src/lib/mapping/price-map.ts`.
 The developer API exposes the same `estimatedUsedPrice` JSON on full gear and
 search responses. The `mpbMaxPriceUsdCents` field remains in those responses
 for MPB-specific pricing; see
-[`developer-api.md`](./developer-api.md) for the public response contract.
+[developer API overview](developers/api/overview.md) for the public response contract.
 
 ## Editorial workflow
 

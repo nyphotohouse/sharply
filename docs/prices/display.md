@@ -124,7 +124,7 @@ the projection shape above and retain minor-unit values.
 fields represent new pricing. The lightweight catalog intentionally excludes
 prices.
 
-See [`../developer-api.md`](../developer-api.md) for the endpoint contract.
+See the [developer API overview](../developers/api/overview.md) for the endpoint contract.
 
 ## Compatibility rules
 

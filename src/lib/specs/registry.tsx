@@ -345,6 +345,8 @@ export type SpecFieldDef = {
   editElementId?: string; // DOM id to focus in the edit UI when navigating from sidebar
   /** Keep this field editable when the editor is filtered to missing values. */
   alwaysShowInEditor?: boolean;
+  /** Restrict this field in the editor without changing public spec visibility. */
+  editorCondition?: (item: GearItem) => boolean;
   /** Exclude fields managed outside the gear change form from the editor. */
   hiddenInEditor?: boolean;
   condition?: (item: GearItem) => boolean; // Optional: when to show this field
@@ -847,6 +849,8 @@ export const specDictionary: SpecSectionDef[] = [
       {
         key: "hasIbis",
         label: "Has IBIS",
+        alwaysShowInEditor: true,
+        editorCondition: (item) => item.cameraSpecs?.cameraType !== "dslr",
         searchTerms: [
           "stabilization",
           "image stabilization",
@@ -2703,6 +2707,9 @@ export function buildEditSidebarSections(
             return false;
           }
           if (field.condition && !field.condition(item)) {
+            return false;
+          }
+          if (field.editorCondition && !field.editorCondition(item)) {
             return false;
           }
           const descriptor = resolveFieldLabelDescriptor(

@@ -1044,16 +1044,17 @@ function CameraFieldsComponent({
           )}
 
           {/* Has Ibis */}
-          {showWhenMissing(initialSpecs?.hasIbis) && (
-            <BooleanInput
-              id="hasIbis"
-              label={specLabel("hasIbis", "Has IBIS (Physical)")}
-              checked={currentSpecs?.hasIbis ?? null}
-              allowNull
-              showStateText
-              onChange={(value) => handleFieldChange("hasIbis", value)}
-            />
-          )}
+          {currentSpecs?.cameraType !== "dslr" &&
+            showWhenMissing(initialSpecs?.hasIbis, "hasIbis") && (
+              <BooleanInput
+                id="hasIbis"
+                label={specLabel("hasIbis", "Has IBIS (Physical)")}
+                checked={currentSpecs?.hasIbis ?? null}
+                allowNull
+                showStateText
+                onChange={(value) => handleFieldChange("hasIbis", value)}
+              />
+            )}
 
           {/* Has Electronic Vibration Reduction */}
           {showWhenMissing(initialSpecs?.hasElectronicVibrationReduction) && (

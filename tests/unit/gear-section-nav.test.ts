@@ -1,4 +1,4 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   buildGearSectionNavItems,
@@ -43,8 +43,8 @@ describe("buildGearSectionNavItems", () => {
       }),
     ).toEqual([
       { href: "#specs", label: "Specs" },
-      { href: "#reviews", label: "Reviews" },
       { href: "#alternatives", label: "Alternatives" },
+      { href: "#reviews", label: "Reviews" },
       { href: "#related-articles", label: "Articles" },
     ]);
   });
@@ -66,8 +66,8 @@ describe("buildGearSectionNavItems", () => {
       { href: "#staff-verdict", label: "Staff Verdict" },
       { href: "#specs", label: "Specs" },
       { href: "#editorial-review", label: "Review" },
-      { href: "#reviews", label: "Reviews" },
       { href: "#raw-samples", label: "Raw Samples" },
+      { href: "#reviews", label: "Reviews" },
     ]);
   });
 
@@ -84,8 +84,8 @@ describe("buildGearSectionNavItems", () => {
       }),
     ).toEqual([
       { href: "#specs", label: "Specs" },
-      { href: "#reviews", label: "Reviews" },
       { href: "#creator-videos", label: "Creator Videos" },
+      { href: "#reviews", label: "Reviews" },
       { href: "#related-articles", label: "Articles" },
     ]);
   });

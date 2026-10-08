@@ -1,0 +1,8 @@
+# Developer webhook delivery
+
+- **Status:** Accepted
+- **Context:** Approved developer accounts need a way to receive notifications when catalog gear first becomes public. Delivery must survive request failures and must not allow user-supplied endpoints to reach private network services.
+- **Decision:** Persist one immutable `gear.created` event and its matching target deliveries in the same transaction as the first-publication change. Dispatch promptly, with a five-minute recovery sweep and at most two retries after the initial attempt. Sign the exact JSON body with HMAC-SHA256, encrypt target signing secrets with a dedicated environment key, and resolve and pin a public HTTPS address for each send. Developer access is the entitlement; revocation pauses targets and cancels pending deliveries, while restoration leaves targets paused.
+- **Alternatives considered:** Synchronous-only sends could lose events on request failure. Reusing API keys for webhook signing would couple unrelated credentials and expose more privilege than needed. Following endpoint redirects would make destination validation harder to enforce.
+- **Consequences:** The catalog write path includes the webhook outbox in its transaction. Production deployments need `DEVELOPER_WEBHOOK_ENCRYPTION_KEY` and the scheduled flush route. Losing the encryption key makes existing target secrets unreadable. The Drizzle schema is the source of truth; contributors leave migration generation and application to the operator.
+- **Related documentation:** [Developer API overview](../developers/api/overview.md), [webhook guide](../developers/webhooks.md), [server structure](../server-structure.md).

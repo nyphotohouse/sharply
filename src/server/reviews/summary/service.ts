@@ -37,7 +37,7 @@ export async function maybeGenerateReviewSummary(params: {
     gearId: params.gearId,
     gearName: params.gearName,
   });
-  if (!process.env.OPENAI_API_KEY) {
+  if (!openai) {
     console.log("[ai-summary] missing OPENAI_API_KEY");
     return { generated: false, reason: "missing_openai_key" } as const;
   }
@@ -120,6 +120,7 @@ export async function maybeGenerateReviewSummary(params: {
 
 export async function fetchReviewSummary(gearId: string) {
   // console.log("[ai-summary] fetchReviewSummary", { gearId });
+  if (!openai) return null;
   const row = await getReviewSummaryRow(gearId);
   return row?.summaryText ?? null;
 }
@@ -139,7 +140,7 @@ export async function generateReviewSummaryFromProvidedReviews(params: {
     gearName: params.gearName,
     sampleSize: params.reviews.length,
   });
-  if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
+  if (!openai) throw new Error("OPENAI_API_KEY missing");
   const prompt = buildSummaryPrompt({
     gearName: params.gearName,
     previousSummary: params.previousSummary ?? null,

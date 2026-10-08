@@ -3,6 +3,9 @@ import { DeveloperApiError } from "~/server/developer-api/errors";
 
 const mocks = vi.hoisted(() => ({
   createDeveloperApiKey: vi.fn(),
+  createDeveloperWebhookTarget: vi.fn(),
+  deleteDeveloperWebhookTarget: vi.fn(),
+  setDeveloperWebhookTargetEnabled: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -14,8 +17,18 @@ vi.mock("~/server/developer-api/service", () => ({
   revokeDeveloperApiKeyForAdmin: vi.fn(),
   setDeveloperAccessForUser: vi.fn(),
 }));
+vi.mock("~/server/developer-api/webhooks/service", () => ({
+  createDeveloperWebhookTarget: mocks.createDeveloperWebhookTarget,
+  deleteDeveloperWebhookTarget: mocks.deleteDeveloperWebhookTarget,
+  setDeveloperWebhookTargetEnabled: mocks.setDeveloperWebhookTargetEnabled,
+}));
 
-import { actionCreateDeveloperApiKey } from "~/server/developer-api/actions";
+import {
+  actionCreateDeveloperApiKey,
+  actionCreateDeveloperWebhookTarget,
+  actionDeleteDeveloperWebhookTarget,
+  actionSetDeveloperWebhookTargetEnabled,
+} from "~/server/developer-api/actions";
 
 describe("developer API actions", () => {
   beforeEach(() => {
@@ -56,5 +69,47 @@ describe("developer API actions", () => {
       "Developer API action failed:",
       expect.any(Error),
     );
+  });
+
+  it("creates webhook targets from the endpoint and event form fields", async () => {
+    mocks.createDeveloperWebhookTarget.mockResolvedValue({
+      target: { id: "target-1" },
+      secret: "whsec_once",
+    });
+    const formData = new FormData();
+    formData.set("endpointUrl", "https://hooks.example.com/events");
+    formData.set("eventType", "gear.created");
+
+    await expect(actionCreateDeveloperWebhookTarget(formData)).resolves.toEqual(
+      {
+        ok: true,
+        target: { id: "target-1" },
+        secret: "whsec_once",
+      },
+    );
+    expect(mocks.createDeveloperWebhookTarget).toHaveBeenCalledWith({
+      endpointUrl: "https://hooks.example.com/events",
+      eventType: "gear.created",
+    });
+  });
+
+  it("delegates webhook pause and delete mutations to the service", async () => {
+    mocks.setDeveloperWebhookTargetEnabled.mockResolvedValue(undefined);
+    mocks.deleteDeveloperWebhookTarget.mockResolvedValue(undefined);
+
+    await expect(
+      actionSetDeveloperWebhookTargetEnabled("target-1", false),
+    ).resolves.toEqual({ ok: true });
+    await expect(
+      actionDeleteDeveloperWebhookTarget("target-1"),
+    ).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(mocks.setDeveloperWebhookTargetEnabled).toHaveBeenCalledWith({
+      targetId: "target-1",
+      enabled: false,
+    });
+    expect(mocks.deleteDeveloperWebhookTarget).toHaveBeenCalledWith("target-1");
   });
 });

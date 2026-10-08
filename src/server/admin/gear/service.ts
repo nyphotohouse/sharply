@@ -160,6 +160,14 @@ export async function createGearAdmin(
   });
 
   invalidateDeveloperApiCatalogCache();
+  if (
+    (params.publicationState ?? GEAR_PUBLICATION_STATES.PUBLISHED) ===
+    GEAR_PUBLICATION_STATES.PUBLISHED
+  ) {
+    const { scheduleDeveloperWebhookDispatch } =
+      await import("~/server/developer-api/webhooks/service");
+    scheduleDeveloperWebhookDispatch();
+  }
 
   return created;
 }
@@ -185,6 +193,11 @@ export async function updateGearPublicationStateService(params: {
 
   const updated = await updateGearPublicationStateData(params);
   invalidateDeveloperApiCatalogCache();
+  if (params.publicationState === GEAR_PUBLICATION_STATES.PUBLISHED) {
+    const { scheduleDeveloperWebhookDispatch } =
+      await import("~/server/developer-api/webhooks/service");
+    scheduleDeveloperWebhookDispatch();
+  }
   return updated;
 }
 

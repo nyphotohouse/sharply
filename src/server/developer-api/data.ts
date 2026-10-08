@@ -15,6 +15,7 @@ import {
   users,
 } from "~/server/db/schema";
 import type { DeveloperApiEndpoint } from "./constants";
+import { pauseDeveloperWebhookTargetsForUserInTransaction } from "./webhooks/data";
 
 export type DeveloperApiKeyRow = typeof developerApiKeys.$inferSelect;
 
@@ -264,15 +265,20 @@ export async function revokeAllApiKeysForUser(
 }
 
 export async function setDeveloperAccessData(userId: string, enabled: boolean) {
-  const rows = await db
-    .update(users)
-    .set({ developerAccessEnabled: enabled, updatedAt: new Date() })
-    .where(eq(users.id, userId))
-    .returning({
-      id: users.id,
-      developerAccessEnabled: users.developerAccessEnabled,
-    });
-  return rows[0] ?? null;
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .update(users)
+      .set({ developerAccessEnabled: enabled, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        developerAccessEnabled: users.developerAccessEnabled,
+      });
+    if (rows[0] && !enabled) {
+      await pauseDeveloperWebhookTargetsForUserInTransaction(tx, userId);
+    }
+    return rows[0] ?? null;
+  });
 }
 
 export async function getDeveloperAccessData(userId: string) {

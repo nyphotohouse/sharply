@@ -119,15 +119,10 @@ export const routeManifest: RouteEntry[] = [
   { path: "/profile/settings", pattern: "/profile/settings", marker: { role: "heading", name: "Account Settings" }, spec: "auth-gated", auth: true },
   { path: "/profile/settings/add-passkey", pattern: "/profile/settings/add-passkey", marker: { role: "heading", name: "Add a passkey" }, spec: "auth-gated", auth: true },
   { path: `/gear/${GEAR.slug}/edit`, pattern: "/gear/[slug]/edit", marker: { role: "heading", name: "Edit Gear Item" }, spec: "auth-gated", auth: true },
-  // Was previously asserting the anonymous sign-in redirect ("Welcome"); now
-  // signed in, the dev fixture has no developer API access grant
-  // (users.developerAccessEnabled is false), so the genuinely-rendered
-  // content is the access-required gate, not the full portal — that's the
-  // real signed-in state, verified against the live page.
-  { path: "/developer", pattern: "/developer", marker: { role: "heading", name: "Developer access is not enabled" }, spec: "auth-gated", auth: true },
-  // Throws developer_access_required and redirects to /developer for the
-  // same reason — same rendered content as above.
-  { path: "/developer/docs", pattern: "/developer/docs", marker: { role: "heading", name: "Developer access is not enabled" }, spec: "auth-gated", auth: true },
+  // The e2e-only developer user is granted access by seed-fixtures.ts so the
+  // API key and webhook portal can be covered by browser tests.
+  { path: "/developer", pattern: "/developer", marker: { role: "heading", name: "Welcome, Sharply Dev User" }, spec: "auth-gated", auth: true },
+  { path: "/developer/docs", pattern: "/developer/docs", marker: { role: "heading", name: "Build with Sharply gear data" }, spec: "auth-gated", auth: true },
   // --- admin (signed in as dev@sharply.local, seeded SUPERADMIN) ---
   // Admin pages are hardcoded English (AGENTS.md) — one exception,
   // /admin/developer-api, pulls its heading from en.json via i18n, but stays

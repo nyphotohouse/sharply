@@ -217,13 +217,19 @@ export async function applyTrustedContributorProposalApproval(
     throw Object.assign(new Error("Unauthorized"), { status: 401 });
   }
 
-  await approveProposalData(
+  const createdWebhookEvent = await approveProposalData(
     proposalId,
     proposal.gearId,
     proposal.payload,
     user.id,
     filteredPayload,
   );
+
+  if (createdWebhookEvent) {
+    const { scheduleDeveloperWebhookDispatch } =
+      await import("~/server/developer-api/webhooks/service");
+    scheduleDeveloperWebhookDispatch();
+  }
 
   if (proposalAffectsDeveloperCatalog(filteredPayload ?? proposal.payload)) {
     invalidateDeveloperApiCatalogCache();
@@ -258,13 +264,19 @@ export async function approveProposal(
     throw new Error("Proposal is not pending");
   }
 
-  await approveProposalData(
+  const createdWebhookEvent = await approveProposalData(
     id,
     proposal.gearId,
     proposal.payload,
     user.id,
     filteredPayload,
   );
+
+  if (createdWebhookEvent) {
+    const { scheduleDeveloperWebhookDispatch } =
+      await import("~/server/developer-api/webhooks/service");
+    scheduleDeveloperWebhookDispatch();
+  }
 
   if (proposalAffectsDeveloperCatalog(filteredPayload ?? proposal.payload)) {
     invalidateDeveloperApiCatalogCache();
