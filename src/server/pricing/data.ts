@@ -11,6 +11,7 @@ import {
   lte,
   ne,
   or,
+  sql,
 } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
@@ -22,7 +23,10 @@ import {
   gearPriceObservations,
   users,
 } from "~/server/db/schema";
-import type { GearPriceProjection } from "~/server/db/schema";
+import type {
+  GearPriceProjection,
+  PriceImportSummary,
+} from "~/server/db/schema";
 import type {
   PriceAdapterMapping,
   PriceAdapterObservation,
@@ -83,8 +87,8 @@ export async function getPriceManagementData(gearId: string) {
       .from(gearPriceEstimates)
       .where(eq(gearPriceEstimates.gearId, gearId))
       .orderBy(
-        desc(gearPriceEstimates.asOf),
         desc(gearPriceEstimates.createdAt),
+        desc(gearPriceEstimates.asOf),
         desc(gearPriceEstimates.id),
       ),
   ]);
@@ -556,13 +560,47 @@ export async function persistGearPriceProjectionData(input: {
   estimates: PriceEstimateInsert[];
 }) {
   return db.transaction(async (tx) => {
-    if (input.estimates.length > 0) {
-      await tx.insert(gearPriceEstimates).values(
-        input.estimates.map((estimate) => ({
-          ...estimate,
-          gearId: input.gearId,
-        })),
-      );
+    await tx
+      .select({ id: gear.id })
+      .from(gear)
+      .where(eq(gear.id, input.gearId))
+      .for("update");
+    const roundPrice = (minor: number) => Math.round(minor / 100) * 100;
+    for (const candidate of input.estimates) {
+      const estimate = {
+        ...candidate,
+        lowMinor: roundPrice(candidate.lowMinor),
+        typicalMinor: roundPrice(candidate.typicalMinor),
+        highMinor: roundPrice(candidate.highMinor),
+      };
+      const [last] = await tx
+        .select()
+        .from(gearPriceEstimates)
+        .where(
+          and(
+            eq(gearPriceEstimates.gearId, input.gearId),
+            eq(gearPriceEstimates.marketKey, estimate.marketKey),
+            eq(
+              gearPriceEstimates.priceKind,
+              estimate.priceKind ?? "used_retail",
+            ),
+          ),
+        )
+        .orderBy(
+          desc(gearPriceEstimates.createdAt),
+          desc(gearPriceEstimates.id),
+        )
+        .limit(1);
+      if (
+        last?.currency === estimate.currency &&
+        roundPrice(last.typicalMinor) === estimate.typicalMinor &&
+        roundPrice(last.lowMinor) === estimate.lowMinor &&
+        roundPrice(last.highMinor) === estimate.highMinor
+      )
+        continue;
+      await tx
+        .insert(gearPriceEstimates)
+        .values({ ...estimate, gearId: input.gearId });
     }
 
     const [updatedGear] = await tx
@@ -581,6 +619,7 @@ export async function listValidPriceObservationsForGearData(gearId: string) {
     .select({
       id: gearPriceObservations.id,
       mappingId: gearPriceObservations.mappingId,
+      sourceKey: gearPriceMappings.sourceKey,
       marketKey: gearPriceMappings.marketKey,
       priceKind: gearPriceMappings.priceKind,
       valueKind: gearPriceObservations.valueKind,
@@ -629,6 +668,7 @@ export async function listDuePriceMappingsData(limit: number) {
       and(
         eq(gearPriceMappings.status, "ACTIVE"),
         ne(gearPriceMappings.sourceKey, "manual"),
+        ne(gearPriceMappings.sourceKey, "campricer"),
         or(
           isNull(gearPriceMappings.nextFetchAt),
           lte(gearPriceMappings.nextFetchAt, new Date()),
@@ -639,10 +679,14 @@ export async function listDuePriceMappingsData(limit: number) {
     .limit(limit);
 }
 
-export async function createPriceFetchRunData() {
+export async function createPriceFetchRunData(sourceKey?: string) {
   const [run] = await db
     .insert(gearPriceFetchRuns)
-    .values({ trigger: "CRON" })
+    .values({
+      trigger: "CRON",
+      runKind: sourceKey ? "SOURCE_IMPORT" : "MAPPING_REFRESH",
+      sourceKey,
+    })
     .returning();
   if (!run) throw new Error("Unable to create pricing fetch run");
   return run;
@@ -683,12 +727,14 @@ export async function completePriceFetchRunData(input: {
   noDataCount: number;
   errorCount: number;
   completedAt?: Date;
+  summary?: PriceImportSummary;
   error?: string | null;
 }) {
   const [run] = await db
     .update(gearPriceFetchRuns)
     .set({
       status: input.status,
+      summary: input.summary,
       scannedCount: input.scannedCount,
       successCount: input.successCount,
       noDataCount: input.noDataCount,
@@ -749,6 +795,7 @@ export async function listUpcomingPriceMappingsData(limit = 8) {
       and(
         eq(gearPriceMappings.status, "ACTIVE"),
         ne(gearPriceMappings.sourceKey, "manual"),
+        ne(gearPriceMappings.sourceKey, "campricer"),
         or(
           isNull(gearPriceMappings.nextFetchAt),
           lte(gearPriceMappings.nextFetchAt, upcomingCutoff),
@@ -799,3 +846,174 @@ export type PriceManagementResult = Awaited<
 >;
 export type PriceFetchMapping = PriceAdapterMapping;
 export type PriceFetchResultData = PriceFetchResult;
+
+/** Original snapshots stay intact when the current projection is recalculated. */
+export async function listPriceHistoryData(
+  gearId: string,
+  marketKey: string,
+  priceKind = "used_retail",
+) {
+  return db
+    .select({
+      createdAt: gearPriceEstimates.createdAt,
+      currency: gearPriceEstimates.currency,
+      lowMinor: gearPriceEstimates.lowMinor,
+      typicalMinor: gearPriceEstimates.typicalMinor,
+      highMinor: gearPriceEstimates.highMinor,
+    })
+    .from(gearPriceEstimates)
+    .where(
+      and(
+        eq(gearPriceEstimates.gearId, gearId),
+        eq(gearPriceEstimates.marketKey, marketKey),
+        eq(gearPriceEstimates.priceKind, priceKind),
+      ),
+    )
+    .orderBy(asc(gearPriceEstimates.createdAt), asc(gearPriceEstimates.id));
+}
+
+export async function getStoredPriceProjectionData(gearId: string) {
+  const [row] = await db
+    .select({ projection: gear.usedPriceProjection })
+    .from(gear)
+    .where(eq(gear.id, gearId));
+  return row?.projection ?? {};
+}
+
+export async function setCampricerEnabledData(
+  mappingId: string,
+  enabled: boolean,
+) {
+  const [mapping] = await db
+    .update(gearPriceMappings)
+    .set({ status: enabled ? "ACTIVE" : "DISABLED", updatedAt: new Date() })
+    .where(
+      and(
+        eq(gearPriceMappings.id, mappingId),
+        eq(gearPriceMappings.sourceKey, "campricer"),
+      ),
+    )
+    .returning();
+  return mapping ?? null;
+}
+
+/** Idempotent normalization; estimate history and existing projections are untouched. */
+export async function normalizePriceRangesData() {
+  return db
+    .update(gearPriceObservations)
+    .set({
+      valueKind: "POINT",
+      amountMinor: sql`round((${gearPriceObservations.lowMinor}::numeric + ${gearPriceObservations.highMinor}) / 2)`,
+      lowMinor: null,
+      highMinor: null,
+    })
+    .where(
+      and(
+        eq(gearPriceObservations.valueKind, "RANGE"),
+        sql`${gearPriceObservations.lowMinor} > 0`,
+        sql`${gearPriceObservations.highMinor} >= ${gearPriceObservations.lowMinor}`,
+      ),
+    )
+    .returning({ id: gearPriceObservations.id });
+}
+
+export async function listGearForPriceImportData(slugs: string[]) {
+  return slugs.length
+    ? db
+        .select({ id: gear.id, slug: gear.slug, name: gear.name })
+        .from(gear)
+        .where(inArray(gear.slug, slugs))
+    : [];
+}
+
+/** Atomic per-gear import: replay is harmless, and disable is never overwritten. */
+export async function importCampricerPriceData(input: {
+  gearId: string;
+  slug: string;
+  url: string;
+  amountMinor: number | null;
+  observedAt: Date | null;
+}) {
+  return db.transaction(async (tx) => {
+    await tx
+      .insert(gearPriceMappings)
+      .values({
+        gearId: input.gearId,
+        sourceKey: "campricer",
+        marketKey: "EU",
+        externalProductId: input.slug,
+        canonicalUrl: input.url,
+      })
+      .onConflictDoNothing();
+    const [mapping] = await tx
+      .select()
+      .from(gearPriceMappings)
+      .where(
+        and(
+          eq(gearPriceMappings.gearId, input.gearId),
+          eq(gearPriceMappings.sourceKey, "campricer"),
+          eq(gearPriceMappings.marketKey, "EU"),
+          eq(gearPriceMappings.priceKind, "used_retail"),
+        ),
+      )
+      .for("update");
+    if (!mapping) throw new Error("Import mapping unavailable");
+    if (mapping.status === "DISABLED")
+      return { mapping, outcome: "disabled" as const };
+    let outcome: "imported" | "unchanged" | "thin" = "thin";
+    if (input.amountMinor !== null && input.observedAt) {
+      const [existing] = await tx
+        .select({ id: gearPriceObservations.id })
+        .from(gearPriceObservations)
+        .where(
+          and(
+            eq(gearPriceObservations.mappingId, mapping.id),
+            eq(gearPriceObservations.observedAt, input.observedAt),
+          ),
+        )
+        .limit(1);
+      outcome = existing ? "unchanged" : "imported";
+      if (!existing)
+        await tx.insert(gearPriceObservations).values({
+          mappingId: mapping.id,
+          valueKind: "POINT",
+          amountMinor: input.amountMinor,
+          currency: "EUR",
+          observedAt: input.observedAt,
+          fetchedAt: new Date(),
+          evidenceUrl: input.url,
+        });
+    }
+    await tx
+      .update(gearPriceMappings)
+      .set({
+        lastFetchedAt: new Date(),
+        lastFetchStatus: outcome === "thin" ? "NO_DATA" : "SUCCESS",
+        canonicalUrl: input.url,
+        externalProductId: input.slug,
+        updatedAt: new Date(),
+        lastFetchError: null,
+      })
+      .where(eq(gearPriceMappings.id, mapping.id));
+    return { mapping, outcome };
+  });
+}
+
+/** Local recalculation does not depend on provider downloads or ETags. */
+export async function listActiveCampricerGearData() {
+  return db
+    .selectDistinct({ id: gear.id, slug: gear.slug })
+    .from(gear)
+    .innerJoin(gearPriceMappings, eq(gearPriceMappings.gearId, gear.id))
+    .innerJoin(
+      gearPriceObservations,
+      eq(gearPriceObservations.mappingId, gearPriceMappings.id),
+    )
+    .where(
+      and(
+        eq(gearPriceMappings.sourceKey, "campricer"),
+        eq(gearPriceMappings.status, "ACTIVE"),
+        eq(gearPriceObservations.status, "VALID"),
+      ),
+    );
+}

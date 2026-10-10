@@ -4,6 +4,7 @@ import "server-only";
 import { revalidateLocalizedPaths } from "~/server/revalidation";
 import {
   addManualPriceObservationForGearService,
+  setCampricerEnabledService,
   addPublicPriceObservationService,
   archiveOrDeletePriceMappingService,
   createPriceMappingService,
@@ -91,6 +92,16 @@ export async function actionRestorePriceMapping(
   slug: string,
 ) {
   const result = await restorePriceMappingService(mappingId);
+  revalidatePricingPaths(slug);
+  return result;
+}
+
+export async function actionSetCampricerEnabled(
+  mappingId: string,
+  slug: string,
+  enabled: boolean,
+) {
+  const result = await setCampricerEnabledService(mappingId, enabled);
   revalidatePricingPaths(slug);
   return result;
 }

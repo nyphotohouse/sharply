@@ -259,7 +259,13 @@
       "contributorPriceDescription": "Añade un precio en el mercado seleccionado. Aparecerá de inmediato y quedará marcado para revisión posterior.",
       "contributorPriceSaved": "Precio añadido",
       "contributorPriceAlreadyExists": "Este artículo ya tiene un precio.",
-      "contributorPriceFailed": "No se pudo añadir el precio. Inténtalo de nuevo."
+      "contributorPriceFailed": "No se pudo añadir el precio. Inténtalo de nuevo.",
+      "campricerConnected": "CamPricer conectado",
+      "campricerPooled": "Precios internacionales · sincronización automática",
+      "campricerDisabled": "CamPricer desactivado",
+      "campricerNoData": "No hay un precio fiable disponible",
+      "campricerDisable": "Desactivar",
+      "campricerEnable": "Activar"
     },
     "renameDialog": {
       "title": "Cambiar nombre del equipo",
@@ -2444,5 +2450,17 @@
     "signInTitle": "Iniciar sesión",
     "verifyOtpTitle": "Verificar código",
     "welcomeTitle": "¡Bienvenido!"
+  },
+  "PriceHistory": {
+    "title": "Historial de precios",
+    "error": "No se pudo cargar el historial de precios.",
+    "retry": "Reintentar",
+    "estimate": "Precio estimado",
+    "chartDescription": "Historial del precio usado estimado con el rango de precios de las fuentes utilizadas.",
+    "period": "Período",
+    "30d": "30 d",
+    "1y": "1 año",
+    "all": "Todo",
+    "changeDescription": "{change} durante {period}"
   }
 }

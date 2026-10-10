@@ -1,4 +1,5 @@
 const PRICE_SOURCE_LABELS: Record<string, string> = {
+  campricer: "CamPricer",
   manual: "Manual",
   mpb: "MPB",
   kamerastore: "KameraStore",

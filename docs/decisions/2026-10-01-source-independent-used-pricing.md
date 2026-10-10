@@ -29,7 +29,7 @@ The implemented system uses:
 
 - `gear_price_mappings` for approved source/market relationships and refresh
   state;
-- `gear_price_observations` for immutable point or range values in integer
+- `gear_price_observations` for immutable point values in integer
   minor units, with currency, dates, evidence, and review metadata;
 - `gear_price_estimates` for versioned low/typical/high derived values; and
 - `gear.used_price_projection` as the denormalized per-market read model.
@@ -37,8 +37,12 @@ The implemented system uses:
 Manual editor entries, MPB fetches, KameraStore fetches, and public first-price
 contributions all enter the same observation and estimation pipeline. Public
 first-price contributions are live immediately but marked for editor review.
-The first estimator is deterministic, uses the five most recent valid
-observations, and keeps the estimator version with the result.
+The estimator now selects one latest point per active source and computes a
+weighted average (CamPricer 3, other supported sources 1). Source extrema form
+low/high. This replaces the initial five-observation median: differing fetch
+frequencies must not implicitly assign influence. CamPricer uses bulk ingestion
+with Redis cursor/budget state and existing durable run tables rather than new
+scheduling tables. See `docs/prices/campricer.md`.
 
 All ordinary display and comparison surfaces use the shared pricing policy:
 exact-market current/stale estimate, converted alternate-market estimate when

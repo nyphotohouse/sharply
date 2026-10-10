@@ -2,74 +2,82 @@ import type { GearPriceProjection } from "~/server/db/schema";
 import {
   listValidPriceObservationsForGearData,
   persistGearPriceProjectionData,
+  getStoredPriceProjectionData,
   type PriceEstimateInsert,
 } from "./data";
-import { estimatePrice } from "./estimator";
+import {
+  estimatePrice,
+  observationPoint,
+  type EstimatorObservation,
+} from "./estimator";
+import { getExchangeRates } from "./exchange-rates";
 import {
   PRICE_METHOD_VERSION,
   PRICE_STALE_AFTER_MS,
+  PRICE_MARKETS,
   inferCurrencyFromMarket,
 } from "./types";
 
-function projectionKey(marketKey: string, priceKind: string): string {
-  return priceKind === "used_retail" ? marketKey : `${marketKey}:${priceKind}`;
-}
-
-export async function rebuildGearPriceProjection(gearId: string) {
+export async function rebuildGearPriceProjection(
+  gearId: string,
+  options: { preserveExisting?: boolean } = {},
+) {
   const observations = await listValidPriceObservationsForGearData(gearId);
-  const grouped = new Map<string, typeof observations>();
-
-  for (const observation of observations) {
-    const key = `${observation.marketKey}:${observation.priceKind}`;
-    const current = grouped.get(key) ?? [];
-    current.push(observation);
-    grouped.set(key, current);
-  }
-
-  const projection: GearPriceProjection = {};
+  const pooled = observations.filter((o) => o.sourceKey === "campricer");
+  const rates = pooled.length ? await getExchangeRates() : null;
+  const projection: GearPriceProjection = options.preserveExisting
+    ? await getStoredPriceProjectionData(gearId)
+    : {};
   const estimates: PriceEstimateInsert[] = [];
-  const now = Date.now();
-
-  for (const group of grouped.values()) {
-    const first = group[0];
-    if (!first) continue;
-    const estimate = estimatePrice(group);
+  for (const market of PRICE_MARKETS) {
+    const currency = inferCurrencyFromMarket(market);
+    const inputs: EstimatorObservation[] = observations
+      .filter((o) => o.sourceKey !== "campricer" && o.marketKey === market)
+      .map((o) => ({ ...o, originalCurrency: o.currency }));
+    for (const o of pooled) {
+      const point = observationPoint(o);
+      const rate = currency === "EUR" ? 1 : rates?.rates[currency];
+      if (point === null || !rate) continue;
+      inputs.push({
+        ...o,
+        valueKind: "POINT",
+        amountMinor: Math.round(point * rate),
+        originalAmountMinor: point,
+        originalCurrency: "EUR",
+        conversionRate: rate,
+        ratesDate: currency === "EUR" ? null : rates?.date,
+      });
+    }
+    const estimate = estimatePrice(inputs);
     if (!estimate) continue;
-
-    const sourceCount = new Set(
-      group.map((observation) => observation.mappingId),
-    ).size;
-    const currency = inferCurrencyFromMarket(first.marketKey);
-
     estimates.push({
-      marketKey: first.marketKey,
-      priceKind: first.priceKind,
+      marketKey: market,
+      priceKind: "used_retail",
+      currency,
       lowMinor: estimate.lowMinor,
       typicalMinor: estimate.typicalMinor,
       highMinor: estimate.highMinor,
-      currency,
       asOf: estimate.asOf,
       methodVersion: PRICE_METHOD_VERSION,
-      sourceCount,
+      sourceCount: estimate.observationCount,
       observationCount: estimate.observationCount,
       inputObservationIds: estimate.inputObservationIds,
+      calculationInputs: estimate.calculationInputs,
     });
-
-    projection[projectionKey(first.marketKey, first.priceKind)] = {
+    projection[market] = {
       low: estimate.lowMinor,
       typical: estimate.typicalMinor,
       high: estimate.highMinor,
       asOf: estimate.asOf.toISOString(),
       status:
-        now - estimate.asOf.getTime() > PRICE_STALE_AFTER_MS
+        Date.now() - estimate.asOf.getTime() > PRICE_STALE_AFTER_MS
           ? "stale"
           : "current",
-      sourceCount,
+      sourceCount: estimate.observationCount,
       observationCount: estimate.observationCount,
       methodVersion: PRICE_METHOD_VERSION,
     };
   }
-
   await persistGearPriceProjectionData({ gearId, projection, estimates });
   return projection;
 }

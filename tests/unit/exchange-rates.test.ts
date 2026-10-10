@@ -25,7 +25,7 @@ describe("exchange rate service", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.frankfurter.dev/v2/rates?base=EUR&quotes=USD,GBP",
-      { next: { revalidate: 60 * 60 * 12 } },
+      { next: { revalidate: 60 * 60 * 12 }, signal: expect.any(AbortSignal) },
     );
   });
 
@@ -41,4 +41,32 @@ describe("exchange rate service", () => {
 
     await expect(getExchangeRates()).resolves.toBeNull();
   });
+});
+
+it("returns null when the exchange-rate request times out", async () => {
+  const controller = new AbortController();
+  const timeout = vi
+    .spyOn(AbortSignal, "timeout")
+    .mockReturnValue(controller.signal);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      (_url: unknown, options: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options.signal.addEventListener(
+            "abort",
+            () => reject(new Error("timed out")),
+            { once: true },
+          );
+        }),
+    ),
+  );
+  try {
+    const result = getExchangeRates();
+    controller.abort();
+    await expect(result).resolves.toBeNull();
+    expect(timeout).toHaveBeenCalledWith(10000);
+  } finally {
+    timeout.mockRestore();
+  }
 });

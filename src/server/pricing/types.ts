@@ -26,7 +26,12 @@ export function getPriceFetchRunStatus(
   return "PARTIAL";
 }
 
-export const PRICE_SOURCE_KEYS = ["manual", "mpb", "kamerastore"] as const;
+export const PRICE_SOURCE_KEYS = [
+  "manual",
+  "mpb",
+  "kamerastore",
+  "campricer",
+] as const;
 export type PriceSourceKey = (typeof PRICE_SOURCE_KEYS)[number];
 
 export function getManualRefreshRetryAt(
@@ -93,7 +98,10 @@ export type PriceAdapterMapping = Pick<
 
 export type PriceAdapter = {
   sourceKey: PriceSourceKey;
-  fetch: (mapping: PriceAdapterMapping) => Promise<PriceFetchResult>;
+  fetch: (
+    mapping: PriceAdapterMapping,
+    options?: { signal?: AbortSignal },
+  ) => Promise<PriceFetchResult>;
 };
 
 export type PriceManagementData = {
