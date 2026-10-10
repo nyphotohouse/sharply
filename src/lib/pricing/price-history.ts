@@ -54,7 +54,12 @@ export function parsePriceHistory(value: unknown): PriceHistory {
     history.currency !== MARKET_CURRENCY[history.market] ||
     !Number.isFinite(Date.parse(history.now)) ||
     !Array.isArray(history.points) ||
-    history.points.some((point) => !point || !validHistoryPoint(point))
+    history.points.some(
+      (point) =>
+        !point ||
+        typeof point.timestamp !== "string" ||
+        !validHistoryPoint(point),
+    )
   )
     throw new Error("Invalid price history");
   return {

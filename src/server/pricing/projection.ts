@@ -31,12 +31,13 @@ export async function rebuildGearPriceProjection(
   const estimates: PriceEstimateInsert[] = [];
   for (const market of PRICE_MARKETS) {
     const currency = inferCurrencyFromMarket(market);
+    const rate = currency === "EUR" ? 1 : rates?.rates[currency];
+    if (pooled.length && !rate && options.preserveExisting) continue;
     const inputs: EstimatorObservation[] = observations
       .filter((o) => o.sourceKey !== "campricer" && o.marketKey === market)
       .map((o) => ({ ...o, originalCurrency: o.currency }));
     for (const o of pooled) {
       const point = observationPoint(o);
-      const rate = currency === "EUR" ? 1 : rates?.rates[currency];
       if (point === null || !rate) continue;
       inputs.push({
         ...o,

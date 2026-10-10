@@ -109,6 +109,7 @@ describe("price history chart data", () => {
     for (const invalid of [
       { ...history([]), currency: "EUR" },
       history([point("bad", 100)]),
+      { ...history([]), points: [{ ...point("2026-01-01", 100), timestamp: 1 }] },
       history([point("2026-01-01", 100, 200, 300)]),
       history([point("2026-01-01", NaN)]),
       null,

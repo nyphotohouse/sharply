@@ -75,11 +75,13 @@ describe("pricing projections", () => {
     expect(result.EU?.typical).toBe(100000);
     expect(result.UK).toBeUndefined();
   });
-  it("recovers conversions and ages freshness using unchanged stored observations", async () => {
+  it("preserves stored projections during rate outages and recovers conversions", async () => {
     mocks.listValidPriceObservationsForGearData.mockResolvedValue([
       point("campricer", 100000),
       point("mpb", 140000, "US"),
     ]);
+    const previousUS = { typical: 130000, low: 125000, high: 135000 };
+    mocks.getStoredPriceProjectionData.mockResolvedValue({ US: previousUS });
     const clock = vi
       .spyOn(Date, "now")
       .mockReturnValue(Date.parse("2026-10-15"));
@@ -87,8 +89,12 @@ describe("pricing projections", () => {
       mocks.getExchangeRates.mockResolvedValueOnce(null);
       expect(
         (await rebuildGearPriceProjection("g", { preserveExisting: true })).US
-          ?.typical,
-      ).toBe(140000);
+      ).toEqual(previousUS);
+      expect(
+        mocks.persistGearPriceProjectionData.mock.calls[0]?.[0].estimates.some(
+          (estimate: { marketKey: string }) => estimate.marketKey === "US",
+        ),
+      ).toBe(false);
       const recovered = await rebuildGearPriceProjection("g", {
         preserveExisting: true,
       });
