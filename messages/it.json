@@ -2450,5 +2450,17 @@
     "signInTitle": "Accedi",
     "verifyOtpTitle": "Verifica codice",
     "welcomeTitle": "Benvenuto!"
+  },
+  "PriceHistory": {
+    "title": "Storico dei prezzi",
+    "error": "Impossibile caricare lo storico dei prezzi.",
+    "retry": "Riprova",
+    "estimate": "Prezzo stimato",
+    "chartDescription": "Storico del prezzo usato stimato con l’intervallo dei prezzi delle fonti utilizzate.",
+    "period": "Periodo",
+    "30d": "30 g",
+    "1y": "1 anno",
+    "all": "Tutto",
+    "changeDescription": "{change} in {period}"
   }
 }

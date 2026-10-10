@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("~/server/gear/service", () => ({ fetchGearBySlug: vi.fn() }));
 vi.mock("~/server/auth", () => ({
   getSessionOrThrow: mocks.getSessionOrThrow,
 }));

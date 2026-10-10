@@ -854,7 +854,13 @@ export async function listPriceHistoryData(
   priceKind = "used_retail",
 ) {
   return db
-    .select()
+    .select({
+      createdAt: gearPriceEstimates.createdAt,
+      currency: gearPriceEstimates.currency,
+      lowMinor: gearPriceEstimates.lowMinor,
+      typicalMinor: gearPriceEstimates.typicalMinor,
+      highMinor: gearPriceEstimates.highMinor,
+    })
     .from(gearPriceEstimates)
     .where(
       and(

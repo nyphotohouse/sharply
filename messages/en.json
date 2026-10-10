@@ -2450,5 +2450,17 @@
     "signInTitle": "Log In",
     "verifyOtpTitle": "Verify Code",
     "welcomeTitle": "Welcome!"
+  },
+  "PriceHistory": {
+    "title": "Price History",
+    "error": "Price history could not be loaded.",
+    "retry": "Retry",
+    "estimate": "Estimated price",
+    "chartDescription": "Estimated used price history with the spread of contributing source prices.",
+    "period": "Time period",
+    "30d": "30d",
+    "1y": "1 year",
+    "all": "All time",
+    "changeDescription": "{change} over {period}"
   }
 }

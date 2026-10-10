@@ -2450,5 +2450,17 @@
     "signInTitle": "ログイン",
     "verifyOtpTitle": "コードを確認",
     "welcomeTitle": "ようこそ！"
+  },
+  "PriceHistory": {
+    "title": "価格履歴",
+    "error": "価格履歴を読み込めませんでした。",
+    "retry": "再試行",
+    "estimate": "推定価格",
+    "chartDescription": "推定中古価格の履歴と参照元の価格幅。",
+    "period": "期間",
+    "30d": "30日",
+    "1y": "1年",
+    "all": "全期間",
+    "changeDescription": "{period}で{change}"
   }
 }

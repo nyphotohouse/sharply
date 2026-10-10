@@ -15,7 +15,8 @@ they should not recreate source precedence or query pricing tables directly.
 The existing [`../used-price-system.md`](../used-price-system.md) document
 remains the broader architecture reference and compatibility entry point.
 
-Future feature ideas are tracked separately in
+The public gear-page history chart is documented in [history.md](./history.md).
+Deferred history extensions are tracked in
 [`../pricing/todo-price-history-idea.md`](../pricing/todo-price-history-idea.md).
 
 ## Current status

@@ -2450,5 +2450,17 @@
     "signInTitle": "登录",
     "verifyOtpTitle": "验证码",
     "welcomeTitle": "欢迎！"
+  },
+  "PriceHistory": {
+    "title": "价格历史",
+    "error": "无法加载价格历史。",
+    "retry": "重试",
+    "estimate": "估算价格",
+    "chartDescription": "估算二手价格历史及所用来源的价格范围。",
+    "period": "时间范围",
+    "30d": "30天",
+    "1y": "1年",
+    "all": "全部时间",
+    "changeDescription": "{period}内{change}"
   }
 }

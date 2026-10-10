@@ -2450,5 +2450,17 @@
     "signInTitle": "Connexion",
     "verifyOtpTitle": "Vérifier le code",
     "welcomeTitle": "Bienvenue !"
+  },
+  "PriceHistory": {
+    "title": "Historique des prix",
+    "error": "Impossible de charger l’historique des prix.",
+    "retry": "Réessayer",
+    "estimate": "Prix estimé",
+    "chartDescription": "Historique du prix d’occasion estimé avec l’écart des prix des sources utilisées.",
+    "period": "Période",
+    "30d": "30 j",
+    "1y": "1 an",
+    "all": "Tout",
+    "changeDescription": "{change} sur {period}"
   }
 }

@@ -1,5 +1,11 @@
 import "server-only";
 
+import { fetchGearBySlug } from "~/server/gear/service";
+import { MARKET_CURRENCY, type PriceMarket } from "~/lib/pricing/display-price";
+import {
+  validHistoryPoint,
+  type PriceHistory,
+} from "~/lib/pricing/price-history";
 import type { AuthUser } from "~/auth";
 import { requireRole } from "~/lib/auth/auth-helpers";
 import { getSessionOrThrow } from "~/server/auth";
@@ -616,4 +622,27 @@ export async function normalizePriceRangesService() {
   const session = await getSessionOrThrow();
   if (!isAdmin(session.user)) unauthorized();
   return normalizePriceRangesData();
+}
+
+/** Public chart DTO: original market snapshots without internal evidence. */
+export async function getPublicPriceHistoryService(
+  slug: string,
+  market: string,
+): Promise<PriceHistory> {
+  assertAllowedValue(market, PRICE_MARKETS, "Unknown price market");
+  const gear = await fetchGearBySlug(slug);
+  const marketKey = market as PriceMarket;
+  const currency = MARKET_CURRENCY[marketKey];
+  const rows = await listPriceHistoryData(gear.id, marketKey);
+  const now = new Date().toISOString();
+  const points = rows
+    .filter((row) => row.currency === currency)
+    .map((row) => ({
+      timestamp: row.createdAt.toISOString(),
+      lowMinor: row.lowMinor,
+      typicalMinor: row.typicalMinor,
+      highMinor: row.highMinor,
+    }))
+    .filter((point) => validHistoryPoint(point) && point.timestamp <= now);
+  return { market: marketKey, currency, now, points };
 }

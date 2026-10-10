@@ -2450,5 +2450,17 @@
     "signInTitle": "Log Masuk",
     "verifyOtpTitle": "Sahkan Kod",
     "welcomeTitle": "Selamat datang!"
+  },
+  "PriceHistory": {
+    "title": "Sejarah Harga",
+    "error": "Sejarah harga tidak dapat dimuatkan.",
+    "retry": "Cuba lagi",
+    "estimate": "Anggaran harga",
+    "chartDescription": "Sejarah anggaran harga terpakai dengan julat harga sumber yang digunakan.",
+    "period": "Tempoh",
+    "30d": "30 h",
+    "1y": "1 tahun",
+    "all": "Sepanjang masa",
+    "changeDescription": "{change} dalam {period}"
   }
 }
