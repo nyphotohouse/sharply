@@ -259,7 +259,13 @@
       "contributorPriceDescription": "Aggiungi un prezzo nel mercato selezionato. Apparirà subito e verrà segnalato per una revisione successiva.",
       "contributorPriceSaved": "Prezzo aggiunto",
       "contributorPriceAlreadyExists": "Questo articolo ha già un prezzo.",
-      "contributorPriceFailed": "Non è stato possibile aggiungere il prezzo. Riprova."
+      "contributorPriceFailed": "Non è stato possibile aggiungere il prezzo. Riprova.",
+      "campricerConnected": "CamPricer connesso",
+      "campricerPooled": "Prezzi internazionali · sincronizzazione automatica",
+      "campricerDisabled": "CamPricer disattivato",
+      "campricerNoData": "Nessun prezzo affidabile disponibile",
+      "campricerDisable": "Disattiva",
+      "campricerEnable": "Attiva"
     },
     "renameDialog": {
       "title": "Rinomina attrezzatura",
@@ -2444,5 +2450,17 @@
     "signInTitle": "Accedi",
     "verifyOtpTitle": "Verifica codice",
     "welcomeTitle": "Benvenuto!"
+  },
+  "PriceHistory": {
+    "title": "Storico dei prezzi",
+    "error": "Impossibile caricare lo storico dei prezzi.",
+    "retry": "Riprova",
+    "estimate": "Prezzo stimato",
+    "chartDescription": "Storico del prezzo usato stimato con l’intervallo dei prezzi delle fonti utilizzate.",
+    "period": "Periodo",
+    "30d": "30 g",
+    "1y": "1 anno",
+    "all": "Tutto",
+    "changeDescription": "{change} in {period}"
   }
 }

@@ -67,6 +67,11 @@ const navigationMocks = vi.hoisted(() => ({
   notFound: vi.fn(() => "NOT_FOUND"),
 }));
 
+const priceMocks = vi.hoisted(() => ({
+  getExchangeRates: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("~/server/pricing/exchange-rates", () => priceMocks);
+
 const dockMock = vi.hoisted(() => vi.fn(() => null));
 const rumoredPageMock = vi.hoisted(() =>
   vi.fn(({ gearName }: { gearName: string }) => `<div>${gearName}</div>`),
@@ -149,6 +154,7 @@ describe("gear page rumored state", () => {
       undefined,
     );
     expect(constructionPageMock).not.toHaveBeenCalled();
+    expect(priceMocks.getExchangeRates).not.toHaveBeenCalled();
     expect(dockMock).toHaveBeenCalledWith(
       expect.objectContaining({
         publicationState: "RUMORED",
@@ -168,5 +174,6 @@ describe("gear page rumored state", () => {
 
     expect(result).toBe("NOT_FOUND");
     expect(navigationMocks.notFound).toHaveBeenCalledTimes(1);
+    expect(priceMocks.getExchangeRates).not.toHaveBeenCalled();
   });
 });

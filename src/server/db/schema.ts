@@ -774,6 +774,44 @@ export const gearPriceMappings = appSchema.table(
   ],
 );
 
+export type PriceImportCounts = {
+  matched: number;
+  imported: number;
+  unchanged: number;
+  thin: number;
+  unmatched: number;
+  invalid: number;
+  disabled: number;
+};
+export type PriceImportSummary = {
+  requests: number;
+  cursorBefore: number;
+  cursorAfter: number;
+  nextEligibleAt: string | null;
+  skippedReason?: string;
+  counts: PriceImportCounts;
+  pages: Array<{
+    page: number;
+    httpStatus: number | null;
+    durationMs: number;
+    itemCount: number;
+    counts: PriceImportCounts;
+    error?: string;
+  }>;
+};
+export type PriceCalculationInput = {
+  observationId: string;
+  sourceKey: string;
+  amountMinor: number;
+  weight: number;
+  observedAt: string;
+  originalAmountMinor: number;
+  originalCurrency: string;
+  pooled: boolean;
+  conversionRate: number;
+  ratesDate: string | null;
+};
+
 /** A persisted execution of the scheduled price refresh batch. */
 export const gearPriceFetchRuns = appSchema.table(
   "gear_price_fetch_runs",
@@ -781,6 +819,11 @@ export const gearPriceFetchRuns = appSchema.table(
     id: varchar("id", { length: 36 })
       .primaryKey()
       .default(sql`gen_random_uuid()::text`),
+    runKind: varchar("run_kind", { length: 40 })
+      .notNull()
+      .default("MAPPING_REFRESH"),
+    sourceKey: varchar("source_key", { length: 40 }),
+    summary: jsonb("summary").$type<PriceImportSummary>(),
     trigger: gearPriceFetchRunTriggerEnum("trigger").notNull().default("CRON"),
     status: gearPriceFetchRunStatusEnum("status").notNull().default("RUNNING"),
     startedAt: timestamp("started_at", { withTimezone: true })
@@ -834,7 +877,7 @@ export const gearPriceFetchRunItems = appSchema.table(
   ],
 );
 
-/** Immutable source observations used to calculate an estimate. */
+/** Point evidence; legacy range columns remain for backward compatibility. */
 export const gearPriceObservations = appSchema.table(
   "gear_price_observations",
   () => ({
@@ -848,7 +891,9 @@ export const gearPriceObservations = appSchema.table(
       .notNull()
       .default("POINT"),
     amountMinor: integer("amount_minor"),
+    /** @deprecated New observations are points; normalize legacy ranges to midpoints. */
     lowMinor: integer("low_minor"),
+    /** @deprecated Retained for legacy range normalization only. */
     highMinor: integer("high_minor"),
     currency: varchar("currency", { length: 3 }).notNull(),
     condition: varchar("condition", { length: 40 })
@@ -899,6 +944,8 @@ export const gearPriceEstimates = appSchema.table(
     methodVersion: integer("method_version").notNull().default(1),
     sourceCount: integer("source_count").notNull().default(0),
     observationCount: integer("observation_count").notNull().default(0),
+    calculationInputs:
+      jsonb("calculation_inputs").$type<PriceCalculationInput[]>(),
     inputObservationIds: jsonb("input_observation_ids").$type<string[]>(),
     createdAt,
   }),

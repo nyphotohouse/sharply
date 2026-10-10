@@ -24,7 +24,7 @@ broader architecture reference.
   be `manual`, `mpb`, or `kamerastore`, and can be disabled without deleting its
   history. Removing a mapping with no observations deletes it; mappings with
   history are archived and can be restored.
-- `gear_price_observations` stores immutable point or range observations in
+- `gear_price_observations` stores immutable point observations in
   integer minor units. Currency is derived from the mapping market and also
   stored on each observation for historical clarity. Public first-price
   contributions remain valid immediately and set `needs_review` so editors can
@@ -42,14 +42,14 @@ broader architecture reference.
   from the market key. Each entry includes freshness, source count, observation
   count, and estimator version metadata.
 
-The first estimator is deliberately deterministic and uses the five most
-recent valid observations, or all available observations when fewer than five
-exist. Range observations contribute their bounds to low/high and their
-midpoint to typical, while point observations contribute the same value to all
-three. The sampled values produce the 25th percentile, median, and 75th
-percentile as low, typical, and high. Calculated values are rounded to the
-nearest whole unit of the market currency before estimates and projections are
-stored; raw observations retain their precise minor-unit values.
+The estimator uses the latest valid point per active source. CamPricer has weight
+3; MPB, KameraStore and manual evidence each have weight 1. Typical is the
+normalized weighted average; low/high are the minimum/maximum source points.
+Values round to whole currency units. Stale evidence remains in the calculation;
+freshness uses the oldest contributor. Immutable input snapshots preserve currency
+conversion and source provenance for future history charts. See
+[`prices/fetching.md`](./prices/fetching.md) and
+[`prices/campricer.md`](./prices/campricer.md).
 
 Public price consumers use the shared pure resolver in
 `src/lib/pricing/display-price.ts`. Its fallback order is an exact-market
@@ -71,9 +71,11 @@ the gear detail page. The modal renders active automatic mappings as full-width
 cards with their latest result, freshness, and source/observation counts. The
 same modal provides the manual observation form; manual mappings are kept
 hidden from the automatic mapping cards and are reviewed through the recent
-observations/Needs Review surfaces on `/admin/prices`. Automatic mappings
-expose a refetch control and editable product link; automatic mappings must
-retain a product link, while manual mappings may be empty. New mappings use
+observations/Needs Review surfaces on `/admin/prices`. Retailer mappings
+expose a refetch control and editable product link. CamPricer connects automatically
+and shows a compact status with disable/enable only; it uses the separate bulk
+import described in [prices/campricer.md](./prices/campricer.md). Manual mappings
+may be empty. New mappings use
 only the coarse US, UK, and EU market choices. `/admin/prices` includes an
 upcoming-fetch queue and a scheduled-run log. Run rows open a detail modal with
 aggregate results and per-mapping outcomes; manual refetches remain in the
@@ -90,8 +92,9 @@ the estimate history and the public read model unchanged.
 
 Manual source refreshes are limited to one request per mapping every six hours
 for editors. Administrators can bypass that cooldown. A single daily cron job
-refreshes due active mappings in a bounded batch; it does not use per-row locks
-or leases because the application owns the scheduler.
+refreshes due retailer mappings in a bounded batch, followed by a separately
+budgeted CamPricer import. The retailer scheduler does not use per-row leases;
+CamPricer uses an expiring source-level Redis lease.
 
 Public contributors can seed an item that has no valid active observations from
 the gear-page price header. The contribution uses the user's selected market,

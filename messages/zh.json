@@ -259,7 +259,13 @@
       "contributorPriceDescription": "在所选市场添加价格。价格会立即显示，并标记为稍后审核。",
       "contributorPriceSaved": "已添加价格",
       "contributorPriceAlreadyExists": "此器材已有价格。",
-      "contributorPriceFailed": "无法添加价格，请重试。"
+      "contributorPriceFailed": "无法添加价格，请重试。",
+      "campricerConnected": "CamPricer 已连接",
+      "campricerPooled": "国际汇总价格 · 自动同步",
+      "campricerDisabled": "CamPricer 已停用",
+      "campricerNoData": "暂无可靠价格",
+      "campricerDisable": "停用",
+      "campricerEnable": "启用"
     },
     "renameDialog": {
       "title": "重命名器材",
@@ -2444,5 +2450,17 @@
     "signInTitle": "登录",
     "verifyOtpTitle": "验证码",
     "welcomeTitle": "欢迎！"
+  },
+  "PriceHistory": {
+    "title": "价格历史",
+    "error": "无法加载价格历史。",
+    "retry": "重试",
+    "estimate": "估算价格",
+    "chartDescription": "估算二手价格历史及所用来源的价格范围。",
+    "period": "时间范围",
+    "30d": "30天",
+    "1y": "1年",
+    "all": "全部时间",
+    "changeDescription": "{period}内{change}"
   }
 }

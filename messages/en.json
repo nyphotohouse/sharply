@@ -259,7 +259,13 @@
       "contributorPriceDescription": "Add a price in your selected market. It will appear immediately and be flagged for later review.",
       "contributorPriceSaved": "Price added",
       "contributorPriceAlreadyExists": "This item already has a price.",
-      "contributorPriceFailed": "The price could not be added. Please try again."
+      "contributorPriceFailed": "The price could not be added. Please try again.",
+      "campricerConnected": "CamPricer connected",
+      "campricerPooled": "Pooled international prices · automatic sync",
+      "campricerDisabled": "CamPricer disabled",
+      "campricerNoData": "No reliable price available",
+      "campricerDisable": "Disable",
+      "campricerEnable": "Enable"
     },
     "renameDialog": {
       "title": "Rename Gear Item",
@@ -2444,5 +2450,17 @@
     "signInTitle": "Log In",
     "verifyOtpTitle": "Verify Code",
     "welcomeTitle": "Welcome!"
+  },
+  "PriceHistory": {
+    "title": "Price History",
+    "error": "Price history could not be loaded.",
+    "retry": "Retry",
+    "estimate": "Estimated price",
+    "chartDescription": "Estimated used price history with the spread of contributing source prices.",
+    "period": "Time period",
+    "30d": "30d",
+    "1y": "1 year",
+    "all": "All time",
+    "changeDescription": "{change} over {period}"
   }
 }

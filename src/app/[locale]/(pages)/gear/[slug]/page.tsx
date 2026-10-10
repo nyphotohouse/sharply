@@ -18,6 +18,7 @@ import { HallOfFameBadge } from "~/components/gear-badges/hall-of-fame-badge";
 import { LiveTrendingBadge } from "~/components/gear-badges/live-trending-badge";
 import { NewBadge } from "~/components/gear-badges/new-badge";
 import { GearDisplayName } from "~/components/gear/gear-display-name";
+import { GearPriceHistory } from "~/components/gear/gear-price-history";
 import { GearPriceDisplay } from "~/components/gear/gear-price-display";
 import { GearItemDock } from "~/components/gear/gear-tools-dock/gear-item-dock";
 import { RenameGearButton } from "~/components/gear/rename-gear-button";
@@ -124,8 +125,6 @@ export default async function GearPage({ params }: GearPageProps) {
 
   if (!item) return notFound();
 
-  const exchangeRates = await getExchangeRates();
-  const { market } = getPriceViewForLocale(locale, exchangeRates);
   const hasMpbPrice = item.mpbMaxPriceUsdCents != null;
   const regionalDisplayName = GetGearDisplayName(
     {
@@ -175,6 +174,9 @@ export default async function GearPage({ params }: GearPageProps) {
       </main>
     );
   }
+
+  const exchangeRates = await getExchangeRates();
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
 
   const [verdict, trendingSlugs] = await Promise.all([
     fetchStaffVerdictByGearId(item.id),
@@ -495,6 +497,8 @@ export default async function GearPage({ params }: GearPageProps) {
           </Suspense>
         </div>
       </div>
+
+      <GearPriceHistory slug={item.slug} initialMarket={market} />
 
       {/* Reviews */}
       <section id="reviews" className="scroll-mt-24">

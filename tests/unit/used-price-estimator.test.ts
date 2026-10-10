@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { getLocalizedPriceFetchUrl } from "~/server/pricing/adapters/json-ld";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createJsonLdPriceAdapter,
+  getLocalizedPriceFetchUrl,
+} from "~/server/pricing/adapters/json-ld";
 import { estimatePrice } from "~/server/pricing/estimator";
 import {
   MANUAL_REFRESH_COOLDOWN_MS,
@@ -14,172 +17,76 @@ describe("used price estimator", () => {
     expect(PRICE_MARKETS).toEqual(["US", "UK", "EU"]);
   });
 
-  it("uses range bounds and midpoint for a deterministic estimate", () => {
-    const result = estimatePrice([
-      {
-        id: "one",
-        valueKind: "POINT",
-        amountMinor: 80000,
-        observedAt: new Date("2026-01-01T00:00:00Z"),
-      },
-      {
-        id: "two",
-        valueKind: "RANGE",
-        lowMinor: 90000,
-        highMinor: 110000,
-        observedAt: new Date("2026-01-02T00:00:00Z"),
-      },
-      {
-        id: "three",
-        valueKind: "POINT",
-        amountMinor: 140000,
-        observedAt: new Date("2026-01-03T00:00:00Z"),
-      },
-    ]);
-
-    expect(result).toEqual({
-      lowMinor: 85000,
-      typicalMinor: 100000,
-      highMinor: 125000,
-      asOf: new Date("2026-01-03T00:00:00Z"),
+  const point = (
+    sourceKey: string,
+    amountMinor: number,
+    date = "2026-01-01",
+    id = sourceKey,
+  ) => ({
+    sourceKey,
+    amountMinor,
+    valueKind: "POINT" as const,
+    observedAt: new Date(date),
+    id,
+  });
+  it("weights sources and uses their extrema", () => {
+    expect(
+      estimatePrice([
+        point("campricer", 100000),
+        point("mpb", 120000),
+        point("kamerastore", 130000),
+      ]),
+    ).toMatchObject({
+      typicalMinor: 110000,
+      lowMinor: 100000,
+      highMinor: 130000,
       observationCount: 3,
-      inputObservationIds: ["one", "two", "three"],
     });
   });
-
-  it("includes multiple same-day range observations", () => {
-    const result = estimatePrice([
-      {
-        id: "one",
-        valueKind: "RANGE",
-        lowMinor: 10000,
-        highMinor: 20000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-      },
-      {
-        id: "two",
-        valueKind: "RANGE",
-        lowMinor: 20000,
-        highMinor: 30000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-      },
-    ]);
-
-    expect(result).toMatchObject({
-      lowMinor: 12500,
-      typicalMinor: 20000,
-      highMinor: 27500,
-      observationCount: 2,
-      inputObservationIds: ["one", "two"],
+  it("normalizes missing sources and includes manual evidence", () => {
+    expect(
+      estimatePrice([point("campricer", 100000), point("manual", 120000)]),
+    ).toMatchObject({ typicalMinor: 105000, observationCount: 2 });
+  });
+  it("uses one latest point per source regardless of fetch frequency", () => {
+    expect(
+      estimatePrice([
+        point("mpb", 200000, "2026-01-01", "old"),
+        point("mpb", 120000, "2026-02-01", "new"),
+        point("campricer", 100000),
+      ]),
+    ).toMatchObject({
+      typicalMinor: 105000,
+      inputObservationIds: ["campricer", "new"],
+      asOf: new Date("2026-01-01"),
     });
   });
-
-  it("keeps a single range as a range", () => {
-    const result = estimatePrice([
-      {
-        valueKind: "RANGE",
-        lowMinor: 10000,
-        highMinor: 20000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-      },
-    ]);
-
-    expect(result).toMatchObject({
-      lowMinor: 10000,
-      typicalMinor: 15000,
-      highMinor: 20000,
-      observationCount: 1,
-    });
+  it("uses creation time then ID for timestamp ties", () => {
+    const a = {
+      ...point("mpb", 10000, "2026-01-01", "a"),
+      createdAt: new Date("2026-02-01"),
+    };
+    const b = {
+      ...point("mpb", 20000, "2026-01-01", "b"),
+      createdAt: new Date("2026-02-01"),
+    };
+    expect(estimatePrice([a, b])?.typicalMinor).toBe(20000);
+    expect(
+      estimatePrice([{ ...a, createdAt: new Date("2026-03-01") }, b])
+        ?.typicalMinor,
+    ).toBe(10000);
   });
-
-  it("uses the five most recent observations and excludes older values", () => {
-    const result = estimatePrice([
-      {
-        id: "old",
-        valueKind: "POINT",
-        amountMinor: 100000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-        createdAt: new Date("2026-01-01T12:00:00Z"),
-      },
-      {
-        id: "one",
-        valueKind: "POINT",
-        amountMinor: 10000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-        createdAt: new Date("2026-02-01T12:00:00Z"),
-      },
-      {
-        id: "two",
-        valueKind: "POINT",
-        amountMinor: 11000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-        createdAt: new Date("2026-03-01T12:00:00Z"),
-      },
-      {
-        id: "three",
-        valueKind: "POINT",
-        amountMinor: 12000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-        createdAt: new Date("2026-04-01T12:00:00Z"),
-      },
-      {
-        id: "four",
-        valueKind: "POINT",
-        amountMinor: 13000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-        createdAt: new Date("2026-05-01T12:00:00Z"),
-      },
-      {
-        id: "five",
-        valueKind: "POINT",
-        amountMinor: 14000,
-        observedAt: new Date("2026-10-01T12:00:00Z"),
-        createdAt: new Date("2026-06-01T12:00:00Z"),
-      },
-    ]);
-
-    expect(result).toMatchObject({
-      lowMinor: 11000,
-      typicalMinor: 12000,
-      highMinor: 13000,
-      observationCount: 5,
-      inputObservationIds: ["one", "two", "three", "four", "five"],
-    });
-  });
-
-  it("rounds calculated values to the nearest dollar", () => {
-    const result = estimatePrice([
-      {
-        id: "one",
-        valueKind: "POINT",
-        amountMinor: 10049,
-        observedAt: new Date("2026-01-01T00:00:00Z"),
-      },
-      {
-        id: "two",
-        valueKind: "POINT",
-        amountMinor: 20051,
-        observedAt: new Date("2026-01-02T00:00:00Z"),
-      },
-      {
-        id: "three",
-        valueKind: "POINT",
-        amountMinor: 30049,
-        observedAt: new Date("2026-01-03T00:00:00Z"),
-      },
-      {
-        id: "four",
-        valueKind: "POINT",
-        amountMinor: 40051,
-        observedAt: new Date("2026-01-04T00:00:00Z"),
-      },
-    ]);
-
-    expect(result).toMatchObject({
-      lowMinor: 17600,
-      typicalMinor: 25100,
-      highMinor: 32600,
-    });
+  it("collapses legacy ranges and rounds whole currency units", () => {
+    expect(
+      estimatePrice([
+        {
+          sourceKey: "manual",
+          valueKind: "RANGE",
+          lowMinor: 10000,
+          highMinor: 20100,
+        },
+      ]),
+    ).toMatchObject({ typicalMinor: 15100, lowMinor: 15100, highMinor: 15100 });
   });
 
   it("returns null when observations have no usable price", () => {
@@ -224,6 +131,75 @@ describe("used price estimator", () => {
     expect(getPriceFetchRunStatus(2, 1, 1)).toBe("PARTIAL");
     expect(getPriceFetchRunStatus(0, 0, 2)).toBe("ERROR");
     expect(getPriceFetchRunStatus(0, 0, 0)).toBe("SUCCESS");
+  });
+
+  it("collapses retailer aggregate bounds to a point and prefers explicit prices", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const mapping = {
+      id: "m",
+      sourceKey: "mpb",
+      marketKey: "US",
+      canonicalUrl: "https://example.com/product",
+      fetchUrl: null,
+      externalProductId: null,
+    };
+    try {
+      fetchMock.mockResolvedValueOnce(
+        new Response(
+          '<script type="application/ld+json">{"offers":{"lowPrice":100,"highPrice":200,"priceCurrency":"USD"}}</script>',
+        ),
+      );
+      expect(
+        (await createJsonLdPriceAdapter("mpb").fetch(mapping)).observations[0],
+      ).toMatchObject({ valueKind: "POINT", amountMinor: 15000 });
+      fetchMock.mockResolvedValueOnce(
+        new Response(
+          '<script type="application/ld+json">{"offers":{"price":180,"lowPrice":100,"highPrice":200,"priceCurrency":"USD"}}</script>',
+        ),
+      );
+      expect(
+        (await createJsonLdPriceAdapter("mpb").fetch(mapping)).observations[0],
+      ).toMatchObject({ valueKind: "POINT", amountMinor: 18000 });
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("aborts a stalled retailer request when its batch deadline expires", async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener(
+            "abort",
+            () => reject(new Error("aborted")),
+            { once: true },
+          );
+        }),
+    );
+    try {
+      const result = createJsonLdPriceAdapter("mpb").fetch(
+        {
+          id: "m",
+          sourceKey: "mpb",
+          marketKey: "US",
+          canonicalUrl: "https://example.com/product",
+          fetchUrl: null,
+          externalProductId: null,
+        },
+        { signal: controller.signal },
+      );
+      controller.abort();
+      await expect(result).resolves.toMatchObject({
+        status: "ERROR",
+        observations: [],
+      });
+      expect(timeout).toHaveBeenCalledWith(20000);
+    } finally {
+      fetch.mockRestore();
+      timeout.mockRestore();
+    }
   });
 
   it("keeps UK KameraStore fetches on the GBP storefront", () => {

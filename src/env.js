@@ -52,6 +52,7 @@ export const env = createEnv({
     DISCORD_CHANGE_REQUEST_WEBHOOK_URL: z.string().url().optional(),
     DISCORD_GENERAL_LOGS_WEBHOOK_URL: z.string().url().optional(),
     DISCORD_BOT_INTERNAL_API_TOKEN: z.string().optional(),
+    CAMPRICER_API_KEY: z.string().optional(),
     OPENAI_API_KEY: z.string().optional(),
     OPENROUTER_API_KEY: z.string().optional(),
     GEAR_IMAGE_REVIEW_MODEL: z.string().optional(),
@@ -120,6 +121,7 @@ export const env = createEnv({
     DISCORD_GENERAL_LOGS_WEBHOOK_URL:
       process.env.DISCORD_GENERAL_LOGS_WEBHOOK_URL,
     DISCORD_BOT_INTERNAL_API_TOKEN: process.env.DISCORD_BOT_INTERNAL_API_TOKEN,
+    CAMPRICER_API_KEY: process.env.CAMPRICER_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     GEAR_IMAGE_REVIEW_MODEL: process.env.GEAR_IMAGE_REVIEW_MODEL,

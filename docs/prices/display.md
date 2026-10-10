@@ -132,5 +132,20 @@ See the [developer API overview](../developers/api/overview.md) for the endpoint
 - Centralize fallback changes in `display-price.ts` and its tests.
 - Keep `usedPriceProjection` as the internal/storage name; use
   `estimatedUsedPrice` at the developer API boundary.
-- Preserve the existing server-loaded data flow when adding a new public
-  display surface.
+- Keep current-price surfaces server-loaded. Below-fold history uses the separate
+  lazy client read described in [history.md](./history.md).
+
+## Weighted estimates and source bounds
+
+Typical prices are weighted averages of the latest eligible point from each
+source. Low/high represent source-price extrema, not a listing distribution or
+confidence interval. Stale sources remain eligible and freshness reflects the
+oldest contributor. CamPricer supplies pooled international EUR evidence converted
+locally for regional calculations; these values do not establish native local
+market prices. See [fetching.md](./fetching.md) and [campricer.md](./campricer.md).
+
+## Price history
+
+The full-width gear-page chart above Reviews uses a lazy client fetch, independently
+of the server-loaded current price. See [history.md](./history.md) for its public
+read contract, period comparisons, and source-price spread semantics.
