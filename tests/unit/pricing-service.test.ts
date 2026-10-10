@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getSessionOrThrow: vi.fn(),
+  getPriceAdapter: vi.fn(),
+  setCampricerEnabledData: vi.fn(),
+  normalizePriceRangesData: vi.fn(),
+  listPriceHistoryData: vi.fn(),
   requireRole: vi.fn().mockReturnValue(true),
   addPriceObservationData: vi.fn(),
   addPublicPriceObservationData: vi.fn(),
@@ -33,6 +37,9 @@ vi.mock("~/lib/auth/auth-helpers", () => ({
 }));
 vi.mock("~/server/pricing/data", () => ({
   addPriceObservationData: mocks.addPriceObservationData,
+  setCampricerEnabledData: mocks.setCampricerEnabledData,
+  normalizePriceRangesData: mocks.normalizePriceRangesData,
+  listPriceHistoryData: mocks.listPriceHistoryData,
   addPublicPriceObservationData: mocks.addPublicPriceObservationData,
   archiveOrDeletePriceMappingData: mocks.archiveOrDeletePriceMappingData,
   completePriceFetchRunData: mocks.completePriceFetchRunData,
@@ -55,7 +62,7 @@ vi.mock("~/server/pricing/projection", () => ({
   rebuildGearPriceProjection: mocks.rebuildGearPriceProjection,
 }));
 vi.mock("~/server/pricing/adapters", () => ({
-  getPriceAdapter: vi.fn(),
+  getPriceAdapter: mocks.getPriceAdapter,
 }));
 
 import {
@@ -63,6 +70,11 @@ import {
   addManualPriceObservationForGearService,
   createPriceMappingService,
   reviewPriceObservationService,
+  setCampricerEnabledService,
+  updatePriceMappingLinkService,
+  archiveOrDeletePriceMappingService,
+  refreshPriceMappingService,
+  refreshDuePriceMappingsService,
 } from "~/server/pricing/service";
 
 describe("pricing service manual observations", () => {
@@ -131,28 +143,22 @@ describe("pricing service manual observations", () => {
       evidenceUrl: "https://example.com/price",
       note: "excellent condition",
     });
-    expect(mocks.rebuildGearPriceProjection).toHaveBeenCalledWith("gear-1");
+    expect(mocks.rebuildGearPriceProjection).toHaveBeenCalledWith("gear-1", {
+      preserveExisting: true,
+    });
   });
 
-  it("persists both bounds for a range observation", async () => {
-    await addManualPriceObservationForGearService({
-      gearId: "gear-1",
-      marketKey: "US",
-      valueKind: "RANGE",
-      lowMinor: 15000,
-      highMinor: 20000,
-      observedAt: new Date("2026-10-01T12:00:00.000Z"),
-    });
-
-    expect(mocks.addPriceObservationData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mappingId: "manual-mapping-1",
+  it("rejects new range observations", async () => {
+    await expect(
+      addManualPriceObservationForGearService({
+        gearId: "gear-1",
+        marketKey: "US",
         valueKind: "RANGE",
-        amountMinor: null,
         lowMinor: 15000,
         highMinor: 20000,
       }),
-    );
+    ).rejects.toMatchObject({ status: 400 });
+    expect(mocks.addPriceObservationData).not.toHaveBeenCalled();
   });
 
   it("validates the observation before creating its backing mapping", async () => {
@@ -165,7 +171,7 @@ describe("pricing service manual observations", () => {
         highMinor: 8000,
       }),
     ).rejects.toMatchObject({
-      message: "A price range must contain valid bounds.",
+      message: "A point price must be a positive integer.",
       status: 400,
     });
 
@@ -187,9 +193,8 @@ describe("pricing service manual observations", () => {
     await addPublicPriceObservationService({
       gearId: "gear-1",
       marketKey: "EU",
-      valueKind: "RANGE",
-      lowMinor: 12500,
-      highMinor: 17500,
+      valueKind: "POINT",
+      amountMinor: 15000,
     });
 
     expect(mocks.requireRole).not.toHaveBeenCalled();
@@ -198,15 +203,17 @@ describe("pricing service manual observations", () => {
       marketKey: "EU",
       createdById: "user-1",
       currency: "EUR",
-      valueKind: "RANGE",
-      amountMinor: null,
-      lowMinor: 12500,
-      highMinor: 17500,
+      valueKind: "POINT",
+      amountMinor: 15000,
+      lowMinor: null,
+      highMinor: null,
       observedAt: expect.any(Date),
       evidenceUrl: null,
       note: null,
     });
-    expect(mocks.rebuildGearPriceProjection).toHaveBeenCalledWith("gear-1");
+    expect(mocks.rebuildGearPriceProjection).toHaveBeenCalledWith("gear-1", {
+      preserveExisting: true,
+    });
   });
 
   it("rejects a public seed when another valid observation already exists", async () => {
@@ -264,5 +271,115 @@ describe("pricing service manual observations", () => {
     });
 
     expect(mocks.rebuildGearPriceProjection).toHaveBeenCalledWith("gear-1");
+  });
+});
+
+describe("CamPricer management restrictions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireRole.mockReturnValue(true);
+    mocks.getSessionOrThrow.mockResolvedValue({
+      user: { id: "editor", role: "EDITOR" },
+    });
+    mocks.getPriceMappingData.mockResolvedValue({
+      id: "m",
+      sourceKey: "campricer",
+      gearId: "gear-1",
+    });
+  });
+  it("rejects manual creation, URL edits, refresh and deletion", async () => {
+    await expect(
+      createPriceMappingService({
+        gearId: "g",
+        marketKey: "EU",
+        sourceKey: "campricer",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(
+      updatePriceMappingLinkService({
+        mappingId: "m",
+        url: "https://example.com",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(refreshPriceMappingService("m")).rejects.toMatchObject({
+      status: 400,
+    });
+    await expect(archiveOrDeletePriceMappingService("m")).rejects.toMatchObject(
+      { status: 400 },
+    );
+  });
+  it("allows reversible disable and recomputes the projection", async () => {
+    mocks.setCampricerEnabledData.mockResolvedValue({ gearId: "gear-1" });
+    await setCampricerEnabledService("m", false);
+    expect(mocks.setCampricerEnabledData).toHaveBeenCalledWith("m", false);
+    expect(mocks.rebuildGearPriceProjection).toHaveBeenCalledWith("gear-1", {
+      preserveExisting: false,
+    });
+  });
+  it("requires editorial access for disable", async () => {
+    mocks.requireRole.mockReturnValue(false);
+    await expect(setCampricerEnabledService("m", false)).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(mocks.setCampricerEnabledData).not.toHaveBeenCalled();
+  });
+});
+
+describe("retailer batch deadline", () => {
+  it("defers remaining mappings after the time budget and records actual work", async () => {
+    vi.clearAllMocks();
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    mocks.createPriceFetchRunData.mockResolvedValue({ id: "run" });
+    mocks.normalizePriceRangesData.mockResolvedValue([]);
+    mocks.listDuePriceMappingsData.mockResolvedValue([
+      {
+        id: "one",
+        gearId: "g",
+        gearName: "Gear",
+        gearSlug: "gear",
+        sourceKey: "mpb",
+        marketKey: "US",
+      },
+      {
+        id: "two",
+        gearId: "g2",
+        gearName: "Other",
+        gearSlug: "other",
+        sourceKey: "mpb",
+        marketKey: "US",
+      },
+    ]);
+    mocks.getPriceMappingData.mockResolvedValue({
+      id: "one",
+      gearId: "g",
+      status: "ACTIVE",
+      sourceKey: "mpb",
+      marketKey: "US",
+      lastFetchedAt: null,
+    });
+    const fetch = vi.fn(async (_mapping: unknown, _options: unknown) => {
+      clock.mockReturnValue(start + 90001);
+      return { status: "NO_DATA", observations: [] };
+    });
+    mocks.getPriceAdapter.mockReturnValue({ fetch });
+    try {
+      const result = await refreshDuePriceMappingsService(20);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetch.mock.calls[0]?.[1]).toMatchObject({
+        signal: expect.any(AbortSignal),
+      });
+      expect(result).toMatchObject({ scanned: 1, deferredCount: 1 });
+      expect(mocks.completePriceFetchRunData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "PARTIAL",
+          scannedCount: 1,
+          error:
+            "Retailer batch time budget exhausted; remaining mappings deferred",
+        }),
+      );
+    } finally {
+      clock.mockRestore();
+    }
   });
 });

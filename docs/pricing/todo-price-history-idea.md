@@ -34,7 +34,7 @@ The fallback policy for that case should be decided before implementation.
 
 The existing pricing tables already provide the required raw material:
 
-- `gearPriceObservations` contains timestamped point/range observations,
+- `gearPriceObservations` contains timestamped point observations,
   source mappings, markets, currencies, evidence URLs, and fetch metadata.
 - `gearPriceEstimates` contains versioned low/typical/high estimates,
   `asOf`, method version, source count, observation count, and contributing
@@ -54,8 +54,7 @@ recomputing historical estimates in the client.
 - Keep stale estimates visible but clearly marked.
 - Keep source and observation details available through hover, a detail row, or
   a secondary view rather than overcrowding the primary chart.
-- Use the stored estimate values and method version so a future estimator
-  change does not rewrite the meaning of old points.
+- Use stored estimate values and calculation input snapshots so later weight or exchange-rate changes never rewrite old points. Earlier estimates may have no input snapshot.
 - Preserve the existing rule that changing a mapping link deletes that
   mapping's observations. If history across source-link replacement is desired,
   archive the old mapping or add source-version records instead of silently
@@ -77,8 +76,7 @@ history table showing the observations that contributed to each estimate.
 
 ## Implementation path
 
-1. Add a server data/service read that returns ordered estimate history and
-   optional observation detail for one gear item and market.
+1. Use the server history read, ordered by estimate creation time, for one gear item and market. This ordered data/service read now exists; the chart is still deferred.
 2. Add tests for launch-MSRP anchoring, missing launch MSRP, point/range
    rendering, stale values, market isolation, and source-link changes.
 3. Add a public read-only chart using the existing SSR data flow; avoid a
@@ -90,3 +88,17 @@ history table showing the observations that contributed to each estimate.
 The current projection remains the fast path for present-day display. History
 should be an additive read model and must not replace the projection used by
 cards, tables, sorting, or the primary gear-page price.
+
+## Current stored history
+
+The weighted estimator saves one latest point per source, normalized weights,
+original currencies, pooled provenance and any conversion rate/date alongside
+new estimates. History is a price-change series: append only when rounded
+low/typical/high differs from the latest row, or currency changes. Changes to
+inputs or freshness alone update the current projection without appending history.
+A flat period therefore does not imply collection stopped; use observations for
+collection/freshness details. `createdAt` is the
+calculation time; `asOf` is the oldest evidence date and is used for freshness.
+The method version remains 1 during development; earlier saved estimates remain
+usable without special identification. Low/high are the minimum/maximum points
+across contributing sources, not listing percentiles or confidence intervals.

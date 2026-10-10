@@ -12,6 +12,8 @@ import {
 } from "~/components/ui/dialog";
 import { formatPriceSourceLabel } from "~/lib/pricing/source-label";
 
+import type { PriceImportSummary } from "~/server/db/schema";
+
 type RunStatus = "RUNNING" | "SUCCESS" | "PARTIAL" | "ERROR";
 type ItemStatus = "SUCCESS" | "NO_DATA" | "ERROR";
 
@@ -33,6 +35,9 @@ export type PriceFetchRunLogItem = {
 export type PriceFetchRunLogRow = {
   id: string;
   trigger: "CRON";
+  runKind: string;
+  sourceKey: string | null;
+  summary: PriceImportSummary | null;
   status: RunStatus;
   startedAt: string;
   completedAt: string | null;
@@ -96,7 +101,7 @@ export function PriceFetchRunLog({ runs }: { runs: PriceFetchRunLogRow[] }) {
             <div className="bg-muted/40 text-muted-foreground grid grid-cols-[minmax(15rem,1fr)_7rem_7rem_7rem_6rem] gap-4 px-4 py-3 text-left text-xs font-medium tracking-wide uppercase">
               <span>Started</span>
               <span>Status</span>
-              <span>Mappings</span>
+              <span>Checked</span>
               <span>Results</span>
               <span className="text-right">Duration</span>
             </div>
@@ -110,6 +115,11 @@ export function PriceFetchRunLog({ runs }: { runs: PriceFetchRunLogRow[] }) {
                 >
                   <span className="font-medium">
                     {formatDate(run.startedAt)}
+                    <span className="text-muted-foreground block text-xs">
+                      {run.runKind === "SOURCE_IMPORT"
+                        ? `${formatPriceSourceLabel(run.sourceKey ?? "")} import`
+                        : "Mapping refresh"}
+                    </span>
                   </span>
                   <span>
                     <Badge variant={statusVariant(run.status)}>
@@ -141,7 +151,11 @@ export function PriceFetchRunLog({ runs }: { runs: PriceFetchRunLogRow[] }) {
           {selectedRun ? (
             <>
               <DialogHeader>
-                <DialogTitle>Scheduled pricing run</DialogTitle>
+                <DialogTitle>
+                  {selectedRun.runKind === "SOURCE_IMPORT"
+                    ? "CamPricer source import"
+                    : "Scheduled pricing run"}
+                </DialogTitle>
                 <DialogDescription>
                   {formatDate(selectedRun.startedAt)} ·{" "}
                   {formatDuration(
@@ -183,6 +197,42 @@ export function PriceFetchRunLog({ runs }: { runs: PriceFetchRunLogRow[] }) {
                   </p>
                 </div>
               </div>
+
+              {selectedRun.summary ? (
+                <div className="space-y-2 rounded-md border p-3 text-sm">
+                  <p>
+                    {selectedRun.summary.requests} requests · page{" "}
+                    {selectedRun.summary.cursorBefore} →{" "}
+                    {selectedRun.summary.cursorAfter}
+                  </p>
+                  <p>
+                    Imported {selectedRun.summary.counts.imported} · unchanged{" "}
+                    {selectedRun.summary.counts.unchanged} · thin/no data{" "}
+                    {selectedRun.summary.counts.thin} · disabled{" "}
+                    {selectedRun.summary.counts.disabled} · unmatched{" "}
+                    {selectedRun.summary.counts.unmatched} · invalid{" "}
+                    {selectedRun.summary.counts.invalid}
+                  </p>
+                  {selectedRun.summary.nextEligibleAt ? (
+                    <p>
+                      Next eligible:{" "}
+                      {formatDate(selectedRun.summary.nextEligibleAt)}
+                    </p>
+                  ) : null}
+                  {selectedRun.summary.skippedReason ? (
+                    <p>{selectedRun.summary.skippedReason}</p>
+                  ) : null}
+                  {selectedRun.summary.pages.map((page) => (
+                    <p key={page.page}>
+                      Page {page.page}: HTTP {page.httpStatus ?? "unavailable"}{" "}
+                      · {page.itemCount} items · {page.counts.imported} imported
+                      · {page.counts.unchanged} unchanged · {page.counts.thin}{" "}
+                      thin/no data · {page.durationMs}ms
+                      {page.error ? ` · ${page.error}` : ""}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
 
               {selectedRun.error ? (
                 <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-3 text-sm">

@@ -72,7 +72,10 @@ export function createJsonLdPriceAdapter(
 ): PriceAdapter {
   return {
     sourceKey,
-    async fetch(mapping: PriceAdapterMapping): Promise<PriceFetchResult> {
+    async fetch(
+      mapping: PriceAdapterMapping,
+      options = {},
+    ): Promise<PriceFetchResult> {
       const sourceUrl = mapping.fetchUrl ?? mapping.canonicalUrl;
       if (!sourceUrl) {
         return {
@@ -91,6 +94,9 @@ export function createJsonLdPriceAdapter(
         const response = await fetch(fetchUrl, {
           headers: { "user-agent": "Sharply price catalog/1.0" },
           redirect: "follow",
+          signal: options.signal
+            ? AbortSignal.any([options.signal, AbortSignal.timeout(20000)])
+            : AbortSignal.timeout(20000),
         });
         if (!response.ok) {
           return {
@@ -112,14 +118,13 @@ export function createJsonLdPriceAdapter(
         const highMinor = parseMinor(offer.highPrice);
         const amountMinor = parseMinor(offer.price);
         const observedAt = new Date();
-        if (lowMinor && highMinor) {
+        if (!amountMinor && lowMinor && highMinor && highMinor >= lowMinor) {
           return {
             status: "SUCCESS",
             observations: [
               {
-                valueKind: "RANGE",
-                lowMinor,
-                highMinor,
+                valueKind: "POINT",
+                amountMinor: Math.round((lowMinor + highMinor) / 2),
                 observedAt,
                 evidenceUrl: mapping.canonicalUrl ?? fetchUrl,
               },

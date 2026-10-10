@@ -4,11 +4,22 @@ const state = vi.hoisted(() => ({
   calls: [] as string[],
   insertPayload: null as unknown,
   failInsert: false,
+  last: null as unknown,
 }));
 
 const dbMocks = vi.hoisted(() => ({
   transaction: vi.fn(async (callback: (tx: unknown) => unknown) => {
     const tx = {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            for: vi.fn(async () => []),
+            orderBy: vi.fn(() => ({
+              limit: vi.fn(async () => (state.last ? [state.last] : [])),
+            })),
+          })),
+        })),
+      })),
       insert: vi.fn(() => ({
         values: vi.fn(async (payload: unknown) => {
           state.calls.push("insert");
@@ -54,6 +65,7 @@ vi.mock("drizzle-orm", () => ({
   lte: vi.fn(),
   ne: vi.fn(),
   or: vi.fn(),
+  sql: vi.fn(),
 }));
 vi.mock("~/lib/pricing/upcoming-fetch-window", () => ({
   getUpcomingFetchCutoff: vi.fn(),
@@ -80,6 +92,7 @@ describe("persistGearPriceProjectionData", () => {
     state.calls = [];
     state.insertPayload = null;
     state.failInsert = false;
+    state.last = null;
     vi.clearAllMocks();
   });
 
@@ -92,7 +105,66 @@ describe("persistGearPriceProjectionData", () => {
 
     expect(dbMocks.transaction).toHaveBeenCalledTimes(1);
     expect(state.calls).toEqual(["insert", "update"]);
-    expect(state.insertPayload).toEqual([{ ...estimate, gearId: "gear-1" }]);
+    expect(state.insertPayload).toEqual({ ...estimate, gearId: "gear-1" });
+  });
+
+  it("suppresses identical history without clearing the projection", async () => {
+    state.last = { ...estimate, calculationInputs: [{ sourceKey: "mpb" }] };
+    await persistGearPriceProjectionData({
+      gearId: "gear-1",
+      projection: {},
+      estimates: [
+        { ...estimate, calculationInputs: [{ sourceKey: "mpb" }] as never },
+      ],
+    });
+    expect(state.calls).toEqual(["update"]);
+  });
+
+  it("does not append history when inputs, timestamps or cents change within rounding", async () => {
+    state.last = { ...estimate, calculationInputs: [{ sourceKey: "mpb" }] };
+    await persistGearPriceProjectionData({
+      gearId: "gear-1",
+      projection: {},
+      estimates: [
+        {
+          ...estimate,
+          lowMinor: 100049,
+          typicalMinor: 110049,
+          highMinor: 120049,
+          asOf: new Date("2026-10-10"),
+          sourceCount: 2,
+          inputObservationIds: ["new-observation"],
+          calculationInputs: [{ sourceKey: "campricer" }] as never,
+        },
+      ],
+    });
+    expect(state.calls).toEqual(["update"]);
+  });
+
+  it.each(["lowMinor", "typicalMinor", "highMinor"] as const)(
+    "appends when rounded %s changes",
+    async (field) => {
+      state.last = estimate;
+      await persistGearPriceProjectionData({
+        gearId: "gear-1",
+        projection: {},
+        estimates: [{ ...estimate, [field]: estimate[field] + 50 }],
+      });
+      expect(state.calls).toEqual(["insert", "update"]);
+      expect(state.insertPayload).toMatchObject({
+        [field]: estimate[field] + 100,
+      });
+    },
+  );
+
+  it("records a return to an earlier price by comparing against the latest row", async () => {
+    state.last = { ...estimate, typicalMinor: 115000 };
+    await persistGearPriceProjectionData({
+      gearId: "gear-1",
+      projection: {},
+      estimates: [estimate],
+    });
+    expect(state.calls).toEqual(["insert", "update"]);
   });
 
   it("does not attempt the projection update after an estimate insert fails", async () => {

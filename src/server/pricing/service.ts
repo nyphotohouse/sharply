@@ -5,6 +5,9 @@ import { requireRole } from "~/lib/auth/auth-helpers";
 import { getSessionOrThrow } from "~/server/auth";
 import {
   addPriceObservationData,
+  setCampricerEnabledData,
+  normalizePriceRangesData,
+  listPriceHistoryData,
   addPublicPriceObservationData,
   archiveOrDeletePriceMappingData,
   completePriceFetchRunData,
@@ -116,6 +119,10 @@ export async function createPriceMappingService(input: {
     PRICE_SOURCE_KEYS,
     "Unknown price source.",
   );
+  if (input.sourceKey === "campricer")
+    throw Object.assign(new Error("CamPricer connects automatically."), {
+      status: 400,
+    });
   if (input.sourceKey === "manual") {
     throw Object.assign(
       new Error("Manual mappings are created when adding an observation."),
@@ -167,47 +174,28 @@ type ManualPriceObservationInput = {
 };
 
 function validateManualObservation(input: ManualPriceObservationInput) {
-  if (input.valueKind !== "POINT" && input.valueKind !== "RANGE") {
-    throw Object.assign(new Error("Unknown price value kind."), {
-      status: 400,
-    });
-  }
-  const observedAt = input.observedAt ?? new Date();
-  const amountMinor = input.amountMinor ?? null;
-  const lowMinor = input.lowMinor ?? null;
-  const highMinor = input.highMinor ?? null;
   if (
-    input.valueKind === "POINT" &&
-    !(
-      typeof amountMinor === "number" &&
-      Number.isInteger(amountMinor) &&
-      amountMinor > 0
-    )
+    input.valueKind !== "POINT" ||
+    !Number.isInteger(input.amountMinor) ||
+    input.amountMinor! <= 0
   ) {
     throw Object.assign(
       new Error("A point price must be a positive integer."),
-      {
-        status: 400,
-      },
+      { status: 400 },
     );
   }
-  if (
-    input.valueKind === "RANGE" &&
-    !(
-      typeof lowMinor === "number" &&
-      typeof highMinor === "number" &&
-      Number.isInteger(lowMinor) &&
-      Number.isInteger(highMinor) &&
-      lowMinor > 0 &&
-      highMinor >= lowMinor
-    )
-  ) {
-    throw Object.assign(new Error("A price range must contain valid bounds."), {
+  const observedAt = input.observedAt ?? new Date();
+  if (!Number.isFinite(observedAt.getTime())) {
+    throw Object.assign(new Error("Observation date must be valid."), {
       status: 400,
     });
   }
-
-  return { observedAt, amountMinor, lowMinor, highMinor };
+  return {
+    observedAt,
+    amountMinor: input.amountMinor!,
+    lowMinor: null,
+    highMinor: null,
+  };
 }
 
 async function addManualObservationToMapping(
@@ -234,7 +222,7 @@ async function addManualObservationToMapping(
     note: input.note?.trim() || null,
   });
 
-  await rebuildGearPriceProjection(mapping.gearId);
+  await rebuildGearPriceProjection(mapping.gearId, { preserveExisting: true });
   return getPriceManagementData(mapping.gearId);
 }
 
@@ -297,7 +285,9 @@ export async function addPublicPriceObservationService(
     });
   }
 
-  const projection = await rebuildGearPriceProjection(result.gearId);
+  const projection = await rebuildGearPriceProjection(result.gearId, {
+    preserveExisting: true,
+  });
   return { ...result, projection };
 }
 
@@ -332,6 +322,7 @@ export async function updatePriceMappingLinkService(input: {
     throw Object.assign(new Error("Price mapping not found"), { status: 404 });
   }
 
+  assertEditableMapping(mapping);
   const url = normalizeOptionalUrl(input.url);
   if (!hasRequiredPriceSourceLink(mapping.sourceKey, url, url)) {
     throw Object.assign(
@@ -360,6 +351,7 @@ export async function updatePriceMappingLinkService(input: {
 type RefreshOptions = {
   actorId: string | null;
   bypassCooldown: boolean;
+  signal?: AbortSignal;
 };
 
 async function refreshPriceMappingInternal(
@@ -376,6 +368,7 @@ async function refreshPriceMappingInternal(
     });
   }
 
+  assertEditableMapping(mapping);
   const retryAt = getManualRefreshRetryAt(mapping.lastFetchedAt);
   if (!options.bypassCooldown && retryAt) {
     return {
@@ -394,7 +387,7 @@ async function refreshPriceMappingInternal(
   }
 
   const fetchedAt = new Date();
-  const result = await adapter.fetch(mapping);
+  const result = await adapter.fetch(mapping, { signal: options.signal });
   const nextFetchAt = new Date(
     fetchedAt.getTime() +
       (result.status === "ERROR" ? 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000),
@@ -412,7 +405,9 @@ async function refreshPriceMappingInternal(
   });
 
   if (result.observations.length > 0) {
-    await rebuildGearPriceProjection(mapping.gearId);
+    await rebuildGearPriceProjection(mapping.gearId, {
+      preserveExisting: true,
+    });
   }
 
   return {
@@ -435,12 +430,14 @@ export async function refreshPriceMappingService(mappingId: string) {
 export async function recalculateGearPricingService(gearId: string) {
   const session = await getSessionOrThrow();
   requirePricingRole(session.user);
-  return rebuildGearPriceProjection(gearId);
+  return rebuildGearPriceProjection(gearId, { preserveExisting: true });
 }
 
 export async function archiveOrDeletePriceMappingService(mappingId: string) {
   const session = await getSessionOrThrow();
   requirePricingRole(session.user);
+  const existing = await getPriceMappingData(mappingId);
+  if (existing) assertEditableMapping(existing);
   const result = await archiveOrDeletePriceMappingData(mappingId);
   if (!result) {
     throw Object.assign(new Error("Price mapping not found"), { status: 404 });
@@ -454,6 +451,8 @@ export async function archiveOrDeletePriceMappingService(mappingId: string) {
 export async function restorePriceMappingService(mappingId: string) {
   const session = await getSessionOrThrow();
   requirePricingRole(session.user);
+  const existing = await getPriceMappingData(mappingId);
+  if (existing) assertEditableMapping(existing);
   const mapping = await restorePriceMappingData(mappingId);
   if (!mapping) {
     throw Object.assign(new Error("Archived price mapping not found"), {
@@ -466,7 +465,10 @@ export async function restorePriceMappingService(mappingId: string) {
 
 export async function refreshDuePriceMappingsService(limit = 20) {
   const run = await createPriceFetchRunData();
+  const deadline = Date.now() + 90000;
+  const signal = AbortSignal.timeout(90000);
   try {
+    await normalizePriceRangesData();
     const mappings = await listDuePriceMappingsData(
       Math.min(Math.max(limit, 1), 50),
     );
@@ -477,11 +479,13 @@ export async function refreshDuePriceMappingsService(limit = 20) {
     let errorCount = 0;
 
     for (const mapping of mappings) {
+      if (signal.aborted || Date.now() >= deadline) break;
       const itemStartedAt = new Date();
       try {
         const result = await refreshPriceMappingInternal(mapping.id, {
           actorId: null,
           bypassCooldown: true,
+          signal,
         });
         const itemStatus = result.ok ? result.status : "ERROR";
         const itemError = result.ok ? null : result.code;
@@ -535,22 +539,25 @@ export async function refreshDuePriceMappingsService(limit = 20) {
       }
     }
 
-    const status = getPriceFetchRunStatus(
-      successCount,
-      noDataCount,
-      errorCount,
-    );
+    const deferredCount = mappings.length - results.length;
+    const status = deferredCount
+      ? "PARTIAL"
+      : getPriceFetchRunStatus(successCount, noDataCount, errorCount);
     await completePriceFetchRunData({
       runId: run.id,
       status,
-      scannedCount: mappings.length,
+      scannedCount: results.length,
+      error: deferredCount
+        ? "Retailer batch time budget exhausted; remaining mappings deferred"
+        : undefined,
       successCount,
       noDataCount,
       errorCount,
     });
     return {
       runId: run.id,
-      scanned: mappings.length,
+      scanned: results.length,
+      deferredCount,
       results,
       gearSlugs: Array.from(gearSlugs),
     };
@@ -566,4 +573,47 @@ export async function refreshDuePriceMappingsService(limit = 20) {
     });
     throw error;
   }
+}
+
+function assertEditableMapping(mapping: { sourceKey: string }) {
+  if (mapping.sourceKey === "campricer")
+    throw Object.assign(
+      new Error(
+        "CamPricer is managed by the bulk import. Use enable or disable.",
+      ),
+      { status: 400 },
+    );
+}
+
+export async function setCampricerEnabledService(
+  mappingId: string,
+  enabled: boolean,
+) {
+  const session = await getSessionOrThrow();
+  requirePricingRole(session.user);
+  if (typeof enabled !== "boolean")
+    throw Object.assign(new Error("Enabled must be boolean"), { status: 400 });
+  const mapping = await setCampricerEnabledData(mappingId, enabled);
+  if (!mapping)
+    throw Object.assign(new Error("CamPricer mapping not found"), {
+      status: 404,
+    });
+  await rebuildGearPriceProjection(mapping.gearId, {
+    preserveExisting: enabled,
+  });
+  return mapping;
+}
+
+export async function getPriceHistoryService(
+  gearId: string,
+  marketKey: string,
+) {
+  assertAllowedValue(marketKey, PRICE_MARKETS, "Unknown price market");
+  return listPriceHistoryData(gearId, marketKey);
+}
+
+export async function normalizePriceRangesService() {
+  const session = await getSessionOrThrow();
+  if (!isAdmin(session.user)) unauthorized();
+  return normalizePriceRangesData();
 }

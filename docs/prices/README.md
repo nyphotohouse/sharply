@@ -22,7 +22,7 @@ Future feature ideas are tracked separately in
 
 The source-independent used-price system is implemented for the first
 `used_retail` slice. It supports manual observations, MPB and KameraStore
-source mappings, US/UK/EU markets, point or range observations, deterministic
+source mappings, automatic CamPricer connections, US/UK/EU markets, point observations, weighted
 low/typical/high estimates, a denormalized gear projection, scheduled refresh
 runs, public first-price contributions, and editor review of those
 contributions.
@@ -54,3 +54,5 @@ The two documents under `docs/plans/` are historical design and migration
 context, not the current implementation checklist. The current behavior is
 defined by the guides in this directory and the decision record
 [`../decisions/2026-10-01-source-independent-used-pricing.md`](../decisions/2026-10-01-source-independent-used-pricing.md).
+
+CamPricer is an automatic second-party bulk source. Its scheduling, Redis state and run observability are covered in [campricer.md](./campricer.md).

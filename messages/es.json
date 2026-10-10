@@ -259,7 +259,13 @@
       "contributorPriceDescription": "Añade un precio en el mercado seleccionado. Aparecerá de inmediato y quedará marcado para revisión posterior.",
       "contributorPriceSaved": "Precio añadido",
       "contributorPriceAlreadyExists": "Este artículo ya tiene un precio.",
-      "contributorPriceFailed": "No se pudo añadir el precio. Inténtalo de nuevo."
+      "contributorPriceFailed": "No se pudo añadir el precio. Inténtalo de nuevo.",
+      "campricerConnected": "CamPricer conectado",
+      "campricerPooled": "Precios internacionales · sincronización automática",
+      "campricerDisabled": "CamPricer desactivado",
+      "campricerNoData": "No hay un precio fiable disponible",
+      "campricerDisable": "Desactivar",
+      "campricerEnable": "Activar"
     },
     "renameDialog": {
       "title": "Cambiar nombre del equipo",

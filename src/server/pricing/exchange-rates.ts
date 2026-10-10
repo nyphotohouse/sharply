@@ -19,6 +19,7 @@ export async function getExchangeRates(): Promise<ExchangeRates | null> {
   try {
     const response = await fetch(EXCHANGE_RATES_URL, {
       next: { revalidate: EXCHANGE_RATES_REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) return null;
 

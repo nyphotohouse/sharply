@@ -259,7 +259,13 @@
       "contributorPriceDescription": "Tambah harga dalam pasaran pilihan anda. Ia akan dipaparkan serta-merta dan ditanda untuk semakan kemudian.",
       "contributorPriceSaved": "Harga ditambah",
       "contributorPriceAlreadyExists": "Item ini sudah mempunyai harga.",
-      "contributorPriceFailed": "Harga tidak dapat ditambah. Sila cuba lagi."
+      "contributorPriceFailed": "Harga tidak dapat ditambah. Sila cuba lagi.",
+      "campricerConnected": "CamPricer disambungkan",
+      "campricerPooled": "Harga antarabangsa · penyegerakan automatik",
+      "campricerDisabled": "CamPricer dinyahaktifkan",
+      "campricerNoData": "Tiada harga yang boleh dipercayai",
+      "campricerDisable": "Nyahaktifkan",
+      "campricerEnable": "Aktifkan"
     },
     "renameDialog": {
       "title": "Namakan semula peralatan",

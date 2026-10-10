@@ -259,7 +259,13 @@
       "contributorPriceDescription": "選択した市場の価格を追加します。すぐに表示され、後で確認する項目としてマークされます。",
       "contributorPriceSaved": "価格を追加しました",
       "contributorPriceAlreadyExists": "この項目にはすでに価格があります。",
-      "contributorPriceFailed": "価格を追加できませんでした。もう一度お試しください。"
+      "contributorPriceFailed": "価格を追加できませんでした。もう一度お試しください。",
+      "campricerConnected": "CamPricer 接続済み",
+      "campricerPooled": "各国の価格 · 自動同期",
+      "campricerDisabled": "CamPricer 無効",
+      "campricerNoData": "信頼できる価格がありません",
+      "campricerDisable": "無効にする",
+      "campricerEnable": "有効にする"
     },
     "renameDialog": {
       "title": "機材名を変更",

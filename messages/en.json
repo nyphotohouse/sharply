@@ -259,7 +259,13 @@
       "contributorPriceDescription": "Add a price in your selected market. It will appear immediately and be flagged for later review.",
       "contributorPriceSaved": "Price added",
       "contributorPriceAlreadyExists": "This item already has a price.",
-      "contributorPriceFailed": "The price could not be added. Please try again."
+      "contributorPriceFailed": "The price could not be added. Please try again.",
+      "campricerConnected": "CamPricer connected",
+      "campricerPooled": "Pooled international prices · automatic sync",
+      "campricerDisabled": "CamPricer disabled",
+      "campricerNoData": "No reliable price available",
+      "campricerDisable": "Disable",
+      "campricerEnable": "Enable"
     },
     "renameDialog": {
       "title": "Rename Gear Item",

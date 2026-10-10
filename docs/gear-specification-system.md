@@ -531,3 +531,11 @@ When deploying this schema:
 2. Consider data migration if upgrading from a flat structure
 3. Update application code to use the new relationship patterns
 4. Test performance with realistic data volumes
+
+### Pricing input snapshots
+
+The existing pricing run table includes run kind, optional source and typed JSON
+import summaries. Estimate rows optionally store immutable weighted calculation
+inputs for future history. No new tables are required. Observation range fields
+remain deprecated compatibility columns; new observations are point-only.
+See [prices/campricer.md](./prices/campricer.md).

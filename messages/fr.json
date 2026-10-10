@@ -259,7 +259,13 @@
       "contributorPriceDescription": "Ajoutez un prix dans le marché sélectionné. Il apparaîtra immédiatement et sera marqué pour une vérification ultérieure.",
       "contributorPriceSaved": "Prix ajouté",
       "contributorPriceAlreadyExists": "Cet article a déjà un prix.",
-      "contributorPriceFailed": "Le prix n’a pas pu être ajouté. Réessayez."
+      "contributorPriceFailed": "Le prix n’a pas pu être ajouté. Réessayez.",
+      "campricerConnected": "CamPricer connecté",
+      "campricerPooled": "Prix internationaux · synchronisation automatique",
+      "campricerDisabled": "CamPricer désactivé",
+      "campricerNoData": "Aucun prix fiable disponible",
+      "campricerDisable": "Désactiver",
+      "campricerEnable": "Activer"
     },
     "renameDialog": {
       "title": "Renommer le matériel",
