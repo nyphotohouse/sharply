@@ -241,12 +241,7 @@ export async function syncCampricerService(deps: Dependencies = {}) {
                 );
                 const bySlug = new Map(gears.map((g) => [g.slug, g]));
                 const processModel = async (model: (typeof models)[number]) => {
-                  if (
-                    !model.success ||
-                    (model.success &&
-                      new URL(model.data.url).origin !==
-                        "https://campricer.psavela.com")
-                  ) {
+                  if (!model.success) {
                     detail.counts.invalid++;
                     return;
                   }

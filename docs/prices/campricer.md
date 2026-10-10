@@ -23,7 +23,8 @@ credentials to another host.
 Match `sharply_slug` exactly; unknown slugs never create gear. Matching models
 receive internal mappings automatically, including models without reliable
 prices. Accept only positive integer estimates with `thin: false`, valid upstream
-timestamps, and provider-host evidence URLs. Null/thin estimates add no price;
+timestamps, and valid evidence URLs. Evidence URL origins are currently unrestricted
+to accommodate provider domain changes. Null/thin estimates add no price;
 previous accepted evidence ages normally. Only the point, timestamp and evidence
 URL are retained. Repeated mapping/timestamp snapshots are deduplicated.
 

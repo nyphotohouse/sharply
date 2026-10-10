@@ -98,6 +98,16 @@ describe("CamPricer bulk sync", () => {
     await syncCampricerService(deps);
     expect(deps.fetch).toHaveBeenCalledTimes(1);
   });
+  it("accepts evidence URLs after a provider domain change", async () => {
+    const deps = dependencies();
+    const url = "https://kamarvo.com/model/canon-a-1";
+    deps.fetch.mockResolvedValue(page(1, 1, [{ ...model, url }]));
+    const result = await syncCampricerService(deps);
+    expect(result.summary.counts).toMatchObject({ imported: 1, invalid: 0 });
+    expect(db.importCampricerPriceData).toHaveBeenCalledWith(
+      expect.objectContaining({ url }),
+    );
+  });
   it("continues after two pages and honors the daily budget on another invocation", async () => {
     const redis = storage(),
       deps = dependencies(redis);
