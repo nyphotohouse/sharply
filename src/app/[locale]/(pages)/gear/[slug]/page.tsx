@@ -125,8 +125,6 @@ export default async function GearPage({ params }: GearPageProps) {
 
   if (!item) return notFound();
 
-  const exchangeRates = await getExchangeRates();
-  const { market } = getPriceViewForLocale(locale, exchangeRates);
   const hasMpbPrice = item.mpbMaxPriceUsdCents != null;
   const regionalDisplayName = GetGearDisplayName(
     {
@@ -176,6 +174,9 @@ export default async function GearPage({ params }: GearPageProps) {
       </main>
     );
   }
+
+  const exchangeRates = await getExchangeRates();
+  const { market } = getPriceViewForLocale(locale, exchangeRates);
 
   const [verdict, trendingSlugs] = await Promise.all([
     fetchStaffVerdictByGearId(item.id),
