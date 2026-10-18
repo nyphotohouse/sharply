@@ -109,6 +109,18 @@ describe("CamPricer bulk sync", () => {
       expect.objectContaining({ url }),
     );
   });
+  it("rejects evidence URLs that are not HTTP or HTTPS", async () => {
+    const deps = dependencies();
+    deps.fetch.mockResolvedValue(
+      page(1, 1, [
+        { ...model, url: "javascript:alert(1)" },
+        { ...model, url: "data:text/html,<script>alert(1)</script>" },
+      ]),
+    );
+    const result = await syncCampricerService(deps);
+    expect(result.summary.counts).toMatchObject({ imported: 0, invalid: 2 });
+    expect(db.importCampricerPriceData).not.toHaveBeenCalled();
+  });
   it("continues after two pages and honors the daily budget on another invocation", async () => {
     const redis = storage(),
       deps = dependencies(redis);

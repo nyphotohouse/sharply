@@ -30,7 +30,16 @@ const pageSchema = z.object({
 });
 const modelSchema = z.object({
   sharply_slug: z.string().min(1),
-  url: z.string().url(),
+  // Any host is allowed (the provider has changed domains), but only web
+  // schemes: the URL is persisted and rendered as an admin anchor href, so
+  // javascript: or data: URLs must never get through.
+  url: z
+    .string()
+    .url()
+    .refine((value) => {
+      const { protocol } = new URL(value);
+      return protocol === "http:" || protocol === "https:";
+    }, "Evidence URL must use HTTP or HTTPS"),
   updated_at: z.string().datetime({ offset: true }),
   estimate: z
     .object({
