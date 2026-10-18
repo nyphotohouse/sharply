@@ -154,6 +154,43 @@ describe("pricing projections", () => {
     });
     expect(result.changed).toBe(true);
   });
+  it("reports no change when only projection metadata moves", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    // Same displayed prices, but the stored entry was still marked current and
+    // carried different provenance counts; none of that is rendered publicly.
+    const storedWithOldMetadata = structuredClone(firstRun);
+    storedWithOldMetadata.US = {
+      ...storedWithOldMetadata.US!,
+      status: "current",
+      asOf: "2026-09-01T00:00:00.000Z",
+      sourceCount: 7,
+    };
+    mocks.getStoredPriceProjectionData.mockResolvedValue(storedWithOldMetadata);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(false);
+    // The full projection, metadata included, is still persisted.
+    expect(
+      mocks.persistGearPriceProjectionData.mock.calls.at(-1)?.[0].projection.US,
+    ).toEqual(result.projection.US);
+  });
+  it("reports a change when a market becomes visible", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    const hidden = structuredClone(firstRun);
+    hidden.US = { ...hidden.US!, status: "unavailable" };
+    mocks.getStoredPriceProjectionData.mockResolvedValue(hidden);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(true);
+  });
   it("does not mutate the stored projection it compares against", async () => {
     const stored = { US: { low: 1, typical: 2, high: 3 } };
     mocks.getStoredPriceProjectionData.mockResolvedValue(stored);

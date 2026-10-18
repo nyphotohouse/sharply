@@ -35,6 +35,24 @@ function stableSerialize(value: unknown): string {
   return JSON.stringify(value);
 }
 
+// Reduces a projection to what the public gear page actually renders, so
+// metadata-only churn (asOf, sourceCount, current -> stale) does not trigger
+// revalidating every localized gear page. Visibility is kept because the
+// display resolver hides entries whose status is not current or stale.
+function displayedPriceFields(projection: GearPriceProjection) {
+  return Object.fromEntries(
+    Object.entries(projection).map(([market, entry]) => [
+      market,
+      entry && {
+        low: entry.low,
+        typical: entry.typical,
+        high: entry.high,
+        visible: entry.status === "current" || entry.status === "stale",
+      },
+    ]),
+  );
+}
+
 export async function rebuildGearPriceProjection(
   gearId: string,
   options: RebuildOptions = {},
@@ -112,7 +130,9 @@ export async function rebuildGearPriceProjectionReportingChange(
     };
   }
   await persistGearPriceProjectionData({ gearId, projection, estimates });
+  // The full projection is persisted above; only the change check is narrowed.
   const changed =
-    stableSerialize(previousProjection) !== stableSerialize(projection);
+    stableSerialize(displayedPriceFields(previousProjection)) !==
+    stableSerialize(displayedPriceFields(projection));
   return { projection, changed };
 }
