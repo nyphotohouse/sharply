@@ -36,4 +36,8 @@ Home's ISR interval is now 15 minutes, with Home-specific news and review caches
 
 ## Update (2026-10-04)
 
-Payload News, editorial Reviews, and Learn data now use a one-hour fallback cache interval. Home's page interval remains 15 minutes for its other content, while its News and Review data caches use one hour. Publishing, unpublishing, or deleting published editorial content invalidates the relevant collection caches and public paths across supported locales, including affected article pages, listings, Home, related gear pages, and the sitemap. Draft saves and autosaves do not invalidate public content.
+Payload News, editorial Reviews, and Learn data now use a one-hour fallback cache interval. Home's page interval remains 15 minutes for its other content, while its News and Review data caches use one hour.
+
+## Update (2026-10-18)
+
+The shared News, Reviews, and Learn data caches now use a 24-hour fallback interval to match gear pages' 24-hour revalidate. Gear pages server-render related news, and Next lowers a page's effective revalidate to the shortest cache it reads, so the one-hour value made gear pages regenerate hourly and drove most ISR writes. Home's dedicated News and Review caches stay at one hour. Editorial publish, unpublish, and delete hooks still invalidate these caches; changes made through the Local API or when the revalidation endpoint fails can now take up to 24 hours to appear. Publishing, unpublishing, or deleting published editorial content invalidates the relevant collection caches and public paths across supported locales, including affected article pages, listings, Home, related gear pages, and the sitemap. Draft saves and autosaves do not invalidate public content.
