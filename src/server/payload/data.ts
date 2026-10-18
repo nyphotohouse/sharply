@@ -5,7 +5,12 @@ import type { LearnPage, News, Review } from "~/payload-types";
 import config from "~/payload.config";
 import { PAYLOAD_CACHE_TAGS } from "~/lib/payload-cache-tags";
 
-const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60 * 60;
+// Matches the gear page's 24h revalidate. Gear pages server-render related news,
+// and Next lowers a page's effective revalidate to the shortest cache it reads,
+// so an hourly value here made gear pages regenerate hourly. Publishing still
+// refreshes this content through the editorial revalidation tags, so this
+// interval is only a fallback for changes that skip those hooks.
+const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60 * 60 * 24;
 const HOME_CONTENT_REVALIDATE_SECONDS = 60 * 60;
 
 let payloadPromise: ReturnType<typeof getPayload> | undefined;
