@@ -59,8 +59,15 @@ Browse `newest` ordering compares release dates at their declared precision: yea
 - Default-locale invalidation targets both the public `/gear/...` URL and its
   internally rewritten `/en/gear/...` cache key. Other locales use their
   public prefixed paths.
-- Browse invalidation targets the localized `/browse` layout, which covers the
-  root, brand, category, and mount-depth catch-all routes.
+- Browse invalidation calls `revalidatePath` once with the route pattern
+  `/[locale]/(pages)/browse/[[...segments]]` and type `page`. Next tags each
+  render with tags derived from its route pattern plus its concrete pathname,
+  so this one call covers the root, brand, category, and mount-depth URLs in
+  every locale. Concrete `/<locale>/browse` layout paths match no page tag.
+- Server-rendered browse output must not read caches shorter than 24 hours,
+  because Next lowers a page's effective revalidate to the shortest cache it
+  reads. The index and brand trending row therefore renders the stable
+  ranking and upgrades to the live ranking on the client.
 - `dynamicParams = true` so non-prebuilt combinations still render on-demand.
 - `getPopularScopes` is deprecated and no longer used.
 

@@ -46,11 +46,23 @@ export function revalidateLocalizedPaths(
 }
 
 /**
- * Revalidate browse's shared layout for every locale. This covers the
- * catch-all page's root, brand, category, and mount-depth URLs.
+ * Route pattern of the browse catch-all page (root, brand, category, and
+ * mount-depth URLs for every locale).
+ */
+export const BROWSE_PAGE_ROUTE_PATTERN =
+  "/[locale]/(pages)/browse/[[...segments]]";
+
+/**
+ * Revalidate every browse page in every locale.
+ *
+ * Next tags each rendered page with derived tags built from its route
+ * pattern (for example `/[locale]/(pages)/browse/[[...segments]]/page`) plus
+ * its concrete pathname, not with layout tags for concrete URLs. A concrete
+ * `revalidatePath("/en/browse", "layout")` therefore matched nothing, so we
+ * revalidate the route pattern once instead; it covers all locales.
  */
 export function revalidateBrowsePages(): void {
-  revalidateLocalizedPaths(["/browse"], "layout");
+  revalidatePath(BROWSE_PAGE_ROUTE_PATTERN, "page");
 }
 
 /**
