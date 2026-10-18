@@ -11,7 +11,7 @@ const rebuild = vi.hoisted(() => vi.fn());
 vi.mock("server-only", () => ({}));
 vi.mock("~/server/pricing/data", () => db);
 vi.mock("~/server/pricing/projection", () => ({
-  rebuildGearPriceProjection: rebuild,
+  rebuildGearPriceProjectionReportingChange: rebuild,
 }));
 import {
   campricerNamespace,
@@ -74,6 +74,7 @@ function dependencies(redis = storage()) {
 describe("CamPricer bulk sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    rebuild.mockResolvedValue({ projection: {}, changed: true });
     db.createPriceFetchRunData.mockResolvedValue({ id: "run" });
     db.listActiveCampricerGearData.mockResolvedValue([
       { id: "g", slug: "canon-a-1" },
@@ -97,6 +98,28 @@ describe("CamPricer bulk sync", () => {
     expect(db.recordPriceFetchRunItemData).toHaveBeenCalled();
     await syncCampricerService(deps);
     expect(deps.fetch).toHaveBeenCalledTimes(1);
+  });
+  it("accepts evidence URLs after a provider domain change", async () => {
+    const deps = dependencies();
+    const url = "https://kamarvo.com/model/canon-a-1";
+    deps.fetch.mockResolvedValue(page(1, 1, [{ ...model, url }]));
+    const result = await syncCampricerService(deps);
+    expect(result.summary.counts).toMatchObject({ imported: 1, invalid: 0 });
+    expect(db.importCampricerPriceData).toHaveBeenCalledWith(
+      expect.objectContaining({ url }),
+    );
+  });
+  it("rejects evidence URLs that are not HTTP or HTTPS", async () => {
+    const deps = dependencies();
+    deps.fetch.mockResolvedValue(
+      page(1, 1, [
+        { ...model, url: "javascript:alert(1)" },
+        { ...model, url: "data:text/html,<script>alert(1)</script>" },
+      ]),
+    );
+    const result = await syncCampricerService(deps);
+    expect(result.summary.counts).toMatchObject({ imported: 0, invalid: 2 });
+    expect(db.importCampricerPriceData).not.toHaveBeenCalled();
   });
   it("continues after two pages and honors the daily budget on another invocation", async () => {
     const redis = storage(),
@@ -270,5 +293,19 @@ describe("CamPricer bulk sync", () => {
     expect(campricerNamespace({ VERCEL_ENV: "production" })).not.toBe(
       campricerNamespace({ VERCEL_ENV: "preview" }),
     );
+  });
+  it("skips revalidating gear whose displayed prices did not change", async () => {
+    rebuild.mockResolvedValue({ projection: {}, changed: false });
+    const result = await syncCampricerService(dependencies());
+    expect(rebuild).toHaveBeenCalledWith("g", { preserveExisting: true });
+    expect(result.gearSlugs).toEqual([]);
+  });
+  it("revalidates nothing when CamPricer returns 304 and prices are unchanged", async () => {
+    rebuild.mockResolvedValue({ projection: {}, changed: false });
+    const deps = dependencies();
+    deps.fetch.mockResolvedValue(new Response(null, { status: 304 }));
+    const result = await syncCampricerService(deps);
+    expect(rebuild).toHaveBeenCalled();
+    expect(result.gearSlugs).toEqual([]);
   });
 });

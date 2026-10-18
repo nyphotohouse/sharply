@@ -9,7 +9,10 @@ vi.mock("~/server/pricing/data", () => mocks);
 vi.mock("~/server/pricing/exchange-rates", () => ({
   getExchangeRates: mocks.getExchangeRates,
 }));
-import { rebuildGearPriceProjection } from "~/server/pricing/projection";
+import {
+  rebuildGearPriceProjection,
+  rebuildGearPriceProjectionReportingChange,
+} from "~/server/pricing/projection";
 const point = (
   sourceKey: string,
   amountMinor: number,
@@ -121,5 +124,82 @@ describe("pricing projections", () => {
   it("explicit removal clears projections rather than leaving a disabled source visible", async () => {
     mocks.listValidPriceObservationsForGearData.mockResolvedValue([]);
     expect(await rebuildGearPriceProjection("g")).toEqual({});
+  });
+  it("reports no change when a rebuild reproduces the stored projection", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    // Reorder keys to prove the comparison ignores ordering.
+    const reordered = Object.fromEntries(
+      Object.entries(structuredClone(firstRun)).reverse(),
+    );
+    mocks.getStoredPriceProjectionData.mockResolvedValue(reordered);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(false);
+  });
+  it("reports a change when a market price moves", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    mocks.getStoredPriceProjectionData.mockResolvedValue(firstRun);
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 42000, "US"),
+    ]);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(true);
+  });
+  it("reports no change when only projection metadata moves", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    // Same displayed prices, but the stored entry was still marked current and
+    // carried different provenance counts; none of that is rendered publicly.
+    const storedWithOldMetadata = structuredClone(firstRun);
+    storedWithOldMetadata.US = {
+      ...storedWithOldMetadata.US!,
+      status: "current",
+      asOf: "2026-09-01T00:00:00.000Z",
+      sourceCount: 7,
+    };
+    mocks.getStoredPriceProjectionData.mockResolvedValue(storedWithOldMetadata);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(false);
+    // The full projection, metadata included, is still persisted.
+    expect(
+      mocks.persistGearPriceProjectionData.mock.calls.at(-1)?.[0].projection.US,
+    ).toEqual(result.projection.US);
+  });
+  it("reports a change when a market becomes visible", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    const hidden = structuredClone(firstRun);
+    hidden.US = { ...hidden.US!, status: "unavailable" };
+    mocks.getStoredPriceProjectionData.mockResolvedValue(hidden);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(true);
+  });
+  it("does not mutate the stored projection it compares against", async () => {
+    const stored = { US: { low: 1, typical: 2, high: 3 } };
+    mocks.getStoredPriceProjectionData.mockResolvedValue(stored);
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 42000, "US"),
+    ]);
+    await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(stored).toEqual({ US: { low: 1, typical: 2, high: 3 } });
   });
 });

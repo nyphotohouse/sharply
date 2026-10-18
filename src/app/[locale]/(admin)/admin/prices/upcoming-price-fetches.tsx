@@ -48,7 +48,7 @@ export function UpcomingPriceFetches({
                 <th className="px-4 py-3 font-medium">Source</th>
                 <th className="px-4 py-3 font-medium">Market</th>
                 <th className="px-4 py-3 font-medium">Last result</th>
-                <th className="px-4 py-3 text-right font-medium">Next check</th>
+                <th className="px-4 py-3 text-right font-medium">Due on</th>
               </tr>
             </thead>
             <tbody className="divide-y">

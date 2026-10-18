@@ -18,15 +18,65 @@ import {
   inferCurrencyFromMarket,
 } from "./types";
 
+type RebuildOptions = { preserveExisting?: boolean };
+
+// Serializes with sorted keys so two projections compare equal regardless of
+// the order their markets or fields were written in.
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+    return `{${entries
+      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerialize(entryValue)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+// Reduces a projection to what the public gear page actually renders, so
+// metadata-only churn (asOf, sourceCount, current -> stale) does not trigger
+// revalidating every localized gear page. Visibility is kept because the
+// display resolver hides entries whose status is not current or stale.
+function displayedPriceFields(projection: GearPriceProjection) {
+  return Object.fromEntries(
+    Object.entries(projection).map(([market, entry]) => [
+      market,
+      entry && {
+        low: entry.low,
+        typical: entry.typical,
+        high: entry.high,
+        visible: entry.status === "current" || entry.status === "stale",
+      },
+    ]),
+  );
+}
+
 export async function rebuildGearPriceProjection(
   gearId: string,
-  options: { preserveExisting?: boolean } = {},
+  options: RebuildOptions = {},
 ) {
+  const { projection } = await rebuildGearPriceProjectionReportingChange(
+    gearId,
+    options,
+  );
+  return projection;
+}
+
+// Same rebuild, but also reports whether the displayed projection changed so
+// callers can skip revalidating gear pages whose prices are identical.
+export async function rebuildGearPriceProjectionReportingChange(
+  gearId: string,
+  options: RebuildOptions = {},
+): Promise<{ projection: GearPriceProjection; changed: boolean }> {
   const observations = await listValidPriceObservationsForGearData(gearId);
   const pooled = observations.filter((o) => o.sourceKey === "campricer");
   const rates = pooled.length ? await getExchangeRates() : null;
+  const previousProjection = await getStoredPriceProjectionData(gearId);
+  // Clone so preserving existing markets never mutates the snapshot we compare against.
   const projection: GearPriceProjection = options.preserveExisting
-    ? await getStoredPriceProjectionData(gearId)
+    ? structuredClone(previousProjection)
     : {};
   const estimates: PriceEstimateInsert[] = [];
   for (const market of PRICE_MARKETS) {
@@ -80,5 +130,9 @@ export async function rebuildGearPriceProjection(
     };
   }
   await persistGearPriceProjectionData({ gearId, projection, estimates });
-  return projection;
+  // The full projection is persisted above; only the change check is narrowed.
+  const changed =
+    stableSerialize(displayedPriceFields(previousProjection)) !==
+    stableSerialize(displayedPriceFields(projection));
+  return { projection, changed };
 }

@@ -10,7 +10,7 @@ import {
   listActiveCampricerGearData,
   recordPriceFetchRunItemData,
 } from "./data";
-import { rebuildGearPriceProjection } from "./projection";
+import { rebuildGearPriceProjectionReportingChange } from "./projection";
 
 const API_URL = "https://campricer.psavela.com/api/v1/models";
 const stateSchema = z.object({
@@ -30,7 +30,16 @@ const pageSchema = z.object({
 });
 const modelSchema = z.object({
   sharply_slug: z.string().min(1),
-  url: z.string().url(),
+  // Any host is allowed (the provider has changed domains), but only web
+  // schemes: the URL is persisted and rendered as an admin anchor href, so
+  // javascript: or data: URLs must never get through.
+  url: z
+    .string()
+    .url()
+    .refine((value) => {
+      const { protocol } = new URL(value);
+      return protocol === "http:" || protocol === "https:";
+    }, "Evidence URL must use HTTP or HTTPS"),
   updated_at: z.string().datetime({ offset: true }),
   estimate: z
     .object({
@@ -241,12 +250,7 @@ export async function syncCampricerService(deps: Dependencies = {}) {
                 );
                 const bySlug = new Map(gears.map((g) => [g.slug, g]));
                 const processModel = async (model: (typeof models)[number]) => {
-                  if (
-                    !model.success ||
-                    (model.success &&
-                      new URL(model.data.url).origin !==
-                        "https://campricer.psavela.com")
-                  ) {
+                  if (!model.success) {
                     detail.counts.invalid++;
                     return;
                   }
@@ -352,10 +356,13 @@ export async function syncCampricerService(deps: Dependencies = {}) {
         for (let offset = 0; offset < gears.length; offset += 5) {
           const outcomes = await Promise.allSettled(
             gears.slice(offset, offset + 5).map(async (gear) => {
-              await rebuildGearPriceProjection(gear.id, {
-                preserveExisting: true,
-              });
-              gearSlugs.add(gear.slug);
+              const { changed } =
+                await rebuildGearPriceProjectionReportingChange(gear.id, {
+                  preserveExisting: true,
+                });
+              // Only pages whose displayed prices moved need regenerating; this
+              // rebuild runs for every active gear each night, including 304s.
+              if (changed) gearSlugs.add(gear.slug);
             }),
           );
           if (outcomes.some((outcome) => outcome.status === "rejected")) {
