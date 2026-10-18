@@ -6,7 +6,12 @@ import type { ExchangeRates } from "~/lib/pricing/display-price";
 
 const EXCHANGE_RATES_URL =
   "https://api.frankfurter.dev/v2/rates?base=EUR&quotes=USD,GBP";
-const EXCHANGE_RATES_REVALIDATE_SECONDS = 60 * 60 * 12;
+// Matches the 24h browse and gear page revalidate. Next lowers a page's
+// effective revalidate to the shortest fetch it reads during render, so a 12h
+// value here regenerated those pages twice a day. Frankfurter publishes ECB
+// reference rates once per business day, so a daily refresh is sufficient
+// for converted display prices.
+const EXCHANGE_RATES_REVALIDATE_SECONDS = 60 * 60 * 24;
 
 type FrankfurterRate = {
   base?: unknown;

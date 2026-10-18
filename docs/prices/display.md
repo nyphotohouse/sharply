@@ -38,8 +38,9 @@ returned when rates are unavailable. A converted fallback retains
 `marketMatch: "fallback"` and `isConverted: true`, so callers can label it as
 approximate rather than presenting it as an exact local-market observation.
 
-The server obtains the shared USD/GBP/EUR rate snapshot with a 12-hour
-revalidated fetch and exposes the same cached result through the internal
+The server obtains the shared USD/GBP/EUR rate snapshot with a 24-hour
+revalidated fetch (matching the 24-hour browse and gear page revalidate, since
+Next lowers a page's revalidate to the shortest fetch it reads) and exposes the same cached result through the internal
 `/api/pricing/exchange-rates` endpoint. Server-rendered pages pass the snapshot
 to this helper, while client-loaded card lists share the endpoint through SWR.
 This keeps the first render stable without making every browser talk to the

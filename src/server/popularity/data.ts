@@ -26,6 +26,12 @@ import { getGearDisplayImageSql } from "~/server/gear/display-image";
 
 const MIN_TRENDING_SCORE = 1;
 
+// Stable trending windows only change when the nightly rollup runs, and that
+// rollup calls revalidateTag("trending"). Matching the 24h browse and gear
+// page revalidate keeps these reads from shortening those pages' ISR window
+// (Next lowers a page's effective revalidate to the shortest cache it reads).
+const STABLE_TRENDING_REVALIDATE_SECONDS = 60 * 60 * 24;
+
 function buildPublishedGearClause() {
   return eq(gear.publicationState, GEAR_PUBLICATION_STATES.PUBLISHED);
 }
@@ -59,8 +65,8 @@ function buildGearMountClause(mountId: string) {
  * Returns top-N trending gear for the given window.
  *
  * Caching:
- * - Cached for 12h via `unstable_cache`
- * - Tagged with 'trending' so a rollup can revalidate proactively
+ * - Cached for 24h via `unstable_cache`
+ * - Tagged with 'trending' so the nightly rollup refreshes it proactively
  * - Cache key includes timeframe, limit, and filters to avoid collisions
  *
  * Query notes:
@@ -189,7 +195,7 @@ export async function getTrendingData(
       return items;
     },
     key,
-    { revalidate: 60 * 60 * 12, tags: ["trending"] },
+    { revalidate: STABLE_TRENDING_REVALIDATE_SECONDS, tags: ["trending"] },
   );
 
   return run();
@@ -357,7 +363,7 @@ export async function getTrendingTotalCount(
       return Number(countRows[0]?.count ?? 0);
     },
     key,
-    { revalidate: 60 * 60 * 12, tags: ["trending"] },
+    { revalidate: STABLE_TRENDING_REVALIDATE_SECONDS, tags: ["trending"] },
   );
 
   return run();

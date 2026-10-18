@@ -25,7 +25,7 @@ describe("exchange rate service", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.frankfurter.dev/v2/rates?base=EUR&quotes=USD,GBP",
-      { next: { revalidate: 60 * 60 * 12 }, signal: expect.any(AbortSignal) },
+      { next: { revalidate: 60 * 60 * 24 }, signal: expect.any(AbortSignal) },
     );
   });
 
