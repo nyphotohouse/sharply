@@ -3,13 +3,11 @@ import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { JSX } from "react";
 import { Suspense } from "react";
-import { GearCard, GearCardSkeleton } from "~/components/gear/gear-card";
+import { GearCardSkeleton } from "~/components/gear/gear-card";
 import { Button } from "~/components/ui/button";
 import { orderBrandsWithPriority, splitBrandsWithPriority } from "~/lib/brands";
 import { BRANDS } from "~/lib/constants";
-import { getItemDisplayPrice } from "~/lib/mapping";
 import {
-  createPriceView,
   getPriceViewForLocale,
   type ExchangeRates,
   type PriceMarket,
@@ -21,6 +19,7 @@ import {
   fetchReleaseFeedPage,
 } from "~/server/gear/browse/service";
 import { fetchTrendingSlugs } from "~/server/popularity/service";
+import { BrowseTrendingGrid } from "./browse-trending-grid";
 import { OtherBrandsSelect } from "./other-brands-select";
 import { ReleaseFeedGrid } from "./release-feed-grid";
 
@@ -164,38 +163,21 @@ async function TrendingGrid({
   market: PriceMarket;
   exchangeRates: ExchangeRates | null;
 }) {
+  // Render only the stable 24h ranking here; BrowseTrendingGrid applies the
+  // live boost on the client so this page keeps its 24h revalidate window.
   const trendingResult = await fetchBrowseTrendingRowItems({
     brandId,
     limit: 3,
+    ranking: "stable",
   });
-  const priceView = createPriceView(market, exchangeRates);
 
   return (
-    <div className="grid w-full grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-      {trendingResult.map((g) => (
-        <GearCard
-          key={g.slug}
-          href={`/gear/${g.slug}`}
-          slug={g.slug}
-          name={g.name}
-          regionalAliases={g.regionalAliases}
-          brandName={g.brandName}
-          thumbnailUrl={g.thumbnailUrl ?? undefined}
-          gearType={g.gearType}
-          isTrending={g.isTrending}
-          trendingStatusSource="live"
-          releaseDate={g.releaseDate}
-          releaseDatePrecision={g.releaseDatePrecision}
-          announcedDate={g.announcedDate}
-          announceDatePrecision={g.announceDatePrecision}
-          priceText={getItemDisplayPrice(g, {
-            style: "short",
-            padWholeAmounts: true,
-            priceView,
-          })}
-        />
-      ))}
-    </div>
+    <BrowseTrendingGrid
+      initialItems={trendingResult}
+      brandId={brandId}
+      market={market}
+      initialExchangeRates={exchangeRates}
+    />
   );
 }
 

@@ -41,3 +41,7 @@ Payload News, editorial Reviews, and Learn data now use a one-hour fallback cach
 ## Update (2026-10-18)
 
 The shared News, Reviews, and Learn data caches now use a 24-hour fallback interval to match gear pages' 24-hour revalidate. Gear pages server-render related news, and Next lowers a page's effective revalidate to the shortest cache it reads, so the one-hour value made gear pages regenerate hourly and drove most ISR writes. Home's dedicated News and Review caches stay at one hour. Editorial publish, unpublish, and delete hooks still invalidate these caches; changes made through the Local API or when the revalidation endpoint fails can now take up to 24 hours to appear. Publishing, unpublishing, or deleting published editorial content invalidates the relevant collection caches and public paths across supported locales, including affected article pages, listings, Home, related gear pages, and the sitemap. Draft saves and autosaves do not invalidate public content.
+
+## Update 2026-10-18
+
+Browse index and brand pages now follow the same pattern as Home: their server-rendered trending row uses only the stable ranking, and the browser swaps in the live row from `GET /api/trending/browse` (same CDN cache policy). Reading the two-minute `trending-live` cache during render had lowered those pages' effective revalidate from 24 hours to about two minutes. The stable `trending` caches and the exchange-rate fetch are now 24 hours so browse and gear pages keep their 24-hour window.

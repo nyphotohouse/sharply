@@ -31,7 +31,10 @@ import {
   getReleaseOrderedGearPage,
   searchGear,
 } from "./data";
-import { fetchTrending } from "~/server/popularity/service";
+import {
+  fetchStableTrending,
+  fetchTrending,
+} from "~/server/popularity/service";
 type LoadHubDataResult = {
   depth: 0 | 1 | 2 | 3;
   scope: RouteScope;
@@ -109,21 +112,34 @@ export async function fetchBrandBrowseCategoryCounts(brandId: string) {
   return getPublishedGearCategoryCountsForBrand(brandId);
 }
 
+/**
+ * Build the browse trending row.
+ *
+ * `ranking: "stable"` reads only the 24h nightly ranking. Server-rendered
+ * browse pages must use it: Next lowers a page's effective revalidate to the
+ * shortest cache it reads, and the live intraday snapshot is cached for two
+ * minutes, which made browse index and brand pages regenerate every ~2 min.
+ * The live ranking (default) is served to the client by
+ * `/api/trending/browse`, which upgrades the row after hydration.
+ */
 export async function fetchBrowseTrendingRowItems(params: {
   brandId?: string;
   limit?: number;
+  ranking?: "live" | "stable";
 }): Promise<BrowseTrendingRowItem[]> {
   const limit = Math.max(1, Math.floor(params.limit ?? 3));
   const candidateLimit = Math.max(limit * 4, 12);
   const filters = params.brandId ? { brandId: params.brandId } : undefined;
+  const fetchRanking =
+    params.ranking === "stable" ? fetchStableTrending : fetchTrending;
 
   const [trending7d, trending30d, newestPage] = await Promise.all([
-    fetchTrending({
+    fetchRanking({
       timeframe: "7d",
       limit: candidateLimit,
       filters,
     }),
-    fetchTrending({
+    fetchRanking({
       timeframe: "30d",
       limit: candidateLimit,
       filters,

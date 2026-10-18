@@ -17,6 +17,7 @@ const browseDataMocks = vi.hoisted(() => ({
 }));
 
 const popularityServiceMocks = vi.hoisted(() => ({
+  fetchStableTrending: vi.fn(),
   fetchTrending: vi.fn(),
 }));
 
@@ -326,5 +327,34 @@ describe("fetchBrowseTrendingRowItems", () => {
       true,
       false,
     ]);
+  });
+
+  it("reads only the stable ranking when server rendering", async () => {
+    popularityServiceMocks.fetchStableTrending
+      .mockResolvedValueOnce([makeItem("a")])
+      .mockResolvedValueOnce([makeItem("b"), makeItem("c")]);
+    browseDataMocks.getReleaseOrderedGearPage.mockResolvedValue({
+      items: [],
+      hasMore: false,
+    });
+
+    const items = await fetchBrowseTrendingRowItems({
+      brandId: "brand-1",
+      limit: 3,
+      ranking: "stable",
+    });
+
+    // The live ranking reads a two-minute cache, which would shorten the
+    // browse page's 24h revalidate window.
+    expect(popularityServiceMocks.fetchTrending).not.toHaveBeenCalled();
+    expect(popularityServiceMocks.fetchStableTrending).toHaveBeenNthCalledWith(
+      1,
+      { timeframe: "7d", limit: 12, filters: { brandId: "brand-1" } },
+    );
+    expect(popularityServiceMocks.fetchStableTrending).toHaveBeenNthCalledWith(
+      2,
+      { timeframe: "30d", limit: 12, filters: { brandId: "brand-1" } },
+    );
+    expect(items.map((item) => item.slug)).toEqual(["a", "b", "c"]);
   });
 });
