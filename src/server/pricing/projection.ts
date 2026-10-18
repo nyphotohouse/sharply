@@ -18,15 +18,47 @@ import {
   inferCurrencyFromMarket,
 } from "./types";
 
+type RebuildOptions = { preserveExisting?: boolean };
+
+// Serializes with sorted keys so two projections compare equal regardless of
+// the order their markets or fields were written in.
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+    return `{${entries
+      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerialize(entryValue)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 export async function rebuildGearPriceProjection(
   gearId: string,
-  options: { preserveExisting?: boolean } = {},
+  options: RebuildOptions = {},
 ) {
+  const { projection } = await rebuildGearPriceProjectionReportingChange(
+    gearId,
+    options,
+  );
+  return projection;
+}
+
+// Same rebuild, but also reports whether the displayed projection changed so
+// callers can skip revalidating gear pages whose prices are identical.
+export async function rebuildGearPriceProjectionReportingChange(
+  gearId: string,
+  options: RebuildOptions = {},
+): Promise<{ projection: GearPriceProjection; changed: boolean }> {
   const observations = await listValidPriceObservationsForGearData(gearId);
   const pooled = observations.filter((o) => o.sourceKey === "campricer");
   const rates = pooled.length ? await getExchangeRates() : null;
+  const previousProjection = await getStoredPriceProjectionData(gearId);
+  // Clone so preserving existing markets never mutates the snapshot we compare against.
   const projection: GearPriceProjection = options.preserveExisting
-    ? await getStoredPriceProjectionData(gearId)
+    ? structuredClone(previousProjection)
     : {};
   const estimates: PriceEstimateInsert[] = [];
   for (const market of PRICE_MARKETS) {
@@ -80,5 +112,7 @@ export async function rebuildGearPriceProjection(
     };
   }
   await persistGearPriceProjectionData({ gearId, projection, estimates });
-  return projection;
+  const changed =
+    stableSerialize(previousProjection) !== stableSerialize(projection);
+  return { projection, changed };
 }

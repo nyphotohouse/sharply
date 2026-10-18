@@ -9,7 +9,10 @@ vi.mock("~/server/pricing/data", () => mocks);
 vi.mock("~/server/pricing/exchange-rates", () => ({
   getExchangeRates: mocks.getExchangeRates,
 }));
-import { rebuildGearPriceProjection } from "~/server/pricing/projection";
+import {
+  rebuildGearPriceProjection,
+  rebuildGearPriceProjectionReportingChange,
+} from "~/server/pricing/projection";
 const point = (
   sourceKey: string,
   amountMinor: number,
@@ -121,5 +124,45 @@ describe("pricing projections", () => {
   it("explicit removal clears projections rather than leaving a disabled source visible", async () => {
     mocks.listValidPriceObservationsForGearData.mockResolvedValue([]);
     expect(await rebuildGearPriceProjection("g")).toEqual({});
+  });
+  it("reports no change when a rebuild reproduces the stored projection", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    // Reorder keys to prove the comparison ignores ordering.
+    const reordered = Object.fromEntries(
+      Object.entries(structuredClone(firstRun)).reverse(),
+    );
+    mocks.getStoredPriceProjectionData.mockResolvedValue(reordered);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(false);
+  });
+  it("reports a change when a market price moves", async () => {
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 30000, "US"),
+    ]);
+    const firstRun = await rebuildGearPriceProjection("g");
+    mocks.getStoredPriceProjectionData.mockResolvedValue(firstRun);
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 42000, "US"),
+    ]);
+    const result = await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(result.changed).toBe(true);
+  });
+  it("does not mutate the stored projection it compares against", async () => {
+    const stored = { US: { low: 1, typical: 2, high: 3 } };
+    mocks.getStoredPriceProjectionData.mockResolvedValue(stored);
+    mocks.listValidPriceObservationsForGearData.mockResolvedValue([
+      point("ebay", 42000, "US"),
+    ]);
+    await rebuildGearPriceProjectionReportingChange("g", {
+      preserveExisting: true,
+    });
+    expect(stored).toEqual({ US: { low: 1, typical: 2, high: 3 } });
   });
 });

@@ -11,7 +11,7 @@ const rebuild = vi.hoisted(() => vi.fn());
 vi.mock("server-only", () => ({}));
 vi.mock("~/server/pricing/data", () => db);
 vi.mock("~/server/pricing/projection", () => ({
-  rebuildGearPriceProjection: rebuild,
+  rebuildGearPriceProjectionReportingChange: rebuild,
 }));
 import {
   campricerNamespace,
@@ -74,6 +74,7 @@ function dependencies(redis = storage()) {
 describe("CamPricer bulk sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    rebuild.mockResolvedValue({ projection: {}, changed: true });
     db.createPriceFetchRunData.mockResolvedValue({ id: "run" });
     db.listActiveCampricerGearData.mockResolvedValue([
       { id: "g", slug: "canon-a-1" },
@@ -280,5 +281,19 @@ describe("CamPricer bulk sync", () => {
     expect(campricerNamespace({ VERCEL_ENV: "production" })).not.toBe(
       campricerNamespace({ VERCEL_ENV: "preview" }),
     );
+  });
+  it("skips revalidating gear whose displayed prices did not change", async () => {
+    rebuild.mockResolvedValue({ projection: {}, changed: false });
+    const result = await syncCampricerService(dependencies());
+    expect(rebuild).toHaveBeenCalledWith("g", { preserveExisting: true });
+    expect(result.gearSlugs).toEqual([]);
+  });
+  it("revalidates nothing when CamPricer returns 304 and prices are unchanged", async () => {
+    rebuild.mockResolvedValue({ projection: {}, changed: false });
+    const deps = dependencies();
+    deps.fetch.mockResolvedValue(new Response(null, { status: 304 }));
+    const result = await syncCampricerService(deps);
+    expect(rebuild).toHaveBeenCalled();
+    expect(result.gearSlugs).toEqual([]);
   });
 });

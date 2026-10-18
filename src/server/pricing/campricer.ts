@@ -10,7 +10,7 @@ import {
   listActiveCampricerGearData,
   recordPriceFetchRunItemData,
 } from "./data";
-import { rebuildGearPriceProjection } from "./projection";
+import { rebuildGearPriceProjectionReportingChange } from "./projection";
 
 const API_URL = "https://campricer.psavela.com/api/v1/models";
 const stateSchema = z.object({
@@ -347,10 +347,13 @@ export async function syncCampricerService(deps: Dependencies = {}) {
         for (let offset = 0; offset < gears.length; offset += 5) {
           const outcomes = await Promise.allSettled(
             gears.slice(offset, offset + 5).map(async (gear) => {
-              await rebuildGearPriceProjection(gear.id, {
-                preserveExisting: true,
-              });
-              gearSlugs.add(gear.slug);
+              const { changed } =
+                await rebuildGearPriceProjectionReportingChange(gear.id, {
+                  preserveExisting: true,
+                });
+              // Only pages whose displayed prices moved need regenerating; this
+              // rebuild runs for every active gear each night, including 304s.
+              if (changed) gearSlugs.add(gear.slug);
             }),
           );
           if (outcomes.some((outcome) => outcome.status === "rejected")) {
