@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   updatePriceMappingLinkData: vi.fn(),
   updatePriceMappingFetchData: vi.fn(),
   rebuildGearPriceProjection: vi.fn(),
+  rebuildGearPriceProjectionReportingChange: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -61,6 +62,8 @@ vi.mock("~/server/pricing/data", () => ({
 }));
 vi.mock("~/server/pricing/projection", () => ({
   rebuildGearPriceProjection: mocks.rebuildGearPriceProjection,
+  rebuildGearPriceProjectionReportingChange:
+    mocks.rebuildGearPriceProjectionReportingChange,
 }));
 vi.mock("~/server/pricing/adapters", () => ({
   getPriceAdapter: mocks.getPriceAdapter,
@@ -382,5 +385,56 @@ describe("retailer batch deadline", () => {
     } finally {
       clock.mockRestore();
     }
+  });
+});
+
+describe("retailer batch revalidation", () => {
+  it("only returns gear slugs whose displayed price changed", async () => {
+    vi.clearAllMocks();
+    mocks.createPriceFetchRunData.mockResolvedValue({ id: "run" });
+    mocks.normalizePriceRangesData.mockResolvedValue([]);
+    const dueMappings = [
+      {
+        id: "changed-mapping",
+        gearId: "changed-gear",
+        gearSlug: "changed-slug",
+      },
+      {
+        id: "unchanged-mapping",
+        gearId: "unchanged-gear",
+        gearSlug: "unchanged-slug",
+      },
+    ].map((mapping) => ({
+      ...mapping,
+      gearName: "Gear",
+      sourceKey: "mpb",
+      marketKey: "US",
+    }));
+    mocks.listDuePriceMappingsData.mockResolvedValue(dueMappings);
+    mocks.getPriceMappingData.mockImplementation(async (mappingId: string) => {
+      const dueMapping = dueMappings.find(
+        (mapping) => mapping.id === mappingId,
+      );
+      return { ...dueMapping, status: "ACTIVE", lastFetchedAt: null };
+    });
+    mocks.getPriceAdapter.mockReturnValue({
+      fetch: vi.fn(async () => ({
+        status: "SUCCESS",
+        observations: [{ amountMinor: 100000 }],
+      })),
+    });
+    mocks.rebuildGearPriceProjectionReportingChange.mockImplementation(
+      async (gearId: string) => ({
+        projection: {},
+        changed: gearId === "changed-gear",
+      }),
+    );
+
+    const result = await refreshDuePriceMappingsService(20);
+
+    expect(
+      mocks.rebuildGearPriceProjectionReportingChange,
+    ).toHaveBeenCalledTimes(2);
+    expect(result.gearSlugs).toEqual(["changed-slug"]);
   });
 });

@@ -107,6 +107,31 @@ describe("payload data client", () => {
     });
   });
 
+  it("caches gear-related news for 3 days under a per-gear tag", async () => {
+    const payloadClient = {
+      find: vi.fn().mockResolvedValue({
+        docs: [
+          { slug: "related", related_gear_items: ["camera-one"] },
+          { slug: "unrelated", related_gear_items: ["camera-two"] },
+          { slug: "no-gear" },
+        ],
+      }),
+    };
+    payloadMocks.getPayload.mockResolvedValue(payloadClient);
+
+    const { getNewsByRelatedGearSlugData } =
+      await import("~/server/payload/data");
+
+    await expect(getNewsByRelatedGearSlugData("camera-one")).resolves.toEqual([
+      { slug: "related", related_gear_items: ["camera-one"] },
+    ]);
+    expect(cacheMocks.unstable_cache).toHaveBeenCalledWith(
+      expect.any(Function),
+      ["payload:gear-related-news-posts", "camera-one"],
+      { revalidate: 60 * 60 * 24 * 3, tags: ["news-gear:camera-one"] },
+    );
+  });
+
   it("returns null when a News slug is no longer available", async () => {
     const payloadClient = {
       find: vi.fn().mockResolvedValue({ docs: [] }),
