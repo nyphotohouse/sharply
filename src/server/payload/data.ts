@@ -12,6 +12,10 @@ import { PAYLOAD_CACHE_TAGS } from "~/lib/payload-cache-tags";
 // interval is only a fallback for changes that skip those hooks.
 const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60 * 60 * 24;
 const HOME_CONTENT_REVALIDATE_SECONDS = 60 * 60;
+// Gear pages revalidate every 3 days, so their related-news lookup gets its own
+// 3-day cache instead of lowering them to the 24h /news and /learn interval.
+// It shares the news tag, so publishing still refreshes it.
+const GEAR_RELATED_NEWS_REVALIDATE_SECONDS = 60 * 60 * 24 * 3;
 
 let payloadPromise: ReturnType<typeof getPayload> | undefined;
 
@@ -57,6 +61,22 @@ const getReviewsDataCached = unstable_cache(
   {
     revalidate: PAYLOAD_CONTENT_REVALIDATE_SECONDS,
     tags: [PAYLOAD_CACHE_TAGS.reviews],
+  },
+);
+
+const getGearRelatedNewsPostsDataCached = unstable_cache(
+  async (): Promise<News[]> => {
+    const payload = await getPayloadClient();
+    const newsPosts = await payload.find({
+      collection: "news",
+      limit: -1,
+    });
+    return newsPosts.docs;
+  },
+  ["payload:gear-related-news-posts"],
+  {
+    revalidate: GEAR_RELATED_NEWS_REVALIDATE_SECONDS,
+    tags: [PAYLOAD_CACHE_TAGS.news],
   },
 );
 
@@ -165,7 +185,7 @@ export const getNewsByRelatedGearSlugData = async (
   limit: number = 12,
 ): Promise<News[]> => {
   // Fetch all and filter locally (JSON field cannot be filtered with ILIKE)
-  const all = await getNewsPostsData();
+  const all = await getGearRelatedNewsPostsDataCached();
   const filtered = all.filter((n) => {
     const v = n.related_gear_items;
     if (!Array.isArray(v)) return false;

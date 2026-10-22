@@ -16,6 +16,7 @@ import {
   fetchTopComparePairs as fetchTopComparePairsData,
   getLiveTrendingSnapshot,
   getTrendingData,
+  getGearPageTrendingData,
   getTrendingTotalCount,
   hasEventForIdentityToday as hasEventForIdentityTodayGeneric,
   hasViewEventForIdentityToday,
@@ -295,6 +296,22 @@ export async function getTrendingStatusForSlugs(
 ): Promise<Set<string>> {
   const trendingSlugs = await fetchTrendingSlugs(params);
   const trendingSet = new Set(trendingSlugs);
+  return new Set(slugs.filter((slug) => trendingSet.has(slug)));
+}
+
+/**
+ * Gear-page variant of getTrendingStatusForSlugs, backed by the 3-day gear-page
+ * trending cache so it does not cap gear page ISR at the 12h trending interval.
+ */
+export async function getGearPageTrendingStatusForSlugs(
+  slugs: string[],
+  params?: { timeframe?: "7d" | "30d"; limit?: number },
+): Promise<Set<string>> {
+  const items = await getGearPageTrendingData(
+    params?.timeframe ?? "30d",
+    params?.limit ?? 20,
+  );
+  const trendingSet = new Set(items.map((item) => item.slug));
   return new Set(slugs.filter((slug) => trendingSet.has(slug)));
 }
 

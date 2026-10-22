@@ -53,6 +53,9 @@ function buildGearMountClause(mountId: string) {
  * - Match tag names used by rollup revalidation (e.g., 'trending')
  */
 
+const TRENDING_REVALIDATE_SECONDS = 60 * 60 * 12;
+const GEAR_PAGE_TRENDING_REVALIDATE_SECONDS = 60 * 60 * 24 * 3;
+
 /**
  * getTrendingData(timeframe, limit, filters)
  *
@@ -74,9 +77,38 @@ export async function getTrendingData(
   filters: TrendingFiltersInput = {},
   offset = 0,
 ) {
+  return getTrendingDataWithCachePolicy(timeframe, limit, filters, offset, {
+    cacheKeyPrefix: "pop-trending",
+    revalidateSeconds: TRENDING_REVALIDATE_SECONDS,
+  });
+}
+
+/**
+ * Same ranking as getTrendingData, cached for 3 days for gear pages.
+ * Next lowers a page's revalidate to the shortest cache it reads, so the 12h
+ * cache above would otherwise regenerate every gear page twice a day. It keeps
+ * the 'trending' tag, so the nightly rollup still refreshes it.
+ */
+export async function getGearPageTrendingData(
+  timeframe: "7d" | "30d",
+  limit: number,
+) {
+  return getTrendingDataWithCachePolicy(timeframe, limit, {}, 0, {
+    cacheKeyPrefix: "pop-trending-gear-page",
+    revalidateSeconds: GEAR_PAGE_TRENDING_REVALIDATE_SECONDS,
+  });
+}
+
+async function getTrendingDataWithCachePolicy(
+  timeframe: "7d" | "30d",
+  limit: number,
+  filters: TrendingFiltersInput,
+  offset: number,
+  cachePolicy: { cacheKeyPrefix: string; revalidateSeconds: number },
+) {
   // Stable cache key across inputs (kept small and deterministic)
   const key = [
-    "pop-trending",
+    cachePolicy.cacheKeyPrefix,
     timeframe,
     String(limit),
     filters.brandId ?? "-",
@@ -189,7 +221,7 @@ export async function getTrendingData(
       return items;
     },
     key,
-    { revalidate: 60 * 60 * 12, tags: ["trending"] },
+    { revalidate: cachePolicy.revalidateSeconds, tags: ["trending"] },
   );
 
   return run();

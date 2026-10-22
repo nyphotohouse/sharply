@@ -107,6 +107,16 @@ describe("payload data client", () => {
     });
   });
 
+  it("caches gear-related news for 3 days under the news tag", async () => {
+    await import("~/server/payload/data");
+
+    expect(cacheMocks.unstable_cache).toHaveBeenCalledWith(
+      expect.any(Function),
+      ["payload:gear-related-news-posts"],
+      { revalidate: 60 * 60 * 24 * 3, tags: ["payload:news-posts"] },
+    );
+  });
+
   it("returns null when a News slug is no longer available", async () => {
     const payloadClient = {
       find: vi.fn().mockResolvedValue({ docs: [] }),
