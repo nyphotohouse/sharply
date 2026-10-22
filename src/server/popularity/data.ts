@@ -83,20 +83,54 @@ export async function getTrendingData(
   });
 }
 
+// The gear page badge shows the top 20 of the 30-day window. The rollup diffs
+// this exact set, so the page and the rollup must share these values.
+export const GEAR_PAGE_TRENDING_TIMEFRAME = "30d";
+export const GEAR_PAGE_TRENDING_LIMIT = 20;
+
+/** Per-slug tag for the gear page trending cache; the rollup revalidates it. */
+export function getGearPageTrendingTag(slug: string): string {
+  return `trending-gear:${slug}`;
+}
+
 /**
- * Same ranking as getTrendingData, cached for 3 days for gear pages.
- * Next lowers a page's revalidate to the shortest cache it reads, so the 12h
- * cache above would otherwise regenerate every gear page twice a day. It keeps
- * the 'trending' tag, so the nightly rollup still refreshes it.
+ * Uncached read of the slugs in the gear page trending set. The rollup calls
+ * this before and after it runs to find which slugs entered or left the set.
  */
-export async function getGearPageTrendingData(
-  timeframe: "7d" | "30d",
-  limit: number,
-) {
-  return getTrendingDataWithCachePolicy(timeframe, limit, {}, 0, {
-    cacheKeyPrefix: "pop-trending-gear-page",
-    revalidateSeconds: GEAR_PAGE_TRENDING_REVALIDATE_SECONDS,
-  });
+export async function queryGearPageTrendingSlugs(): Promise<string[]> {
+  const items = await queryTrendingData(
+    GEAR_PAGE_TRENDING_TIMEFRAME,
+    GEAR_PAGE_TRENDING_LIMIT,
+    {},
+    0,
+  );
+  return items.map((item) => item.slug);
+}
+
+/**
+ * Returns which of the given slugs are in the gear page trending set, cached
+ * for 3 days to match the gear page.
+ *
+ * Each entry is tagged only with its own slugs, never the shared 'trending'
+ * tag, so the nightly rollup can refresh just the gear pages whose badges
+ * changed instead of every gear page.
+ */
+export async function getGearPageTrendingSlugsAmong(
+  slugs: string[],
+): Promise<string[]> {
+  const uniqueSlugs = Array.from(new Set(slugs)).sort();
+  const run = unstable_cache(
+    async () => {
+      const trendingSlugs = new Set(await queryGearPageTrendingSlugs());
+      return uniqueSlugs.filter((slug) => trendingSlugs.has(slug));
+    },
+    ["pop-trending-gear-page", ...uniqueSlugs],
+    {
+      revalidate: GEAR_PAGE_TRENDING_REVALIDATE_SECONDS,
+      tags: uniqueSlugs.map(getGearPageTrendingTag),
+    },
+  );
+  return run();
 }
 
 async function getTrendingDataWithCachePolicy(
@@ -119,9 +153,22 @@ async function getTrendingDataWithCachePolicy(
 
   // Wrap the resolver with unstable_cache to enable ISR-style caching and tag invalidation
   const run = unstable_cache(
-    async () => {
-      // Composite score: simple, transparent weights; typed numeric expression
-      const scoreFormula = sql<number>`(
+    () => queryTrendingData(timeframe, limit, filters, offset),
+    key,
+    { revalidate: cachePolicy.revalidateSeconds, tags: ["trending"] },
+  );
+
+  return run();
+}
+
+async function queryTrendingData(
+  timeframe: "7d" | "30d",
+  limit: number,
+  filters: TrendingFiltersInput,
+  offset: number,
+): Promise<TrendingEntry[]> {
+  // Composite score: simple, transparent weights; typed numeric expression
+  const scoreFormula = sql<number>`(
         ${gearPopularityWindows.viewsSum} * 0.1 +
         ${gearPopularityWindows.wishlistAddsSum} * 2 +
         ${gearPopularityWindows.ownerAddsSum} * 3 +
@@ -129,102 +176,94 @@ async function getTrendingDataWithCachePolicy(
         ${gearPopularityWindows.reviewSubmitsSum} * 2.5
       )`;
 
-      // Base conditions: fixed timeframe and only the most recent snapshot for that timeframe
-      const conditions: SQL[] = [
-        eq(gearPopularityWindows.timeframe, timeframe),
-        buildPublishedGearClause(),
-        sql`${gearPopularityWindows.asOfDate} = (
+  // Base conditions: fixed timeframe and only the most recent snapshot for that timeframe
+  const conditions: SQL[] = [
+    eq(gearPopularityWindows.timeframe, timeframe),
+    buildPublishedGearClause(),
+    sql`${gearPopularityWindows.asOfDate} = (
           SELECT MAX(as_of_date)
           FROM app.gear_popularity_windows
           WHERE timeframe = ${timeframe}::popularity_timeframe
         )`,
-      ];
-      // Optional scoping filters
-      if (filters.brandId) conditions.push(eq(gear.brandId, filters.brandId));
-      if (filters.mountId)
-        conditions.push(buildGearMountClause(filters.mountId));
-      if (filters.gearType)
-        conditions.push(eq(gear.gearType, filters.gearType));
-      conditions.push(sql`${scoreFormula} >= ${MIN_TRENDING_SCORE}`);
+  ];
+  // Optional scoping filters
+  if (filters.brandId) conditions.push(eq(gear.brandId, filters.brandId));
+  if (filters.mountId) conditions.push(buildGearMountClause(filters.mountId));
+  if (filters.gearType) conditions.push(eq(gear.gearType, filters.gearType));
+  conditions.push(sql`${scoreFormula} >= ${MIN_TRENDING_SCORE}`);
 
-      // Read a single row per gear for the latest snapshot; order by score desc; limit N
-      const rows = await db
-        .select({
-          gearId: gearPopularityWindows.gearId,
-          score: scoreFormula.as("score"),
-          viewsSum: gearPopularityWindows.viewsSum,
-          wishlistAddsSum: gearPopularityWindows.wishlistAddsSum,
-          ownerAddsSum: gearPopularityWindows.ownerAddsSum,
-          compareAddsSum: gearPopularityWindows.compareAddsSum,
-          reviewSubmitsSum: gearPopularityWindows.reviewSubmitsSum,
-          asOfDate: gearPopularityWindows.asOfDate,
-          slug: gear.slug,
-          name: gear.name,
-          gearType: gear.gearType,
-          brandId: gear.brandId,
-          brandName: brands.name,
-          releaseDate: gear.releaseDate,
-          releaseDatePrecision: gear.releaseDatePrecision,
-          announcedDate: gear.announcedDate,
-          announceDatePrecision: gear.announceDatePrecision,
-          msrpNowUsdCents: gear.msrpNowUsdCents,
-          msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
-          mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
-          usedPriceProjection: gear.usedPriceProjection,
-          thumbnailUrl: getGearDisplayImageSql(),
-          lifetimeViews: gearPopularityLifetime.viewsLifetime,
-        })
-        .from(gearPopularityWindows)
-        .innerJoin(gear, eq(gearPopularityWindows.gearId, gear.id))
-        .innerJoin(brands, eq(gear.brandId, brands.id))
-        .leftJoin(
-          gearPopularityLifetime,
-          eq(gearPopularityLifetime.gearId, gear.id),
-        )
-        .where(and(...conditions))
-        .orderBy(
-          desc(scoreFormula),
-          desc(gearPopularityWindows.viewsSum),
-          gearPopularityWindows.gearId,
-        )
-        .limit(limit)
-        .offset(Math.max(0, offset));
+  // Read a single row per gear for the latest snapshot; order by score desc; limit N
+  const rows = await db
+    .select({
+      gearId: gearPopularityWindows.gearId,
+      score: scoreFormula.as("score"),
+      viewsSum: gearPopularityWindows.viewsSum,
+      wishlistAddsSum: gearPopularityWindows.wishlistAddsSum,
+      ownerAddsSum: gearPopularityWindows.ownerAddsSum,
+      compareAddsSum: gearPopularityWindows.compareAddsSum,
+      reviewSubmitsSum: gearPopularityWindows.reviewSubmitsSum,
+      asOfDate: gearPopularityWindows.asOfDate,
+      slug: gear.slug,
+      name: gear.name,
+      gearType: gear.gearType,
+      brandId: gear.brandId,
+      brandName: brands.name,
+      releaseDate: gear.releaseDate,
+      releaseDatePrecision: gear.releaseDatePrecision,
+      announcedDate: gear.announcedDate,
+      announceDatePrecision: gear.announceDatePrecision,
+      msrpNowUsdCents: gear.msrpNowUsdCents,
+      msrpAtLaunchUsdCents: gear.msrpAtLaunchUsdCents,
+      mpbMaxPriceUsdCents: gear.mpbMaxPriceUsdCents,
+      usedPriceProjection: gear.usedPriceProjection,
+      thumbnailUrl: getGearDisplayImageSql(),
+      lifetimeViews: gearPopularityLifetime.viewsLifetime,
+    })
+    .from(gearPopularityWindows)
+    .innerJoin(gear, eq(gearPopularityWindows.gearId, gear.id))
+    .innerJoin(brands, eq(gear.brandId, brands.id))
+    .leftJoin(
+      gearPopularityLifetime,
+      eq(gearPopularityLifetime.gearId, gear.id),
+    )
+    .where(and(...conditions))
+    .orderBy(
+      desc(scoreFormula),
+      desc(gearPopularityWindows.viewsSum),
+      gearPopularityWindows.gearId,
+    )
+    .limit(limit)
+    .offset(Math.max(0, offset));
 
-      // Map to a render-ready shape
-      const items: TrendingEntry[] = rows.map((r) => ({
-        gearId: r.gearId,
-        slug: r.slug,
-        name: r.name,
-        brandName: r.brandName,
-        gearType: r.gearType,
-        thumbnailUrl: r.thumbnailUrl ?? null,
-        releaseDate: r.releaseDate ? r.releaseDate.toISOString() : null,
-        releaseDatePrecision: r.releaseDatePrecision ?? null,
-        announcedDate: r.announcedDate ? r.announcedDate.toISOString() : null,
-        announceDatePrecision: r.announceDatePrecision ?? null,
-        msrpNowUsdCents: r.msrpNowUsdCents,
-        msrpAtLaunchUsdCents: r.msrpAtLaunchUsdCents,
-        mpbMaxPriceUsdCents: r.mpbMaxPriceUsdCents,
-        usedPriceProjection: r.usedPriceProjection,
-        lifetimeViews: Number(r.lifetimeViews ?? 0),
-        score: Number(r.score),
-        stats: {
-          views: Number(r.viewsSum),
-          wishlistAdds: Number(r.wishlistAddsSum),
-          ownerAdds: Number(r.ownerAddsSum),
-          compareAdds: Number(r.compareAddsSum),
-          reviewSubmits: Number(r.reviewSubmitsSum),
-        },
-        asOfDate: String(r.asOfDate),
-      }));
-
-      return items;
+  // Map to a render-ready shape
+  const items: TrendingEntry[] = rows.map((r) => ({
+    gearId: r.gearId,
+    slug: r.slug,
+    name: r.name,
+    brandName: r.brandName,
+    gearType: r.gearType,
+    thumbnailUrl: r.thumbnailUrl ?? null,
+    releaseDate: r.releaseDate ? r.releaseDate.toISOString() : null,
+    releaseDatePrecision: r.releaseDatePrecision ?? null,
+    announcedDate: r.announcedDate ? r.announcedDate.toISOString() : null,
+    announceDatePrecision: r.announceDatePrecision ?? null,
+    msrpNowUsdCents: r.msrpNowUsdCents,
+    msrpAtLaunchUsdCents: r.msrpAtLaunchUsdCents,
+    mpbMaxPriceUsdCents: r.mpbMaxPriceUsdCents,
+    usedPriceProjection: r.usedPriceProjection,
+    lifetimeViews: Number(r.lifetimeViews ?? 0),
+    score: Number(r.score),
+    stats: {
+      views: Number(r.viewsSum),
+      wishlistAdds: Number(r.wishlistAddsSum),
+      ownerAdds: Number(r.ownerAddsSum),
+      compareAdds: Number(r.compareAddsSum),
+      reviewSubmits: Number(r.reviewSubmitsSum),
     },
-    key,
-    { revalidate: cachePolicy.revalidateSeconds, tags: ["trending"] },
-  );
+    asOfDate: String(r.asOfDate),
+  }));
 
-  return run();
+  return items;
 }
 
 export async function getLiveTrendingSnapshot(

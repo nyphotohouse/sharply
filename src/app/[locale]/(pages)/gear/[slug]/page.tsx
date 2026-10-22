@@ -182,10 +182,7 @@ export default async function GearPage({ params }: GearPageProps) {
 
   const [verdict, trendingSlugs] = await Promise.all([
     fetchStaffVerdictByGearId(item.id),
-    getGearPageTrendingStatusForSlugs([item.slug], {
-      timeframe: "30d",
-      limit: 20,
-    }),
+    getGearPageTrendingStatusForSlugs([item.slug]),
   ]);
   const isNew = isNewRelease(
     item.releaseDate ?? item.announcedDate,
@@ -651,10 +648,10 @@ async function GearAlternativesAndVideos({
     fetchGearAlternativesByGearId(gearId),
     fetchPublicGearCreatorVideosByGearId(gearId),
   ]);
-  const trendingSlugs = await getGearPageTrendingStatusForSlugs(
-    [slug, ...alternatives.map((alternative) => alternative.slug)],
-    { timeframe: "30d", limit: 20 },
-  );
+  const trendingSlugs = await getGearPageTrendingStatusForSlugs([
+    slug,
+    ...alternatives.map((alternative) => alternative.slug),
+  ]);
 
   return (
     <>

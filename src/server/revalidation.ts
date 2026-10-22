@@ -3,7 +3,10 @@ import "server-only";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { defaultLocale, locales } from "~/i18n/config";
 import { localizePathname } from "~/i18n/routing";
-import { PAYLOAD_CACHE_TAGS } from "~/lib/payload-cache-tags";
+import {
+  getGearRelatedNewsCacheTag,
+  PAYLOAD_CACHE_TAGS,
+} from "~/lib/payload-cache-tags";
 
 export type RevalidationPathType = "page" | "layout";
 
@@ -119,6 +122,11 @@ export function revalidateEditorialContent(
     paths.push("/news", "/");
     paths.push(...slugs.map((slug) => `/news/${slug}`));
     paths.push(...gearSlugs.map((slug) => `/gear/${slug}`));
+    // Gear pages cache related news per slug. The hooks send both the old and
+    // new versions of a post, so removed relations are refreshed too.
+    for (const gearSlug of gearSlugs) {
+      revalidateTag(getGearRelatedNewsCacheTag(gearSlug), { expire: 0 });
+    }
   } else if (collection === "review") {
     paths.push("/reviews", "/");
     paths.push(...slugs.map((slug) => `/reviews/${slug}`));
