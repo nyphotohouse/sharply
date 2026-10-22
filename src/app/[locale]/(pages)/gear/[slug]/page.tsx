@@ -69,7 +69,7 @@ import {
 import {
   fetchHighTrafficGearSlugs,
   fetchTrendingSlugs,
-  getTrendingStatusForSlugs,
+  getGearPageTrendingStatusForSlugs,
 } from "~/server/popularity/service";
 import { getExchangeRates } from "~/server/pricing/exchange-rates";
 import { AiReviewBanner } from "../_components/ai-review-banner";
@@ -87,7 +87,9 @@ import { StaffVerdictSection } from "../_components/staff-verdict-section";
 import { UserPendingEditBanner } from "../_components/user-pending-edit-banner";
 import { generateGearPageMetadata } from "./metadata";
 
-export const revalidate = 86400;
+// 3 days. Every cache this page reads must be at least this long, because Next
+// regenerates the page at the shortest one. Edits use on-demand revalidation.
+export const revalidate = 259200;
 export const dynamicParams = true;
 
 const GEAR_PREBUILD_TRENDING_LIMIT = 100;
@@ -180,10 +182,7 @@ export default async function GearPage({ params }: GearPageProps) {
 
   const [verdict, trendingSlugs] = await Promise.all([
     fetchStaffVerdictByGearId(item.id),
-    getTrendingStatusForSlugs([item.slug], {
-      timeframe: "30d",
-      limit: 20,
-    }),
+    getGearPageTrendingStatusForSlugs([item.slug]),
   ]);
   const isNew = isNewRelease(
     item.releaseDate ?? item.announcedDate,
@@ -649,10 +648,10 @@ async function GearAlternativesAndVideos({
     fetchGearAlternativesByGearId(gearId),
     fetchPublicGearCreatorVideosByGearId(gearId),
   ]);
-  const trendingSlugs = await getTrendingStatusForSlugs(
-    [slug, ...alternatives.map((alternative) => alternative.slug)],
-    { timeframe: "30d", limit: 20 },
-  );
+  const trendingSlugs = await getGearPageTrendingStatusForSlugs([
+    slug,
+    ...alternatives.map((alternative) => alternative.slug),
+  ]);
 
   return (
     <>

@@ -39,7 +39,7 @@ const payloadServiceMocks = vi.hoisted(() => ({
 const popularityServiceMocks = vi.hoisted(() => ({
   fetchHighTrafficGearSlugs: vi.fn(),
   fetchTrendingSlugs: vi.fn(),
-  getTrendingStatusForSlugs: vi.fn(),
+  getGearPageTrendingStatusForSlugs: vi.fn(),
 }));
 
 const authMocks = vi.hoisted(() => ({

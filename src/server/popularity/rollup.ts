@@ -2,17 +2,67 @@ import { sql } from "drizzle-orm";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { rollupRuns } from "~/server/db/schema";
+import {
+  getGearPageTrendingTag,
+  queryGearPageTrendingSlugs,
+} from "~/server/popularity/data";
 
 type SqlClient = { execute: (q: any) => Promise<any> };
 type RevalidateTag = (tag: string, profile: "max") => void;
+type RevalidateGearPages = (slugs: Iterable<string>) => void;
 
+/**
+ * Slugs that entered or left the gear page trending set during a rollup.
+ */
+export function getChangedTrendingGearSlugs(
+  before: string[],
+  after: string[],
+): string[] {
+  const beforeSet = new Set(before);
+  const afterSet = new Set(after);
+  return Array.from(new Set([...before, ...after]))
+    .filter((slug) => beforeSet.has(slug) !== afterSet.has(slug))
+    .sort();
+}
+
+/**
+ * Refresh popularity caches after a rollup.
+ *
+ * Home, browse and lists read the shared 'trending' tag and refresh every
+ * night. Gear pages use per-slug trending tags instead, so only the slugs whose
+ * badge changed are refreshed. The per-slug tag also covers pages that show
+ * that slug as an alternative.
+ */
 export async function revalidatePopularityCachesAfterRollup(
-  revalidate?: RevalidateTag,
-): Promise<void> {
+  trendingGearSlugs: { before: string[]; after: string[] },
+  revalidators?: {
+    revalidateTag: RevalidateTag;
+    revalidateGearPages: RevalidateGearPages;
+  },
+): Promise<string[]> {
   const revalidateTag =
-    revalidate ?? (await import("next/cache")).revalidateTag;
+    revalidators?.revalidateTag ?? (await import("next/cache")).revalidateTag;
+  const revalidateGearPages =
+    revalidators?.revalidateGearPages ??
+    (await import("~/server/revalidation")).revalidateGearPages;
+
   revalidateTag("trending", "max");
   console.info("popularity_rollup: revalidated tag", { tag: "trending" });
+
+  const changedSlugs = getChangedTrendingGearSlugs(
+    trendingGearSlugs.before,
+    trendingGearSlugs.after,
+  );
+  for (const slug of changedSlugs) {
+    revalidateTag(getGearPageTrendingTag(slug), "max");
+  }
+  if (changedSlugs.length > 0) {
+    revalidateGearPages(changedSlugs);
+  }
+  console.info("popularity_rollup: revalidated trending gear pages", {
+    slugs: changedSlugs,
+  });
+  return changedSlugs;
 }
 
 /**
@@ -287,6 +337,16 @@ export async function runDailyPopularityRollup(
   }> = [];
   let ok = false;
   let errorMessage: string | null = null;
+  // Gear page trending set before the rollup, diffed afterwards so only gear
+  // pages whose badge changed are refreshed. Null if the read fails.
+  const trendingGearSlugsBefore = await queryGearPageTrendingSlugs().catch(
+    (error: unknown) => {
+      console.warn("popularity_rollup: failed to read trending gear slugs", {
+        error,
+      });
+      return null;
+    },
+  );
   try {
     // 1) Correction pass for D-2 (late arrivals)
     const tD2 = Date.now();
@@ -368,7 +428,22 @@ export async function runDailyPopularityRollup(
 
     // Invalidate cached trending endpoints since windows/lifetime changed
     try {
-      await revalidatePopularityCachesAfterRollup();
+      const trendingGearSlugsAfter = await queryGearPageTrendingSlugs().catch(
+        (error: unknown) => {
+          console.warn(
+            "popularity_rollup: failed to read trending gear slugs",
+            {
+              error,
+            },
+          );
+          return [];
+        },
+      );
+      await revalidatePopularityCachesAfterRollup({
+        // Without a before snapshot, refresh every slug now in the set.
+        before: trendingGearSlugsBefore ?? [],
+        after: trendingGearSlugsAfter,
+      });
     } catch (e) {
       console.warn("popularity_rollup: failed to revalidate tag", { error: e });
     }

@@ -33,7 +33,10 @@ import {
   updatePriceMappingFetchData,
 } from "./data";
 import { getPriceAdapter } from "./adapters";
-import { rebuildGearPriceProjection } from "./projection";
+import {
+  rebuildGearPriceProjection,
+  rebuildGearPriceProjectionReportingChange,
+} from "./projection";
 import {
   PRICE_MARKETS,
   PRICE_SOURCE_KEYS,
@@ -410,15 +413,21 @@ async function refreshPriceMappingInternal(
     createdById: options.actorId,
   });
 
+  // Track whether the displayed price moved so batch callers only revalidate
+  // gear pages whose stored price actually changed.
+  let displayedPriceChanged = false;
   if (result.observations.length > 0) {
-    await rebuildGearPriceProjection(mapping.gearId, {
-      preserveExisting: true,
-    });
+    const { changed } = await rebuildGearPriceProjectionReportingChange(
+      mapping.gearId,
+      { preserveExisting: true },
+    );
+    displayedPriceChanged = changed;
   }
 
   return {
     ok: true as const,
     status: result.status,
+    displayedPriceChanged,
     insertedObservationCount: result.observations.length,
     nextFetchAt: nextFetchAt.toISOString(),
   };
@@ -502,7 +511,10 @@ export async function refreshDuePriceMappingsService(limit = 20) {
           mappingId: mapping.id,
           status: result.ok ? result.status : result.code,
         });
-        if (result.ok) gearSlugs.add(mapping.gearSlug);
+        // Mirrors the CamPricer sync: skip pages whose displayed price is unchanged.
+        if (result.ok && result.displayedPriceChanged) {
+          gearSlugs.add(mapping.gearSlug);
+        }
         await recordPriceFetchRunItemData({
           runId: run.id,
           mappingId: mapping.id,

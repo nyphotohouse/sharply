@@ -63,6 +63,48 @@ describe("editorial revalidation route", () => {
     expect(cacheMocks.revalidatePath).toHaveBeenCalledWith("/sitemap.xml");
   });
 
+  it("expires only the related gear news tags, including removed relations", async () => {
+    await POST(
+      request({
+        collection: "news",
+        documents: [
+          { slug: "camera-news", relatedGearSlugs: ["old-gear", "kept-gear"] },
+          { slug: "camera-news", relatedGearSlugs: ["kept-gear", "new-gear"] },
+        ],
+      }),
+    );
+
+    const gearNewsTags = cacheMocks.revalidateTag.mock.calls
+      .map(([tag]) => tag as string)
+      .filter((tag) => tag.startsWith("news-gear:"));
+    expect(gearNewsTags.sort()).toEqual([
+      "news-gear:kept-gear",
+      "news-gear:new-gear",
+      "news-gear:old-gear",
+    ]);
+    expect(cacheMocks.revalidateTag).toHaveBeenCalledWith(
+      "news-gear:old-gear",
+      { expire: 0 },
+    );
+    expect(cacheMocks.revalidatePath).toHaveBeenCalledWith("/gear/old-gear");
+  });
+
+  it("does not expire gear news tags for reviews", async () => {
+    await POST(
+      request({
+        collection: "review",
+        documents: [
+          { slug: "camera-review", relatedGearSlugs: ["camera-one"] },
+        ],
+      }),
+    );
+
+    expect(cacheMocks.revalidateTag).not.toHaveBeenCalledWith(
+      "news-gear:camera-one",
+      expect.anything(),
+    );
+  });
+
   it("rejects requests without the Payload secret", async () => {
     const response = await POST(
       request(

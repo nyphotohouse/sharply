@@ -6,7 +6,8 @@ import type { ExchangeRates } from "~/lib/pricing/display-price";
 
 const EXCHANGE_RATES_URL =
   "https://api.frankfurter.dev/v2/rates?base=EUR&quotes=USD,GBP";
-const EXCHANGE_RATES_REVALIDATE_SECONDS = 60 * 60 * 12;
+// Matches the 3-day gear page revalidate; daily reference rates move little.
+const EXCHANGE_RATES_REVALIDATE_SECONDS = 60 * 60 * 24 * 3;
 
 type FrankfurterRate = {
   base?: unknown;

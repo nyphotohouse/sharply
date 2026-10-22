@@ -3,7 +3,10 @@ import { getPayload } from "payload";
 import "server-only";
 import type { LearnPage, News, Review } from "~/payload-types";
 import config from "~/payload.config";
-import { PAYLOAD_CACHE_TAGS } from "~/lib/payload-cache-tags";
+import {
+  getGearRelatedNewsCacheTag,
+  PAYLOAD_CACHE_TAGS,
+} from "~/lib/payload-cache-tags";
 
 // Matches the gear page's 24h revalidate. Gear pages server-render related news,
 // and Next lowers a page's effective revalidate to the shortest cache it reads,
@@ -12,6 +15,10 @@ import { PAYLOAD_CACHE_TAGS } from "~/lib/payload-cache-tags";
 // interval is only a fallback for changes that skip those hooks.
 const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60 * 60 * 24;
 const HOME_CONTENT_REVALIDATE_SECONDS = 60 * 60;
+// Gear pages revalidate every 3 days, so their related-news lookup gets its own
+// 3-day cache instead of lowering them to the 24h /news and /learn interval.
+// It is tagged per gear slug, so publishing refreshes only the related gear pages.
+const GEAR_RELATED_NEWS_REVALIDATE_SECONDS = 60 * 60 * 24 * 3;
 
 let payloadPromise: ReturnType<typeof getPayload> | undefined;
 
@@ -59,6 +66,29 @@ const getReviewsDataCached = unstable_cache(
     tags: [PAYLOAD_CACHE_TAGS.reviews],
   },
 );
+
+// One cache entry per gear slug, tagged only with that slug's news tag.
+const getGearRelatedNewsPostsDataCached = (gearSlug: string) =>
+  unstable_cache(
+    async (): Promise<News[]> => {
+      const payload = await getPayloadClient();
+      const newsPosts = await payload.find({
+        collection: "news",
+        limit: -1,
+      });
+      // Filter locally (JSON field cannot be filtered with ILIKE)
+      return newsPosts.docs.filter((n) => {
+        const v = n.related_gear_items;
+        if (!Array.isArray(v)) return false;
+        return v.some((x) => typeof x === "string" && x === gearSlug);
+      });
+    },
+    ["payload:gear-related-news-posts", gearSlug],
+    {
+      revalidate: GEAR_RELATED_NEWS_REVALIDATE_SECONDS,
+      tags: [getGearRelatedNewsCacheTag(gearSlug)],
+    },
+  )();
 
 // Home keeps separate cache entries so publish hooks can invalidate its
 // snapshot alongside the Home page.
@@ -164,13 +194,7 @@ export const getNewsByRelatedGearSlugData = async (
   gearSlug: string,
   limit: number = 12,
 ): Promise<News[]> => {
-  // Fetch all and filter locally (JSON field cannot be filtered with ILIKE)
-  const all = await getNewsPostsData();
-  const filtered = all.filter((n) => {
-    const v = n.related_gear_items;
-    if (!Array.isArray(v)) return false;
-    return v.some((x) => typeof x === "string" && x === gearSlug);
-  });
+  const filtered = await getGearRelatedNewsPostsDataCached(gearSlug);
   return filtered.slice(0, limit < 0 ? filtered.length : limit);
 };
 
