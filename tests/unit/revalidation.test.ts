@@ -12,6 +12,7 @@ vi.mock("next/cache", () => cacheMocks);
 import {
   revalidateBrowsePages,
   revalidateGearPages,
+  revalidateHomePage,
   revalidateLocalizedPaths,
 } from "~/server/revalidation";
 
@@ -78,5 +79,19 @@ describe("shared public revalidation helpers", () => {
       "/de/browse",
       "layout",
     );
+  });
+
+  it("revalidates Home for every locale, including the /en ISR entry", () => {
+    revalidateHomePage();
+
+    expect(cacheMocks.revalidatePath).toHaveBeenCalledTimes(locales.length + 1);
+    expect(cacheMocks.revalidatePath).toHaveBeenCalledWith("/");
+    expect(cacheMocks.revalidatePath).toHaveBeenCalledWith("/en");
+    for (const locale of locales) {
+      if (locale === "en") continue;
+      expect(cacheMocks.revalidatePath).toHaveBeenCalledWith(
+        localizePathname("/", locale),
+      );
+    }
   });
 });

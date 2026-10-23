@@ -55,6 +55,9 @@ function buildGearMountClause(mountId: string) {
 
 const TRENDING_REVALIDATE_SECONDS = 60 * 60 * 12;
 const GEAR_PAGE_TRENDING_REVALIDATE_SECONDS = 60 * 60 * 24 * 3;
+// Home revalidates daily and the nightly rollup invalidates the "trending" tag
+// after it writes new windows, so Home's baseline does not need the 12h value.
+export const STABLE_TRENDING_REVALIDATE_SECONDS = 60 * 60 * 24;
 
 /**
  * getTrendingData(timeframe, limit, filters)
@@ -80,6 +83,23 @@ export async function getTrendingData(
   return getTrendingDataWithCachePolicy(timeframe, limit, filters, offset, {
     cacheKeyPrefix: "pop-trending",
     revalidateSeconds: TRENDING_REVALIDATE_SECONDS,
+  });
+}
+
+/**
+ * Same ranking as `getTrendingData`, cached for 24h so the Home page (which
+ * server-renders this baseline) is not capped to the 12h trending interval.
+ * Shares the "trending" tag, so the nightly rollup still refreshes it.
+ */
+export async function getStableTrendingData(
+  timeframe: "7d" | "30d",
+  limit: number,
+  filters: TrendingFiltersInput = {},
+  offset = 0,
+) {
+  return getTrendingDataWithCachePolicy(timeframe, limit, filters, offset, {
+    cacheKeyPrefix: "pop-trending-stable",
+    revalidateSeconds: STABLE_TRENDING_REVALIDATE_SECONDS,
   });
 }
 

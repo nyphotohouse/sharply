@@ -14,7 +14,9 @@ import {
 // refreshes this content through the editorial revalidation tags, so this
 // interval is only a fallback for changes that skip those hooks.
 const PAYLOAD_CONTENT_REVALIDATE_SECONDS = 60 * 60 * 24;
-const HOME_CONTENT_REVALIDATE_SECONDS = 60 * 60;
+// Home revalidates daily and publishing invalidates these entries by tag, so an
+// hourly fallback only made Home regenerate more often without fresher content.
+const HOME_CONTENT_REVALIDATE_SECONDS = 60 * 60 * 24;
 // Gear pages revalidate every 3 days, so their related-news lookup gets its own
 // 3-day cache instead of lowering them to the 24h /news and /learn interval.
 // It is tagged per gear slug, so publishing refreshes only the related gear pages.

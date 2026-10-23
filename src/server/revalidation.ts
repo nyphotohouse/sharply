@@ -77,6 +77,16 @@ export function revalidateGearPages(
   }
 }
 
+/**
+ * Revalidate the Home page for every locale. Home renders recent gear
+ * activity and gear/contribution counters straight from the database, so
+ * mutations that add or remove public gear call this instead of waiting for
+ * Home's daily regeneration.
+ */
+export function revalidateHomePage(): void {
+  revalidateLocalizedPaths(["/"]);
+}
+
 export type EditorialCollection = "news" | "review" | "learn-pages";
 
 /**

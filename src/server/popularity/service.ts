@@ -15,6 +15,7 @@ import {
   fetchHighTrafficGearSlugsData,
   fetchTopComparePairs as fetchTopComparePairsData,
   getLiveTrendingSnapshot,
+  getStableTrendingData,
   getTrendingData,
   getGearPageTrendingSlugsAmong,
   getTrendingTotalCount,
@@ -227,7 +228,7 @@ export async function fetchStableTrending(params: {
   const limit = params.limit ?? 10;
   const filters = params.filters ?? {};
   const offset = params.offset ?? 0;
-  const items = await getTrendingData(timeframe, limit, filters, offset);
+  const items = await getStableTrendingData(timeframe, limit, filters, offset);
   const aliasesById = await fetchGearAliasesByGearIds(
     items.map((item) => item.gearId),
   );

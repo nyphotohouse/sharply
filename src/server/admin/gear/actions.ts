@@ -7,7 +7,11 @@ import {
   isGearImageReviewRejectedError,
   reviewRejectionResult,
 } from "~/lib/gear/image-review-result";
-import { revalidateGearPages } from "~/server/revalidation";
+import { GEAR_PUBLICATION_STATES } from "~/lib/gear/publication-state";
+import {
+  revalidateGearPages,
+  revalidateHomePage,
+} from "~/server/revalidation";
 import {
   clearGearLeftViewService,
   clearGearRearViewService,
@@ -33,6 +37,13 @@ export async function actionCreateGear(params: GearCreationParams) {
   const result = await createGearAdmin(params);
   revalidatePath("/admin");
   revalidateGearPages([result.slug], { includeBrowse: true });
+  // New published gear appears in Home's activity list and gear counter.
+  if (
+    (params.publicationState ?? GEAR_PUBLICATION_STATES.PUBLISHED) ===
+    GEAR_PUBLICATION_STATES.PUBLISHED
+  ) {
+    revalidateHomePage();
+  }
   return result;
 }
 
@@ -229,7 +240,9 @@ export async function actionUpdateGearPublicationState(params: {
   revalidatePath("/admin/gear");
   revalidateGearPages([result.slug], { includeBrowse: true });
   revalidatePath("/lists/under-construction");
-  revalidatePath("/");
+  // Home's activity list and gear counter only include published gear. A bare
+  // revalidatePath("/") misses the localized "/en" ISR entry.
+  revalidateHomePage();
   return result;
 }
 
