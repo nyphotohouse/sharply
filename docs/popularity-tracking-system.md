@@ -42,7 +42,7 @@ This document describes the end‑to‑end popularity tracking in Sharply: inges
 - **Caching & revalidation**
   - Trending API and UI cache ~12h; revalidated proactively after rollup via `revalidateTag('trending')`.
   - Live boost snapshots cache ~2 minutes via `unstable_cache` tagged `trending-live` and expire naturally; the rollup does not invalidate this short-lived cache.
-  - Home uses a 15-minute ISR window. Its news and review collections use separate 15-minute Payload cache keys; shared Payload caches used by other routes retain their existing 60-second window.
+  - Home uses a 24-hour ISR window. Its news and review collections use separate 24-hour Payload cache keys tagged for editorial publish hooks. Its stable 7-day trending baseline reads a dedicated 24-hour cache (`pop-trending-stable`, tag `trending`) so the 12h shared trending cache does not cap Home's revalidate; the nightly rollup's `trending` invalidation refreshes it.
   - Home server-renders the stable 7-day ranking. After hydration, the visible list refreshes every two minutes from `GET /api/trending/home`; SWR pauses polling while the page is hidden and keeps the last successful list if refresh fails.
   - `GET /api/trending/home` returns only the row fields Home renders (`gearId`, `slug`, `name`, `regionalAliases`, and the flame count). Vercel CDN caches it for 120 seconds and may serve stale data for a further 60 seconds while refreshing. Score and statistics changes therefore update the small live response without changing Home's ISR payload.
   - Gear stats endpoint caches ~1h with tags (`popularity`, `gear-stats:{slug}`).

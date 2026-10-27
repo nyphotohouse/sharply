@@ -6,9 +6,11 @@ const cacheMocks = vi.hoisted(() => ({
 
 const revalidationMocks = vi.hoisted(() => ({
   revalidateGearPages: vi.fn(),
+  revalidateHomePage: vi.fn(),
 }));
 
 const serviceMocks = vi.hoisted(() => ({
+  createGearAdmin: vi.fn(),
   updateGearPublicationStateService: vi.fn(),
 }));
 
@@ -17,7 +19,10 @@ vi.mock("server-only", () => ({}));
 vi.mock("~/server/admin/gear/service", () => serviceMocks);
 vi.mock("~/server/revalidation", () => revalidationMocks);
 
-import { actionUpdateGearPublicationState } from "~/server/admin/gear/actions";
+import {
+  actionCreateGear,
+  actionUpdateGearPublicationState,
+} from "~/server/admin/gear/actions";
 
 describe("gear publication state admin action", () => {
   beforeEach(() => {
@@ -45,10 +50,47 @@ describe("gear publication state admin action", () => {
       2,
       "/lists/under-construction",
     );
-    expect(cacheMocks.revalidatePath).toHaveBeenNthCalledWith(3, "/");
+    expect(cacheMocks.revalidatePath).toHaveBeenCalledTimes(2);
+    expect(revalidationMocks.revalidateHomePage).toHaveBeenCalledTimes(1);
     expect(revalidationMocks.revalidateGearPages).toHaveBeenCalledWith(
       ["nikon-z9ii"],
       { includeBrowse: true },
     );
+  });
+});
+
+describe("gear create admin action", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serviceMocks.createGearAdmin.mockResolvedValue({
+      id: "gear-2",
+      slug: "sony-a1-iii",
+    });
+  });
+
+  it("revalidates Home when new gear is published", async () => {
+    await actionCreateGear({ publicationState: "PUBLISHED" } as Parameters<
+      typeof actionCreateGear
+    >[0]);
+
+    expect(revalidationMocks.revalidateGearPages).toHaveBeenCalledWith(
+      ["sony-a1-iii"],
+      { includeBrowse: true },
+    );
+    expect(revalidationMocks.revalidateHomePage).toHaveBeenCalledTimes(1);
+  });
+
+  it("defaults to published when no state is given", async () => {
+    await actionCreateGear({} as Parameters<typeof actionCreateGear>[0]);
+
+    expect(revalidationMocks.revalidateHomePage).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves Home alone for hidden or rumored gear", async () => {
+    await actionCreateGear({ publicationState: "HIDDEN" } as Parameters<
+      typeof actionCreateGear
+    >[0]);
+
+    expect(revalidationMocks.revalidateHomePage).not.toHaveBeenCalled();
   });
 });

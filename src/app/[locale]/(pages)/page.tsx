@@ -23,7 +23,11 @@ import type { Review } from "~/payload-types";
 import { fetchHomeActivity } from "~/server/gear/service";
 import { getHomeNewsPosts, getHomeReviews } from "~/server/payload/service";
 
-export const revalidate = 900;
+// Home regenerates daily. Fresher content arrives through on-demand
+// revalidation: editorial publishes (news/reviews tags + "/"), gear create and
+// publication-state changes, and the nightly trending rollup ("trending" tag).
+// Every cache read during render must be >= this value or it caps the page.
+export const revalidate = 86400;
 
 export async function generateMetadata({
   params,

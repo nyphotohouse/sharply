@@ -22,6 +22,7 @@ const popularityDataMocks = vi.hoisted(() => ({
   fetchHighTrafficGearSlugsData: vi.fn(),
   fetchTopComparePairs: vi.fn(),
   getLiveTrendingSnapshot: vi.fn(),
+  getStableTrendingData: vi.fn(),
   getTrendingData: vi.fn(),
   getTrendingTotalCount: vi.fn(),
   hasEventForIdentityToday: vi.fn(),
@@ -118,17 +119,19 @@ describe("popularity service", () => {
   });
 
   it("loads the stable ranking for the Home server-rendered baseline", async () => {
-    popularityDataMocks.getTrendingData.mockResolvedValue([baselineItem]);
+    popularityDataMocks.getStableTrendingData.mockResolvedValue([baselineItem]);
 
     const result = await fetchStableTrending({ timeframe: "7d", limit: 10 });
 
     expect(result).toEqual([{ ...baselineItem, regionalAliases: [] }]);
-    expect(popularityDataMocks.getTrendingData).toHaveBeenCalledWith(
+    // Home reads the day-long cache so trending does not cap its revalidate.
+    expect(popularityDataMocks.getStableTrendingData).toHaveBeenCalledWith(
       "7d",
       10,
       {},
       0,
     );
+    expect(popularityDataMocks.getTrendingData).not.toHaveBeenCalled();
     expect(gearDataMocks.fetchGearAliasesByGearIds).toHaveBeenCalledWith([
       "gear-baseline",
     ]);

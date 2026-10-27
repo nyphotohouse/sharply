@@ -132,6 +132,22 @@ describe("payload data client", () => {
     );
   });
 
+  it("caches Home news and reviews for a day under Home tags", async () => {
+    await import("~/server/payload/data");
+
+    // Home revalidates daily, so shorter Home caches would cap the page.
+    expect(cacheMocks.unstable_cache).toHaveBeenCalledWith(
+      expect.any(Function),
+      ["payload:home-news-posts"],
+      { revalidate: 60 * 60 * 24, tags: ["payload:home-news-posts"] },
+    );
+    expect(cacheMocks.unstable_cache).toHaveBeenCalledWith(
+      expect.any(Function),
+      ["payload:home-reviews"],
+      { revalidate: 60 * 60 * 24, tags: ["payload:home-reviews"] },
+    );
+  });
+
   it("returns null when a News slug is no longer available", async () => {
     const payloadClient = {
       find: vi.fn().mockResolvedValue({ docs: [] }),
