@@ -85,3 +85,40 @@ export function formatFocalLengthRangeDisplay({
 
   return { actual, equivalent };
 }
+
+/**
+ * Format a sensor/image-circle name for use mid-sentence in the FOV tooltip.
+ * Keeps acronyms like APS-C intact; lowercases plain names like Medium Format.
+ */
+export function formatSensorFormatNameForSentence(formatName: string): string {
+  const trimmed = formatName.trim();
+  if (!trimmed) return trimmed;
+  if (/aps/i.test(trimmed)) return trimmed;
+  if (/^\d/.test(trimmed) || /["/]/.test(trimmed)) return trimmed;
+  return trimmed.toLowerCase();
+}
+
+/** Indefinite article for a format name based on leading pronunciation. */
+export function indefiniteArticleForFormatName(formatName: string): "a" | "an" {
+  const trimmed = formatName.trim();
+  if (/^aps/i.test(trimmed)) return "an";
+  const firstLetter = trimmed[0]?.toLowerCase();
+  if (firstLetter && "aeiou".includes(firstLetter)) return "an";
+  return "a";
+}
+
+/**
+ * Tooltip explaining full-frame-equivalent focal length.
+ * `equivalent` is the same display string shown in the UI (e.g. "19mm", "29-72mm").
+ */
+export function buildFocalLengthEquivalentTooltip({
+  formatName,
+  equivalent,
+}: {
+  formatName: string;
+  equivalent: string;
+}): string {
+  const format = formatSensorFormatNameForSentence(formatName);
+  const article = indefiniteArticleForFormatName(format);
+  return `On ${article} ${format} camera, this lens has a field of view similar to a ${equivalent} lens on a full-frame camera.`;
+}
