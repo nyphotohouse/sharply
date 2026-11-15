@@ -1,6 +1,7 @@
 import type { SpecsTableSection } from "~/app/[locale]/(pages)/gear/_components/specs-table";
 import { VideoSpecsSummary } from "~/app/[locale]/(pages)/gear/_components/video/video-summary";
 import { ApproximatePriceText } from "~/components/gear/approximate-price-text";
+import { FocalLengthEquivalentHint } from "~/components/gear/focal-length-equivalent-hint";
 import { LensApertureProfile } from "~/components/lens-aperture-profile/lens-aperture-profile";
 import { normalizeApertureProfile } from "~/lib/lens-aperture-profile";
 import { Badge } from "~/components/ui/badge";
@@ -1004,6 +1005,9 @@ export const specDictionary: SpecSectionDef[] = [
           max: item.fixedLensSpecs?.focalLengthMaxMm,
         }),
         formatDisplay: (_, item) => {
+          const formatId =
+            item.fixedLensSpecs?.imageCircleSizeId ??
+            item.cameraSpecs?.sensorFormatId;
           const { actual, equivalent } = formatFocalLengthRangeDisplay({
             isPrime: item.fixedLensSpecs?.isPrime,
             min: item.fixedLensSpecs?.focalLengthMinMm,
@@ -1012,14 +1016,21 @@ export const specDictionary: SpecSectionDef[] = [
             sensorFormatId: item.cameraSpecs?.sensorFormatId,
           });
           if (!actual) return undefined;
+          if (!equivalent) return actual;
+          const formatName = sensorNameFromId(formatId);
           return (
             <span className="flex items-center gap-1">
               {actual}
-              {equivalent ? (
+              {formatName && formatName !== "Unknown" ? (
+                <FocalLengthEquivalentHint
+                  equivalent={equivalent}
+                  formatName={formatName}
+                />
+              ) : (
                 <span className="text-muted-foreground">
                   {`(${equivalent} equiv.)`}
                 </span>
-              ) : null}
+              )}
             </span>
           );
         },
@@ -1670,18 +1681,29 @@ export const specDictionary: SpecSectionDef[] = [
           imageCircleFormatId: item.lensSpecs?.imageCircleSizeId,
         }),
         formatDisplay: (_, item) => {
+          const formatId = item.lensSpecs?.imageCircleSizeId;
           const { actual, equivalent } = formatFocalLengthRangeDisplay({
             isPrime: item.lensSpecs?.isPrime,
             min: item.lensSpecs?.focalLengthMinMm,
             max: item.lensSpecs?.focalLengthMaxMm,
-            imageCircleFormatId: item.lensSpecs?.imageCircleSizeId,
+            imageCircleFormatId: formatId,
           });
           if (!actual) return undefined;
           if (!equivalent) return actual;
+          const formatName = sensorNameFromId(formatId);
           return (
             <span className="flex items-center gap-1">
               {actual}
-              <span className="text-muted-foreground">{`(${equivalent} equiv.)`}</span>
+              {formatName && formatName !== "Unknown" ? (
+                <FocalLengthEquivalentHint
+                  equivalent={equivalent}
+                  formatName={formatName}
+                />
+              ) : (
+                <span className="text-muted-foreground">
+                  {`(${equivalent} equiv.)`}
+                </span>
+              )}
             </span>
           );
         },
